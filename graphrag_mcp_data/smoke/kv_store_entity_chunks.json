@@ -1,0 +1,11 @@
+{
+  "ACME": {
+    "chunk_ids": [
+      "c1"
+    ],
+    "count": 1,
+    "create_time": 1779272269,
+    "update_time": 1779272269,
+    "_id": "ACME"
+  }
+}

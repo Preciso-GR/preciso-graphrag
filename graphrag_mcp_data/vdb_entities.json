@@ -1,0 +1,1 @@
+{"embedding_dim": 8, "data": [{"__id__": "ent-3fbeb6a5a3e2f60d2a9c015a6f527a08", "__created_at__": 1779272235, "entity_name": "ACME", "entity_type": "COMPANY", "content": "ACME\nA public company", "source_id": "c1", "file_path": "sample.md", "vector": "eJxjYEAFAAAQAAE="}], "matrix": "AADAfwAAwH8AAMB/AADAfwAAwH8AAMB/AADAfwAAwH8="}

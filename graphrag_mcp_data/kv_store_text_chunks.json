@@ -1,0 +1,12 @@
+{
+  "c1": {
+    "tokens": 4,
+    "content": "ACME reported revenue growth.",
+    "full_doc_id": "doc1",
+    "chunk_order_index": 0,
+    "file_path": "sample.md",
+    "create_time": 1779272235,
+    "update_time": 1779272235,
+    "_id": "c1"
+  }
+}

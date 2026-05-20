@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='utf-8'?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd"><key id="d6" for="node" attr.name="truncate" attr.type="string"/>
+<key id="d5" for="node" attr.name="created_at" attr.type="long"/>
+<key id="d4" for="node" attr.name="file_path" attr.type="string"/>
+<key id="d3" for="node" attr.name="source_id" attr.type="string"/>
+<key id="d2" for="node" attr.name="description" attr.type="string"/>
+<key id="d1" for="node" attr.name="entity_type" attr.type="string"/>
+<key id="d0" for="node" attr.name="entity_id" attr.type="string"/>
+<graph edgedefault="undirected"><node id="ACME">
+  <data key="d0">ACME</data>
+  <data key="d1">COMPANY</data>
+  <data key="d2">A public company</data>
+  <data key="d3">c1</data>
+  <data key="d4">sample.md</data>
+  <data key="d5">1779272235</data>
+  <data key="d6"></data>
+</node>
+</graph></graphml>

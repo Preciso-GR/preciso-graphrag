@@ -16,6 +16,7 @@ from core.storage.base import QueryParam
 from core.storage.vector_store import NanoVectorDBStorage
 from core.utils import BasicTokenizer
 from ingest.pipeline import ingest_extracted_json
+from mcp.tools.ingest_from_file_tool import ingest_from_file, reingest_from_file
 from mcp.server.fastmcp import FastMCP
 
 
@@ -100,6 +101,22 @@ mcp = FastMCP("graphrag-mcp")
 @mcp.tool()
 async def ingest_graph_tool(payload: dict) -> dict:
     return await ingest_extracted_json(payload, storage_instances, global_config)
+
+
+@mcp.tool(
+    name="ingest_from_file",
+    description="Read agent extraction JSON from disk and ingest into knowledge graph",
+)
+async def ingest_from_file_tool(file_path: str) -> dict:
+    return await ingest_from_file(file_path, storage_instances, global_config)
+
+
+@mcp.tool(
+    name="reingest_from_file",
+    description="Re-run ingestion on existing extraction file. Use when pipeline failed but extraction is intact.",
+)
+async def reingest_from_file_tool(file_path: str) -> dict:
+    return await reingest_from_file(file_path, storage_instances, global_config)
 
 
 @mcp.tool()

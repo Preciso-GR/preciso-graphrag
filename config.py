@@ -4,40 +4,71 @@ import os
 from pathlib import Path
 from typing import Any
 
-GRAPH_FIELD_SEP = "<SEP>"
-DEFAULT_MAX_ENTITY_TOKENS = 4_000
-DEFAULT_MAX_RELATION_TOKENS = 4_000
-DEFAULT_MAX_TOTAL_TOKENS = 16_000
-DEFAULT_RELATED_CHUNK_NUMBER = 8
-DEFAULT_KG_CHUNK_PICK_METHOD = "WEIGHT"
-DEFAULT_SUMMARY_LANGUAGE = "English"
-DEFAULT_MAX_FILE_PATHS = 8
-DEFAULT_FILE_PATH_MORE_PLACEHOLDER = "more_paths"
-DEFAULT_ENTITY_NAME_MAX_LENGTH = 255
-DEFAULT_TOP_K = 20
-DEFAULT_CHUNK_TOP_K = 20
-DEFAULT_HISTORY_TURNS = 3
-DEFAULT_SOURCE_IDS_LIMIT_METHOD = "KEEP"
-SOURCE_IDS_LIMIT_METHOD_KEEP = "KEEP"
-SOURCE_IDS_LIMIT_METHOD_FIFO = "FIFO"
+# ============================================================================
+# FORMATTING & DELIMITER CONSTANTS
+# ============================================================================
+GRAPH_FIELD_SEP = "<SEP>"  # Used to join multiple values (e.g., source_ids, file_paths)
+
+# ============================================================================
+# TOKEN LIMIT DEFAULTS (used by summary.py, merge.py, query.py)
+# Prevents LLM calls from exceeding API token limits
+# ============================================================================
+DEFAULT_MAX_ENTITY_TOKENS = 4_000              # Max tokens for a single entity description
+DEFAULT_MAX_RELATION_TOKENS = 4_000            # Max tokens for a single relationship description
+DEFAULT_MAX_TOTAL_TOKENS = 16_000              # Total token budget per query
+DEFAULT_RELATED_CHUNK_NUMBER = 8               # How many text chunks to retrieve per query
+
+# ============================================================================
+# KNOWLEDGE GRAPH DEFAULTS (used by merge.py, query.py)
+# Controls entity/relationship merging and retrieval behavior
+# ============================================================================
+DEFAULT_KG_CHUNK_PICK_METHOD = "WEIGHT"        # Method to select important chunks: "WEIGHT" or other
+DEFAULT_MAX_FILE_PATHS = 8                     # Max source file paths to store per entity/relation
+DEFAULT_FILE_PATH_MORE_PLACEHOLDER = "more_paths"  # Placeholder when truncating file paths
+DEFAULT_ENTITY_NAME_MAX_LENGTH = 255           # Max entity name length
+DEFAULT_TOP_K = 20                             # Top K results to return in queries
+DEFAULT_CHUNK_TOP_K = 20                       # Top K chunks to retrieve
+
+# ============================================================================
+# MERGING & SOURCE TRACKING DEFAULTS (used by merge.py)
+# Controls how entities/relationships are merged when re-ingested
+# ============================================================================
+DEFAULT_SOURCE_IDS_LIMIT_METHOD = "KEEP"       # How to limit stored source references: "KEEP" (keep old) or "FIFO" (newest)
+SOURCE_IDS_LIMIT_METHOD_KEEP = "KEEP"          # Keep older source IDs when limit reached
+SOURCE_IDS_LIMIT_METHOD_FIFO = "FIFO"          # Use FIFO (first-in-first-out) when limit reached
 VALID_SOURCE_IDS_LIMIT_METHODS = {
     SOURCE_IDS_LIMIT_METHOD_KEEP,
     SOURCE_IDS_LIMIT_METHOD_FIFO,
 }
 
+# ============================================================================
+# QUERY DEFAULTS (used by query.py)
+# ============================================================================
+DEFAULT_HISTORY_TURNS = 3                      # Number of previous turns to include in context
+DEFAULT_SUMMARY_LANGUAGE = "English"           # Language for LLM summaries
+
+# ============================================================================
+# LLM PROMPTS (used by summary.py, query.py)
+# Templates sent to LLM functions for summarization and response generation
+# ============================================================================
 PROMPTS = {
     "summarize_entity_descriptions": (
+        # Used by summary.py → _summarize_descriptions()
+        # Combines multiple entity/relationship descriptions into one concise summary
         "Summarize the following {description_type} information for "
         "{description_name} in {language}. Keep the most important facts and "
         "target about {summary_length} tokens.\n{description_list}"
     ),
     "rag_response": (
+        # Used by query.py → kg_query()
+        # Final prompt to generate response from knowledge graph context
         "You are a financial graph retrieval assistant.\n"
         "Use the provided context to answer in {response_type}.\n"
         "Additional user guidance: {user_prompt}\n\n"
         "{context_data}"
     ),
     "kg_query_context": (
+        # Used by query.py → to format context before sending to LLM
         "-----Entities-----\n{entities_str}\n\n"
         "-----Relationships-----\n{relations_str}\n\n"
         "-----Text Chunks-----\n{text_chunks_str}\n\n"
@@ -47,45 +78,103 @@ PROMPTS = {
 }
 
 
+
 def build_global_config(
     *,
     working_dir: str | None = None,
-    llm_model_func: Any = None,
-    embedding_func: Any = None,
-    tokenizer: Any = None,
-    extra: dict[str, Any] | None = None,
+    llm_model_func: Any = None,              # LLM function to call: can be OpenAI, Claude, local model, or None (no LLM)
+    embedding_func: Any = None,              # Embedding function: converts text to vectors for similarity search
+    tokenizer: Any = None,                   # Token counter: counts tokens in text (uses tiktoken or fallback)
+    extra: dict[str, Any] | None = None,     # Additional custom config values
 ) -> dict[str, Any]:
+    """
+    Build a global configuration dictionary used throughout the system.
+    
+    This function creates a single config object passed to ALL functions that need settings.
+    Instead of hardcoding values in each file, all functions read from this global_config dict.
+    """
     base_dir = Path(working_dir or os.getenv("GRAPHRAG_MCP_WORKDIR", "./graphrag_mcp_data"))
     config: dict[str, Any] = {
-        "working_dir": str(base_dir),
-        "llm_model_func": llm_model_func,
-        "embedding_func": embedding_func,
-        "tokenizer": tokenizer,
-        "embedding_batch_num": 8,
+        # ====================================================================
+        # CORE PLUGGABLE FUNCTIONS (can be None or custom implementations)
+        # ====================================================================
+        "working_dir": str(base_dir),                    # Where to store graph/vector DB data
+        "llm_model_func": llm_model_func,                # LLM to use (defaults to None = no LLM)
+        "embedding_func": embedding_func,                # Embedding model (converts text→vectors)
+        "tokenizer": tokenizer,                          # Token counter (GPT-4o-mini or fallback)
+        
+        # ====================================================================
+        # VECTOR EMBEDDING SETTINGS (used by storage/ and query.py)
+        # Controls how text is converted to vectors for similarity search
+        # ====================================================================
+        "embedding_batch_num": 8,                        # Batch size for embedding operations
         "vector_db_storage_cls_kwargs": {
-            "cosine_better_than_threshold": 0.2,
+            "cosine_better_than_threshold": 0.2,         # Min similarity threshold for results
         },
-        "enable_llm_cache": True,
-        "enable_llm_cache_for_entity_extract": True,
-        "summary_context_size": 8_000,
-        "summary_max_tokens": 1_024,
-        "summary_length_recommended": 256,
-        "force_llm_summary_on_merge": 3,
-        "embedding_token_limit": None,
+        
+        # ====================================================================
+        # LLM CACHING SETTINGS (used by utils.py and summary.py)
+        # Caches LLM responses to avoid redundant API calls
+        # ====================================================================
+        "enable_llm_cache": True,                        # Cache query/summarization results
+        "enable_llm_cache_for_entity_extract": True,     # Cache extraction-time LLM calls
+        
+        # ====================================================================
+        # SUMMARY & DESCRIPTION SETTINGS (used by summary.py, merge.py)
+        # Controls how entity/relationship descriptions are merged
+        # ====================================================================
+        "summary_context_size": 8_000,                   # Max tokens to show LLM for summarization
+        "summary_max_tokens": 1_024,                     # Max tokens in final summary
+        "summary_length_recommended": 256,               # Target summary length
+        "force_llm_summary_on_merge": 3,                 # Use LLM if this many descriptions or more
+        
+        # ====================================================================
+        # TOKEN LIMITS (used by utils.py, merge.py, query.py)
+        # Prevents text from exceeding API token limits
+        # ====================================================================
+        "embedding_token_limit": None,                   # Max tokens for embeddings (None = no limit)
+        "max_entity_tokens": DEFAULT_MAX_ENTITY_TOKENS,  # Max tokens per entity description
+        "max_relation_tokens": DEFAULT_MAX_RELATION_TOKENS,  # Max tokens per relation description
+        "max_total_tokens": DEFAULT_MAX_TOTAL_TOKENS,    # Total token budget per query
+        
+        # ====================================================================
+        # KNOWLEDGE GRAPH SETTINGS (used by merge.py, query.py)
+        # Controls entity/relation retrieval and filtering
+        # ====================================================================
+        "related_chunk_number": DEFAULT_RELATED_CHUNK_NUMBER,  # Chunks to retrieve per query
+        "kg_chunk_pick_method": DEFAULT_KG_CHUNK_PICK_METHOD,  # How to select chunks: "WEIGHT" or others
         "max_entity_tokens": DEFAULT_MAX_ENTITY_TOKENS,
         "max_relation_tokens": DEFAULT_MAX_RELATION_TOKENS,
         "max_total_tokens": DEFAULT_MAX_TOTAL_TOKENS,
-        "related_chunk_number": DEFAULT_RELATED_CHUNK_NUMBER,
-        "kg_chunk_pick_method": DEFAULT_KG_CHUNK_PICK_METHOD,
-        "max_source_ids_per_entity": 64,
-        "max_source_ids_per_relation": 64,
-        "source_ids_limit_method": DEFAULT_SOURCE_IDS_LIMIT_METHOD,
-        "max_file_paths": DEFAULT_MAX_FILE_PATHS,
-        "file_path_more_placeholder": DEFAULT_FILE_PATH_MORE_PLACEHOLDER,
-        "max_graph_nodes": 1000,
-        "min_rerank_score": 0.0,
-        "addon_params": {"language": DEFAULT_SUMMARY_LANGUAGE},
-        "system_prompt_template": PROMPTS["rag_response"],
+        
+        # ====================================================================
+        # SOURCE ID TRACKING (used by merge.py)
+        # Controls how many source references (chunk IDs) to keep per entity/relation
+        # When re-ingesting, older sources may be dropped if limit is reached
+        # ====================================================================
+        "max_source_ids_per_entity": 64,                 # Max source chunks to track per entity
+        "max_source_ids_per_relation": 64,               # Max source chunks to track per relation
+        "source_ids_limit_method": DEFAULT_SOURCE_IDS_LIMIT_METHOD,  # "KEEP" old or "FIFO" newest
+        
+        # ====================================================================
+        # FILE PATH TRACKING (used by merge.py)
+        # Limits how many file paths are stored per entity/relation
+        # ====================================================================
+        "max_file_paths": DEFAULT_MAX_FILE_PATHS,        # Max file paths to store
+        "file_path_more_placeholder": DEFAULT_FILE_PATH_MORE_PLACEHOLDER,  # Placeholder for truncated paths
+        
+        # ====================================================================
+        # GRAPH FILTERING (used by query.py)
+        # Controls graph search and result filtering
+        # ====================================================================
+        "max_graph_nodes": 1000,                         # Max nodes to consider in graph traversal
+        "min_rerank_score": 0.0,                         # Min score to include in results
+        
+        # ====================================================================
+        # LANGUAGE & PROMPTS (used by summary.py, query.py)
+        # ====================================================================
+        "addon_params": {"language": DEFAULT_SUMMARY_LANGUAGE},  # Language for LLM summaries
+        "system_prompt_template": PROMPTS["rag_response"],       # Default system prompt for queries
     }
     if extra:
         config.update(extra)

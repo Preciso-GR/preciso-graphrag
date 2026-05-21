@@ -97,11 +97,11 @@ global_config = build_global_config(
 storage_instances = build_storage_instances(global_config)
 mcp = FastMCP("graphrag-mcp")
 
-
+"""
 @mcp.tool()
 async def ingest_graph_tool(payload: dict) -> dict:
     return await ingest_extracted_json(payload, storage_instances, global_config)
-
+"""
 
 @mcp.tool(
     name="ingest_from_file",

@@ -1,0 +1,294 @@
+---
+name: Financial-Graph-Extraction
+description: >
+  Use this skill whenever a user wants to extract entities and relationships from
+  financial documents for graph-based knowledge ingestion. Triggers include: 10-K or
+  10-Q filings, earnings call transcripts, analyst reports, investor presentations,
+  SEC filings, financial news articles, risk disclosures, balance sheets, income
+  statements, MD&A sections, or any structured/unstructured financial text.
+  Also trigger when the user says things like "build a graph from this report",
+  "map the relationships in this filing", "connect entities in this earnings call",
+  "I want to query this financial doc", or "extract for graph-rag".
+  This skill enforces HIGH PRECISION extraction — financial data must be factually exact,
+  numerically grounded, and relationship-typed with financial semantics. Always use this
+  over the general extraction skill when the source material is financial in nature.
+---
+
+# Financial Graph Extraction Skill
+
+## Why This Skill Exists
+
+Financial analysts read enormous volumes of documents — 10-Ks, earnings transcripts, research notes — to surface connections between companies, people, risks, and metrics. This skill turns that reading into a structured knowledge graph that an agent can query with precision.
+
+Financial extraction demands **higher fidelity than general text** because:
+- Numbers, dates, and percentages must be exact (no approximation)
+- Entity disambiguation matters (Apple Inc. ≠ Apple the fruit; Tim Cook as CEO ≠ Tim Cook as person)
+- Relationships carry financial weight (subsidiary, acquired, guarantees, competes with)
+- Temporal context is critical (Q3 2024 revenue ≠ Q3 2023 revenue)
+
+---
+
+## Extraction Output Format
+
+Always write to `extractions/{source_filename}_extracted.json`.
+
+```json
+{
+  "source": "apple_10k_2024.pdf",
+  "domain": "financial",
+  "extracted_at": "2024-10-01T00:00:00Z",
+  "entities": [...],
+  "relationships": [...],
+  "metadata": {
+    "document_type": "10-K",
+    "fiscal_year": "2024",
+    "company": "Apple Inc.",
+    "ticker": "AAPL",
+    "filing_date": "2024-10-30"
+  }
+}
+```
+
+---
+
+## Entity Types for Financial Documents
+
+Extract the following entity types with strict typing:
+
+### Core Entity Types
+
+| Type | Description | Example |
+|------|-------------|---------|
+| `COMPANY` | Legal corporate entity | Apple Inc., Foxconn Technology Group |
+| `PERSON` | Named individual with role | Tim Cook (CEO), Luca Maestri (CFO) |
+| `FINANCIAL_METRIC` | Quantitative figure | Revenue $394.3B, Net Income $97B, EPS $6.16 |
+| `PRODUCT_LINE` | Named revenue segment | iPhone, Mac, Services, Wearables |
+| `GEOGRAPHIC_SEGMENT` | Revenue or ops region | Americas, Greater China, Europe |
+| `RISK_FACTOR` | Disclosed risk | Supply chain concentration, FX exposure, litigation |
+| `LEGAL_ENTITY` | Subsidiary or JV | Apple Operations International Ltd |
+| `REGULATION` | Named law or standard | ASC 606, GDPR, Sarbanes-Oxley |
+| `TRANSACTION` | M&A, investment, divestiture | Acquired Beats Electronics for $3B |
+| `DATE_PERIOD` | Fiscal period | FY2024, Q3 2024, YE September 28 2024 |
+
+### Entity Schema
+
+```json
+{
+  "id": "unique_snake_case_id",
+  "type": "COMPANY",
+  "label": "Apple Inc.",
+  "properties": {
+    "ticker": "AAPL",
+    "exchange": "NASDAQ",
+    "industry": "Consumer Electronics",
+    "fiscal_year_end": "September",
+    "aliases": ["Apple", "AAPL"]
+  }
+}
+```
+
+For `FINANCIAL_METRIC` always include:
+```json
+{
+  "id": "revenue_fy2024",
+  "type": "FINANCIAL_METRIC",
+  "label": "Total Net Sales FY2024",
+  "properties": {
+    "value": 391035,
+    "unit": "USD_millions",
+    "period": "FY2024",
+    "yoy_change": "+2.0%",
+    "source_section": "Consolidated Statements of Operations"
+  }
+}
+```
+
+---
+
+## Relationship Types for Financial Documents
+
+Every relationship must have a `type` from this controlled vocabulary:
+
+| Relationship Type | Usage |
+|-------------------|-------|
+| `EMPLOYS` | Company → Person (with role) |
+| `SUBSIDIARY_OF` | Legal entity → Parent company |
+| `ACQUIRED` | Company → Target (with date, value) |
+| `COMPETES_WITH` | Company ↔ Company |
+| `SUPPLIES_TO` | Supplier → Customer |
+| `REPORTED_METRIC` | Company → Financial metric |
+| `OPERATES_IN` | Company → Geographic segment |
+| `EXPOSED_TO` | Company/Segment → Risk factor |
+| `GOVERNED_BY` | Company/Practice → Regulation |
+| `ISSUED` | Company → Debt/Equity instrument |
+| `AUDITED_BY` | Company → Audit firm |
+| `MENTIONS` | Document section → Any entity |
+
+### Relationship Schema
+
+```json
+{
+  "source": "apple_inc",
+  "target": "tim_cook",
+  "type": "EMPLOYS",
+  "properties": {
+    "role": "Chief Executive Officer",
+    "since": "2011",
+    "compensation_fy2024": "63.2M USD"
+  }
+}
+```
+
+Always attach `period` or `as_of` to relationships that change over time.
+
+---
+
+## Precision Rules (Non-Negotiable)
+
+1. **Exact numbers**: Copy figures verbatim from the source. Never round unless the source rounds.
+2. **Unit always present**: `394.3B` is invalid. Write `394300` with `"unit": "USD_millions"`.
+3. **Period always present**: Every metric must reference a fiscal period.
+4. **Disambiguate entities**: If "the Company" refers to Apple Inc., resolve it. Don't leave pronouns.
+5. **No inference beyond the text**: If the document does not say X acquired Y, don't add that relationship.
+6. **Source section tagging**: Tag each entity/relationship with `source_section` (e.g., `"MD&A"`, `"Risk Factors"`, `"Notes to Financial Statements"`).
+7. **Conflicting data**: If two sections report different values for the same metric, extract both with section tags and add `"conflict": true`.
+
+---
+
+## Analyst-Oriented Extraction Focus
+
+When processing financial documents, prioritize connections analysts actually query:
+
+### Tier 1 — Always Extract
+- Executive team (name, title, compensation, tenure)
+- Revenue by segment (product line + geography)
+- Key metrics: revenue, gross margin, operating income, net income, EPS, FCF
+- Debt structure: long-term debt, credit facilities, maturities
+- Top risks disclosed in Risk Factors section
+- Auditor and audit opinion
+- Related-party transactions
+
+### Tier 2 — Extract When Present
+- Customer concentration (if any customer > 10% revenue)
+- Supplier/manufacturing dependencies
+- Pending litigation with materiality estimates
+- Off-balance-sheet arrangements
+- Goodwill and intangibles by acquisition
+- Share repurchase programs
+
+### Tier 3 — Extract for Deep Analysis
+- Non-GAAP reconciliation items
+- Geographic revenue breakdowns
+- Employee headcount and changes
+- Capital expenditure breakdown
+- Lease obligations schedule
+
+---
+
+## Step-by-Step Agent Workflow
+
+```
+1. READ the document in full (or in chunked passes for long filings)
+2. IDENTIFY document type (10-K, 10-Q, earnings transcript, etc.)
+3. EXTRACT metadata block first (company, ticker, period, filing date)
+4. PASS 1 — Entity extraction:
+   - Scan for all named companies, people, metrics, segments, risks
+   - Assign IDs (snake_case, unique within the file)
+   - Populate properties with values from text
+5. PASS 2 — Relationship extraction:
+   - For each entity pair, determine if a typed relationship exists in the text
+   - Attach period and source_section to every relationship
+6. PASS 3 — Validation:
+   - All FINANCIAL_METRIC entities have value + unit + period
+   - All PERSON entities have at least one EMPLOYS relationship
+   - No entity ID is duplicated
+   - No relationship references an undefined entity ID
+7. WRITE to extractions/{filename}_extracted.json
+8. CALL ingest_from_file MCP tool with the output path
+```
+
+---
+
+## Common Financial Document Patterns
+
+### 10-K Structure Mapping
+```
+Item 1 (Business)        → COMPANY, PRODUCT_LINE, GEOGRAPHIC_SEGMENT, COMPETES_WITH
+Item 1A (Risk Factors)   → RISK_FACTOR, EXPOSED_TO
+Item 7 (MD&A)            → FINANCIAL_METRIC, REPORTED_METRIC, trends
+Item 8 (Financial Stmts) → FINANCIAL_METRIC (authoritative source)
+Item 9A (Controls)       → REGULATION, GOVERNED_BY
+Proxy Statement          → PERSON, EMPLOYS, compensation
+```
+
+### Earnings Call Transcript Pattern
+- Speaker turns → `PERSON` entities with `EMPLOYS` linking to company
+- Guidance → `FINANCIAL_METRIC` with `period: "FY2025E"` (E = estimate)
+- Analyst questions → can tag `source_section: "Q&A"` for filtering
+
+---
+
+## Example Extraction (Apple 10-K Excerpt)
+
+**Input text:**
+> "Net sales increased 2 percent or $7.8 billion during 2024 compared to 2023. iPhone net sales decreased 1 percent or $2.0 billion during 2024 compared to 2023."
+
+**Output:**
+```json
+{
+  "entities": [
+    {
+      "id": "net_sales_fy2024",
+      "type": "FINANCIAL_METRIC",
+      "label": "Total Net Sales FY2024",
+      "properties": {
+        "value": 391035,
+        "unit": "USD_millions",
+        "period": "FY2024",
+        "yoy_change": "+2.0%",
+        "yoy_change_abs": 7800,
+        "source_section": "MD&A"
+      }
+    },
+    {
+      "id": "iphone_net_sales_fy2024",
+      "type": "FINANCIAL_METRIC",
+      "label": "iPhone Net Sales FY2024",
+      "properties": {
+        "value": 201183,
+        "unit": "USD_millions",
+        "period": "FY2024",
+        "yoy_change": "-1.0%",
+        "yoy_change_abs": -2000,
+        "source_section": "MD&A"
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "source": "apple_inc",
+      "target": "net_sales_fy2024",
+      "type": "REPORTED_METRIC",
+      "properties": { "period": "FY2024" }
+    },
+    {
+      "source": "iphone",
+      "target": "iphone_net_sales_fy2024",
+      "type": "REPORTED_METRIC",
+      "properties": { "period": "FY2024" }
+    }
+  ]
+}
+```
+
+---
+
+## After Extraction
+
+- Run `ingest_from_file("extractions/{filename}_extracted.json")` via MCP
+- If ingestion fails but extraction file exists, use `reingest_from_file(...)` — no re-extraction needed
+- Sample queries to verify the graph:
+  - `"What was Apple's revenue in FY2024?"`
+  - `"Who are Apple's top executives and their compensation?"`
+  - `"What are the top 5 risk factors disclosed?"`
+  - `"Which segments saw revenue decline?"`

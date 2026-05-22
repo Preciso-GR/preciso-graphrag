@@ -1,1 +1,0 @@
-{"embedding_dim": 8, "data": [{"__id__": "vchunk-a9f7e97965d6cf799a529102a973b8b9", "__created_at__": 1779272235, "content": "ACME reported revenue growth.", "full_doc_id": "doc1", "file_path": "sample.md", "chunk_id": "c1", "vector": "eJxjYEAFAAAQAAE="}], "matrix": "AADAfwAAwH8AAMB/AADAfwAAwH8AAMB/AADAfwAAwH8="}

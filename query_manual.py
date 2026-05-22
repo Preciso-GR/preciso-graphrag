@@ -19,17 +19,13 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from config import build_global_config
+from config import build_default_embedding_func, build_global_config
 from core.query import kg_query
-from core.storage.base import EmbeddingFunc, QueryParam
+from core.storage.base import QueryParam
 from core.storage.graph_store import NetworkXStorage
 from core.storage.kv_store import JsonKVStorage
 from core.storage.vector_store import NanoVectorDBStorage
 from core.utils import BasicTokenizer
-
-
-async def _fallback_embed(texts, **kwargs):
-    return [[0.0] * 8 for _ in texts]
 
 
 def build_storage_instances(global_config: dict, workspace: str = "") -> dict:
@@ -78,12 +74,7 @@ async def query_graph_manual(query: str, mode: str) -> None:
     global_config = build_global_config(
         working_dir=str(working_dir),
         tokenizer=tokenizer,
-        embedding_func=EmbeddingFunc(
-            embedding_dim=8,
-            max_token_size=8192,
-            func=_fallback_embed,
-            model_name="fallback",
-        ),
+        embedding_func=build_default_embedding_func(),
     )
     storage_instances = build_storage_instances(global_config)
     await initialize_storage_instances(storage_instances)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import os
 from pathlib import Path
 from typing import Any
@@ -48,6 +49,14 @@ DEFAULT_HISTORY_TURNS = 3                      # Number of previous turns to inc
 DEFAULT_SUMMARY_LANGUAGE = "English"           # Language for LLM summaries
 
 # ============================================================================
+# EMBEDDING DEFAULTS
+# ============================================================================
+DEFAULT_EMBEDDING_PROVIDER = os.getenv("GRAPHRAG_EMBEDDING_PROVIDER", "ollama")
+DEFAULT_EMBEDDING_MODEL = os.getenv("GRAPHRAG_EMBEDDING_MODEL", "nomic-embed-text")
+DEFAULT_EMBEDDING_DIM = int(os.getenv("GRAPHRAG_EMBEDDING_DIM", "768"))
+DEFAULT_EMBEDDING_MAX_TOKENS = int(os.getenv("GRAPHRAG_EMBEDDING_MAX_TOKENS", "8192"))
+
+# ============================================================================
 # LLM PROMPTS (used by summary.py, query.py)
 # Templates sent to LLM functions for summarization and response generation
 # ============================================================================
@@ -76,6 +85,38 @@ PROMPTS = {
     ),
     "fail_response": "No relevant graph context could be constructed for the query.",
 }
+
+
+async def _fallback_embed(texts, **kwargs):
+    return [[0.0] * 8 for _ in texts]
+
+
+async def _ollama_embed(texts: list[str], **kwargs) -> list[list[float]]:
+    ollama = importlib.import_module("ollama")
+    model = kwargs.get("model") or kwargs.get("model_name") or DEFAULT_EMBEDDING_MODEL
+    response = ollama.embeddings(model=model, input=texts)
+    return response["embeddings"]
+
+
+def build_default_embedding_func() -> Any:
+    from core.storage.base import EmbeddingFunc
+
+    provider = DEFAULT_EMBEDDING_PROVIDER.lower()
+    if provider == "ollama":
+        return EmbeddingFunc(
+            embedding_dim=DEFAULT_EMBEDDING_DIM,
+            max_token_size=DEFAULT_EMBEDDING_MAX_TOKENS,
+            func=_ollama_embed,
+            model_name=DEFAULT_EMBEDDING_MODEL,
+        )
+    if provider == "fallback":
+        return EmbeddingFunc(
+            embedding_dim=8,
+            max_token_size=DEFAULT_EMBEDDING_MAX_TOKENS,
+            func=_fallback_embed,
+            model_name="fallback",
+        )
+    raise ValueError(f"Unsupported embedding provider: {DEFAULT_EMBEDDING_PROVIDER}")
 
 
 

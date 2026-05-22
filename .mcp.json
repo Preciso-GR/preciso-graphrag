@@ -4,7 +4,7 @@
       "type": "stdio",
       "command": "/Users/sanjayelango/Desktop/graphrag-mcp/.venv/bin/python",
       "args": [
-        "python mcp/server.py"
+        "mcp/server.py"
       ],
       "cwd": "/Users/sanjayelango/Desktop/graphrag-mcp",
       "tools": [

@@ -312,3 +312,108 @@ In general extraction, if a README says "the auth module handles login and token
   - `"What does OrderService depend on?"`
   - `"Which tables does the Payments team write to?"`
   - `"Who owns InventoryService?"`
+
+---
+
+## Multi-Document and Large Document Handling
+
+### When to work alone (default)
+
+Work alone when:
+- Single document under 50 pages
+- Under 15 sections
+- Straightforward flat structure
+
+Alone workflow:
+  Read fully → extract → write → ingest_from_file → done
+
+---
+
+### When to spawn subagents
+
+Spawn subagents when:
+- Single document over 50 pages OR over 15 sections
+- Multiple documents given at once (2 or more files)
+- You notice context is filling up mid-document
+
+---
+
+### Orchestrator workflow (you are the orchestrator)
+
+Step 1: Read first 50 lines of the document only.
+        Count section headers (## and ### markers).
+        Estimate total length.
+
+Step 2: Divide sections into groups.
+        Each group: 10 to 12 sections maximum.
+        Each group: under 3000 tokens if possible.
+        Name groups: part1, part2, part3...
+
+Step 3: Spawn one subagent per group.
+        Give each subagent:
+          - The text content of their assigned sections only
+          - This same skill file as their instructions
+          - Their output filename:
+            extractions/{original_filename}_part{n}_extracted.json
+          - This strict rule:
+            "DO NOT call ingest_from_file or any ingest tool.
+             Write your output file and report complete."
+
+Step 4: Wait for ALL subagents to finish before proceeding.
+        Do not call any tool until every subagent reports complete.
+
+Step 5: Call ingest_with_reconciliation with all part files:
+        ingest_with_reconciliation([
+          "extractions/{filename}_part1_extracted.json",
+          "extractions/{filename}_part2_extracted.json",
+          ...all part files...
+        ])
+
+Step 6: Wait for response.
+
+Step 7: Report final summary to user:
+        - Files reconciled: N
+        - Duplicate entities merged: N
+        - Total entities added: N
+        - Total relationships added: N
+        - Unified file location: extractions/reconciled_{filename}_{ts}.json
+
+---
+
+### Subagent rule (when you are a subagent)
+
+You are a subagent if:
+- Your assigned output filename contains _part
+- You were given a specific section range to process
+- You were told not to call ingest tools
+
+When you are a subagent:
+  - Extract ONLY your assigned sections
+  - Do not reference or look up other sections
+  - Do not call ingest_from_file
+  - Do not call ingest_with_reconciliation
+  - Do not call any MCP ingest tool
+  - Write your output file to the filename you were given
+  - When done, report exactly:
+    "Extraction complete: {your_output_filename}
+     Entities extracted: {count}
+     Relationships extracted: {count}"
+  - Stop. Do nothing else.
+
+---
+
+### Entity registry rule for subagents
+
+When you are a subagent you only see your sections.
+If you encounter a pronoun or reference like
+"the Company", "its subsidiary", "the aforementioned entity"
+and you cannot resolve it from your sections alone:
+
+  Create the entity anyway with description:
+  "Referenced in document. Details in another section."
+
+The reconciler will merge it with the fully-described
+version from another subagent's output.
+
+Do not skip entities because they lack full context.
+Extract what you can. The reconciler fixes the rest.

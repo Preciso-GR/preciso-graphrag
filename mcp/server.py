@@ -20,6 +20,7 @@ from core.utils import BasicTokenizer
 from ingest.pipeline import ingest_extracted_json
 from mcp.server.fastmcp import FastMCP
 from tools.ingest_from_file_tool import ingest_from_file, reingest_from_file
+from mcp.tools.reconcile_tool import ingest_with_reconciliation
 
 
 
@@ -232,6 +233,29 @@ async def reingest_from_file_tool(file_path: str) -> dict:
         Internally: Both call _ingest_file() with same logic
     """
     return await reingest_from_file(file_path, storage_instances, global_config)
+
+
+@mcp.tool()
+async def ingest_with_reconciliation_tool(extraction_files: list[str]) -> dict:
+    """
+    Reconcile multiple subagent extraction files and ingest
+    as a single unified knowledge graph.
+
+    Use this after spawning subagents on a large document.
+    Pass the list of all subagent output file paths.
+
+    Args:
+        extraction_files: list of paths to subagent JSON extraction files
+
+    Returns:
+        status, unified_file path, counts of entities/relationships added,
+        reconciliation stats showing how many duplicates were merged
+    """
+    return await ingest_with_reconciliation(
+        extraction_files=extraction_files,
+        storage_instances=storage_instances,
+        global_config=global_config,
+    )
 
 
 @mcp.tool()

@@ -1,0 +1,146 @@
+"""
+reconcile_tool.py
+
+MCP tool: ingest_with_reconciliation
+
+Called by orchestrator agent after all subagents finish.
+Reads multiple extraction files, reconciles them into
+one unified extraction, writes unified file to disk,
+then runs the ingestion pipeline.
+"""
+
+import json
+import time
+from pathlib import Path
+
+from ingest.reconciler import reconcile_extractions
+from ingest.pipeline import ingest_extracted_json
+
+
+async def ingest_with_reconciliation(
+    extraction_files: list[str],
+    storage_instances: dict,
+    global_config: dict,
+) -> dict:
+    """
+    Args:
+        extraction_files: list of paths to subagent extraction JSON files
+                          e.g. ["extractions/doc_part1_extracted.json",
+                                "extractions/doc_part2_extracted.json"]
+        storage_instances: initialized storage dict from server startup
+        global_config: LightRAG global config dict
+
+    Returns:
+        {
+          "status": "success" | "error" | "validation_failed",
+          "unified_file": "extractions/reconciled_{timestamp}.json",
+          "files_reconciled": int,
+          "duplicate_entities_merged": int,
+          "entities_added": int,
+          "relationships_added": int,
+          "chunks_stored": int,
+          "reconciliation_stats": {...},
+          "errors": []
+        }
+    """
+
+    # Step 1: Validate all files exist before starting
+    missing = []
+    for fp in extraction_files:
+        if not Path(fp).exists():
+            missing.append(fp)
+    if missing:
+        return {
+            "status": "error",
+            "message": f"Files not found: {missing}",
+            "files_reconciled": 0,
+        }
+
+    # Step 2: Read all extraction files
+    extraction_list = []
+    read_errors = []
+    for fp in extraction_files:
+        try:
+            with open(fp, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            extraction_list.append(data)
+        except json.JSONDecodeError as e:
+            read_errors.append(f"Invalid JSON in {fp}: {e}")
+        except Exception as e:
+            read_errors.append(f"Failed to read {fp}: {e}")
+
+    if read_errors:
+        return {
+            "status": "error",
+            "message": "Failed to read one or more extraction files",
+            "errors": read_errors,
+        }
+
+    if not extraction_list:
+        return {
+            "status": "error",
+            "message": "No valid extraction files could be read",
+        }
+
+    # Step 3: Build document_id from first file
+    first = extraction_list[0]
+    base_document_id = first.get("document_id", "reconciled")
+    # Strip _part1, _part2 suffixes to get clean document_id
+    import re
+
+    document_id = re.sub(r"_part\d+$", "", base_document_id)
+
+    # Step 4: Reconcile all extractions
+    try:
+        unified = reconcile_extractions(extraction_list, document_id)
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Reconciliation failed: {e}",
+        }
+
+    stats = unified.pop("_reconciliation_stats", {})
+    duplicate_entities_merged = stats.get("total_entities_before", 0) - stats.get(
+        "total_entities_after", 0
+    )
+
+    # Step 5: Write unified file to disk
+    timestamp = int(time.time())
+    unified_path = f"extractions/reconciled_{document_id}_{timestamp}.json"
+    Path("extractions").mkdir(exist_ok=True)
+
+    try:
+        with open(unified_path, "w", encoding="utf-8") as f:
+            json.dump(unified, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to write unified file: {e}",
+        }
+
+    # Step 6: Run ingestion pipeline on unified output
+    try:
+        ingest_result = await ingest_extracted_json(
+            payload=unified,
+            storage_instances=storage_instances,
+            global_config=global_config,
+        )
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Ingestion failed after reconciliation: {e}",
+            "unified_file": unified_path,
+            "note": "Unified file was written. Use reingest_from_file to retry.",
+        }
+
+    return {
+        "status": ingest_result.get("status", "unknown"),
+        "unified_file": unified_path,
+        "files_reconciled": len(extraction_files),
+        "duplicate_entities_merged": duplicate_entities_merged,
+        "entities_added": ingest_result.get("entities_added", 0),
+        "relationships_added": ingest_result.get("relationships_added", 0),
+        "chunks_stored": ingest_result.get("chunks_stored", 0),
+        "reconciliation_stats": stats,
+        "errors": ingest_result.get("errors", []),
+    }

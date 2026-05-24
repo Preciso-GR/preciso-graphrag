@@ -10,6 +10,8 @@ description: >
   "extract knowledge from this wiki", "connect these notes", "build a graph from my repo",
   or "index this for querying". Use the financial-graph-extraction skill instead when
   the document is a financial filing, earnings report, or analyst document.
+  Output must follow the GraphRAG ingestion schema: document_id + entities + relationships + chunks,
+  with chunk-based source_id values.
 ---
 
 # General Graph Extraction Skill
@@ -26,23 +28,32 @@ Unlike financial extraction (which enforces strict numerical precision), general
 
 ---
 
-## Extraction Output Format
+## Extraction Output Format (Repo-Compatible)
 
 Write to `extractions/{source_filename}_extracted.json`.
 
+This repo **requires** `document_id`, `entities`, `relationships`, and `chunks`.
+
 ```json
 {
-  "source": "backend_readme.md",
-  "domain": "general",
-  "domain_subtype": "codebase",
-  "extracted_at": "2024-10-01T00:00:00Z",
+  "document_id": "backend_readme",
+  "file_path": "README.md",
+  "timestamp": 1727740800,
   "entities": [...],
   "relationships": [...],
-  "metadata": {
-    "document_type": "README",
-    "project": "my-backend-service",
-    "language": "Python"
-  }
+  "chunks": [...]
+}
+```
+
+### Chunks (Required)
+Chunks are the evidence base. Every entity and relationship must point to a chunk via `source_id`.
+
+```json
+{
+  "chunk_id": "chunk_001",
+  "content": "The OrderService is owned by the Payments team and calls InventoryService.",
+  "chunk_order_index": 1,
+  "file_path": "README.md"
 }
 ```
 
@@ -66,7 +77,7 @@ Choose the right entity profile based on what you're processing:
 | `TEAM` | `Platform Team`, `Payments Squad` |
 | `CONCEPT` | `idempotency`, `circuit breaker` |
 
-Relevant relationship types: `IMPORTS`, `CALLS`, `OWNS`, `DEPENDS_ON`, `DOCUMENTS`, `IMPLEMENTS`, `EXTENDS`, `STORES_IN`, `EXPOSES`
+Relevant relationship keywords: `IMPORTS`, `CALLS`, `OWNS`, `DEPENDS_ON`, `DOCUMENTS`, `IMPLEMENTS`, `EXTENDS`, `STORES_IN`, `EXPOSES`
 
 ### 2. Internal Wiki / Knowledge Base
 
@@ -80,7 +91,7 @@ Relevant relationship types: `IMPORTS`, `CALLS`, `OWNS`, `DEPENDS_ON`, `DOCUMENT
 | `DOCUMENT` | Runbook: DB failover |
 | `DECISION` | ADR-042: Use Postgres over MySQL |
 
-Relevant relationship types: `OWNS`, `WRITTEN_BY`, `REFERENCES`, `SUPERSEDES`, `IMPLEMENTS`, `USES`, `DESCRIBES`, `DECIDES`
+Relevant relationship keywords: `OWNS`, `WRITTEN_BY`, `REFERENCES`, `SUPERSEDES`, `IMPLEMENTS`, `USES`, `DESCRIBES`, `DECIDES`
 
 ### 3. Meeting Notes / Tickets
 
@@ -93,55 +104,48 @@ Relevant relationship types: `OWNS`, `WRITTEN_BY`, `REFERENCES`, `SUPERSEDES`, `
 | `PROJECT` | Project Phoenix |
 | `DATE` | 2024-10-15 (target date) |
 
-Relevant relationship types: `ASSIGNED_TO`, `BLOCKS`, `RELATES_TO`, `DECIDED_IN`, `DUE_BY`
+Relevant relationship keywords: `ASSIGNED_TO`, `BLOCKS`, `RELATES_TO`, `DECIDED_IN`, `DUE_BY`
 
 ---
 
-## Universal Entity Schema
+## Universal Entity Schema (Required Fields)
 
 ```json
 {
-  "id": "auth_service",
-  "type": "MODULE",
-  "label": "Authentication Service",
-  "properties": {
-    "language": "Python",
-    "path": "services/auth/",
-    "owner": "platform_team",
-    "description": "Handles JWT issuance and validation",
-    "tags": ["core", "security"]
-  }
+  "entity_name": "auth_service",
+  "entity_type": "MODULE",
+  "description": "Authentication service that issues and validates JWTs; owner=platform_team; path=services/auth/.",
+  "source_id": "chunk_002",
+  "file_path": "services/auth/README.md"
 }
 ```
 
 **Rules:**
-- `id`: unique, `snake_case`, no spaces
-- `label`: human-readable display name
-- `properties`: flexible, add what the text provides — don't leave fields empty
-- Add `"source_line"` or `"source_section"` if the document has sections/headings
+- `entity_name`: unique, `snake_case`, no spaces
+- `entity_type`: pick from the relevant profile list
+- `description`: include concrete facts and properties from the text (owner, path, constraints)
+- `source_id`: must match a real `chunk_id` in `chunks`
 
 ---
 
-## Universal Relationship Schema
+## Universal Relationship Schema (Required Fields)
 
 ```json
 {
-  "source": "order_service",
-  "target": "payment_processor",
-  "type": "CALLS",
-  "properties": {
-    "method": "charge_card()",
-    "protocol": "gRPC",
-    "async": true,
-    "context": "Called during checkout flow"
-  }
+  "src_id": "order_service",
+  "tgt_id": "payment_processor",
+  "description": "OrderService calls PaymentProcessor to charge the customer during checkout.",
+  "keywords": "CALLS,context=checkout_flow",
+  "source_id": "chunk_001",
+  "weight": 1.0,
+  "file_path": "README.md"
 }
 ```
 
 **Rules:**
-- `source` and `target` must be valid entity `id` values
-- `type` should be a clear verb phrase (`CALLS`, `OWNS`, `EXTENDS`)
-- Add `"context"`: one sentence from the source text justifying this relationship
+- `src_id` and `tgt_id` must be valid `entity_name` values
+- `keywords` should include the relationship type (e.g., `CALLS`, `OWNS`, `DEPENDS_ON`)
+- Add `context=...` or `source_section=...` in `keywords` when useful
 - Directed relationships: source → target; for bidirectional add both directions
 
 ---
@@ -186,15 +190,17 @@ In general extraction, if a README says "the auth module handles login and token
 ```
 1. READ the full document (or repo files in scope)
 2. IDENTIFY domain subtype (codebase, wiki, notes, etc.)
-3. SCAN for all named entities — people, modules, tools, concepts, processes
-4. EXTRACT entities with proper types and properties
-5. EXTRACT relationships by asking: "how does X relate to Y in this text?"
-6. VALIDATE:
-   - No entity ID duplicates
-   - All relationship source/target IDs exist in entities list
-   - Each entity has at least one relationship
-7. WRITE to extractions/{filename}_extracted.json
-8. CALL ingest_from_file MCP tool
+3. CHUNK the text into evidence blocks (sections, paragraphs, or tables)
+   - Assign chunk_id like chunk_001, chunk_002...
+4. SCAN for all named entities — people, modules, tools, concepts, processes
+5. EXTRACT entities with required fields and chunk-based source_id
+6. EXTRACT relationships by asking: "how does X relate to Y in this text?"
+7. VALIDATE:
+   - No entity_name duplicates
+   - All relationships reference existing entity_name values
+   - Every entity/relationship source_id matches a chunk_id
+8. WRITE to extractions/{filename}_extracted.json
+9. CALL ingest_from_file MCP tool
 ```
 
 ---
@@ -202,27 +208,96 @@ In general extraction, if a README says "the auth module handles login and token
 ## Example: Codebase README Extraction
 
 **Input text:**
-> "The `OrderService` module is owned by the Payments team. It calls `InventoryService` to check stock before calling `PaymentProcessor` to charge the customer. It stores order records in the `orders` table of the PostgreSQL database."
+> "The OrderService module is owned by the Payments team. It calls InventoryService to check stock before calling PaymentProcessor to charge the customer. It stores order records in the orders table of the PostgreSQL database."
 
 **Output:**
 ```json
 {
+  "document_id": "backend_readme",
+  "file_path": "README.md",
+  "timestamp": 1727740800,
+  "chunks": [
+    {
+      "chunk_id": "chunk_001",
+      "content": "The OrderService module is owned by the Payments team. It calls InventoryService to check stock before calling PaymentProcessor to charge the customer. It stores order records in the orders table of the PostgreSQL database.",
+      "chunk_order_index": 1,
+      "file_path": "README.md"
+    }
+  ],
   "entities": [
-    { "id": "order_service", "type": "MODULE", "label": "OrderService",
-      "properties": { "owner": "payments_team" } },
-    { "id": "inventory_service", "type": "MODULE", "label": "InventoryService", "properties": {} },
-    { "id": "payment_processor", "type": "MODULE", "label": "PaymentProcessor", "properties": {} },
-    { "id": "payments_team", "type": "TEAM", "label": "Payments Team", "properties": {} },
-    { "id": "orders_table", "type": "DATABASE_TABLE", "label": "orders",
-      "properties": { "db": "PostgreSQL" } }
+    {
+      "entity_name": "order_service",
+      "entity_type": "MODULE",
+      "description": "OrderService module owned by Payments team.",
+      "source_id": "chunk_001",
+      "file_path": "README.md"
+    },
+    {
+      "entity_name": "inventory_service",
+      "entity_type": "MODULE",
+      "description": "InventoryService called to check stock before charging.",
+      "source_id": "chunk_001",
+      "file_path": "README.md"
+    },
+    {
+      "entity_name": "payment_processor",
+      "entity_type": "MODULE",
+      "description": "PaymentProcessor used to charge the customer.",
+      "source_id": "chunk_001",
+      "file_path": "README.md"
+    },
+    {
+      "entity_name": "payments_team",
+      "entity_type": "TEAM",
+      "description": "Payments team owns OrderService.",
+      "source_id": "chunk_001",
+      "file_path": "README.md"
+    },
+    {
+      "entity_name": "orders_table",
+      "entity_type": "DATABASE_TABLE",
+      "description": "orders table in PostgreSQL storing order records.",
+      "source_id": "chunk_001",
+      "file_path": "README.md"
+    }
   ],
   "relationships": [
-    { "source": "payments_team", "target": "order_service", "type": "OWNS", "properties": {} },
-    { "source": "order_service", "target": "inventory_service", "type": "CALLS",
-      "properties": { "context": "Check stock before charging customer" } },
-    { "source": "order_service", "target": "payment_processor", "type": "CALLS",
-      "properties": { "context": "Charge customer after stock confirmed" } },
-    { "source": "order_service", "target": "orders_table", "type": "STORES_IN", "properties": {} }
+    {
+      "src_id": "payments_team",
+      "tgt_id": "order_service",
+      "description": "Payments team owns OrderService.",
+      "keywords": "OWNS",
+      "source_id": "chunk_001",
+      "weight": 1.0,
+      "file_path": "README.md"
+    },
+    {
+      "src_id": "order_service",
+      "tgt_id": "inventory_service",
+      "description": "OrderService calls InventoryService to check stock.",
+      "keywords": "CALLS,context=stock_check",
+      "source_id": "chunk_001",
+      "weight": 1.0,
+      "file_path": "README.md"
+    },
+    {
+      "src_id": "order_service",
+      "tgt_id": "payment_processor",
+      "description": "OrderService calls PaymentProcessor to charge the customer.",
+      "keywords": "CALLS,context=checkout_flow",
+      "source_id": "chunk_001",
+      "weight": 1.0,
+      "file_path": "README.md"
+    },
+    {
+      "src_id": "order_service",
+      "tgt_id": "orders_table",
+      "description": "OrderService stores order records in orders table.",
+      "keywords": "STORES_IN,db=PostgreSQL",
+      "source_id": "chunk_001",
+      "weight": 1.0,
+      "file_path": "README.md"
+    }
   ]
 }
 ```

@@ -11,6 +11,8 @@ description: >
   "I want to query my paper collection".
   This skill handles multi-paper corpora (a folder of papers) as well as single papers.
   Use this instead of general-graph-extraction whenever the source is academic/scientific literature.
+  Output must follow the GraphRAG ingestion schema: document_id + entities + relationships + chunks,
+  with chunk-based source_id values.
 ---
 
 # Research Paper Graph Extraction Skill
@@ -27,32 +29,34 @@ Researchers and analysts reading literature face a specific problem: insights ar
 
 ---
 
-## Extraction Output Format
+## Extraction Output Format (Repo-Compatible)
 
 Write to `extractions/{source_filename}_extracted.json`.
 
-For a single paper:
+This repo **requires** `document_id`, `entities`, `relationships`, and `chunks`.
+
 ```json
 {
-  "source": "attention_is_all_you_need.pdf",
-  "domain": "research",
-  "domain_subtype": "single_paper",
-  "extracted_at": "2024-10-01T00:00:00Z",
+  "document_id": "attention_is_all_you_need_2017",
+  "file_path": "attention_is_all_you_need.pdf",
+  "timestamp": 1727740800,
   "entities": [...],
   "relationships": [...],
-  "metadata": {
-    "title": "Attention Is All You Need",
-    "authors": ["Vaswani et al."],
-    "year": 2017,
-    "venue": "NeurIPS",
-    "doi": "...",
-    "arxiv_id": "1706.03762",
-    "field": "Machine Learning"
-  }
+  "chunks": [...]
 }
 ```
 
-For multi-paper corpora, produce one extraction file per paper, then run ingestion for each. The graph engine will link papers via shared citations, methods, datasets, and authors.
+### Chunks (Required)
+Chunks are the evidence base. Every entity and relationship must point to a chunk via `source_id`.
+
+```json
+{
+  "chunk_id": "chunk_002",
+  "content": "We present the Transformer, a model relying entirely on attention mechanisms.",
+  "chunk_order_index": 2,
+  "file_path": "attention_is_all_you_need.pdf"
+}
+```
 
 ---
 
@@ -77,41 +81,27 @@ For multi-paper corpora, produce one extraction file per paper, then run ingesti
 
 ---
 
-## Entity Schema
+## Entity Schema (Required Fields)
 
 ```json
 {
-  "id": "transformer_2017",
-  "type": "PAPER",
-  "label": "Attention Is All You Need",
-  "properties": {
-    "year": 2017,
-    "venue": "NeurIPS",
-    "arxiv_id": "1706.03762",
-    "citation_count": 95000,
-    "abstract_summary": "Proposes Transformer architecture relying entirely on attention, removing recurrence and convolutions.",
-    "contributions": [
-      "Multi-head self-attention mechanism",
-      "Positional encoding scheme",
-      "Encoder-decoder Transformer architecture"
-    ]
-  }
+  "entity_name": "transformer_2017",
+  "entity_type": "METHOD",
+  "description": "Transformer model relying entirely on attention mechanisms; introduced in 2017 paper.",
+  "source_id": "chunk_002",
+  "file_path": "attention_is_all_you_need.pdf"
 }
 ```
 
-For `FINDING` entities, always include `evidence_type`:
+For `FINDING` entities, include evidence details in `description`:
+
 ```json
 {
-  "id": "transformer_bleu_wmt14",
-  "type": "FINDING",
-  "label": "Transformer achieves 28.4 BLEU on WMT14 En-De",
-  "properties": {
-    "value": "28.4 BLEU",
-    "dataset": "WMT 2014 English-to-German",
-    "evidence_type": "empirical",
-    "paper": "transformer_2017",
-    "section": "Results"
-  }
+  "entity_name": "transformer_bleu_wmt14",
+  "entity_type": "FINDING",
+  "description": "Transformer achieves 28.4 BLEU on WMT14 En-De (evidence_type=empirical; section=Results).",
+  "source_id": "chunk_005",
+  "file_path": "attention_is_all_you_need.pdf"
 }
 ```
 
@@ -121,8 +111,8 @@ For `FINDING` entities, always include `evidence_type`:
 
 ## Relationship Types for Research Literature
 
-| Relationship | Usage |
-|-------------|-------|
+| Keyword | Usage |
+|---------|-------|
 | `AUTHORED_BY` | Paper → Author |
 | `AFFILIATED_WITH` | Author → Institution |
 | `PUBLISHED_IN` | Paper → Venue |
@@ -140,21 +130,21 @@ For `FINDING` entities, always include `evidence_type`:
 | `HAS_LIMITATION` | Paper/Method → Limitation |
 | `CO_AUTHORED_WITH` | Author ↔ Author |
 
-### Relationship Schema
+### Relationship Schema (Required Fields)
 
 ```json
 {
-  "source": "bert_2018",
-  "target": "transformer_2017",
-  "type": "EXTENDS",
-  "properties": {
-    "context": "BERT uses the Transformer encoder and extends it with masked language modeling pretraining",
-    "aspect": "pretraining objective"
-  }
+  "src_id": "bert_2018",
+  "tgt_id": "transformer_2017",
+  "description": "BERT uses the Transformer encoder and extends it with masked language modeling pretraining.",
+  "keywords": "EXTENDS,aspect=pretraining_objective",
+  "source_id": "chunk_008",
+  "weight": 1.0,
+  "file_path": "bert_2018.pdf"
 }
 ```
 
-Always include `"context"` on relationships — one sentence from the paper text justifying the connection.
+Always include a brief justification in `description`.
 
 ---
 
@@ -169,12 +159,12 @@ Extract all `PAPER` entities with metadata before diving into content. This lets
 For each paper:
 1. Extract its entities and internal relationships
 2. Identify all citations → create `CITES` relationships to other papers in the corpus
-3. Flag unresolved citations (papers not in corpus) with `"in_corpus": false`
+3. Flag unresolved citations with `keywords: "CITES,in_corpus=false"`
 
 ### Step 3 — Surface Cross-Paper Connections
 After individual extractions, make one pass to find:
-- **Shared methods**: Paper A and Paper B both evaluate `METHOD_X` → add `EVALUATES_ON` from both
-- **Contradictions**: Paper A reports 92% F1 on dataset D; Paper B reports 84% F1 → add `CONTRADICTS` between findings
+- **Shared methods**: Paper A and Paper B both evaluate `METHOD_X`
+- **Contradictions**: Paper A reports 92% F1 on dataset D; Paper B reports 84% F1
 - **Method lineages**: Method A → Method B → Method C chain via `EXTENDS`
 - **Author networks**: Authors who appear in multiple papers → `CO_AUTHORED_WITH`
 
@@ -183,10 +173,11 @@ After individual extractions, make one pass to find:
 ## Extraction Precision Rules for Research
 
 1. **Separate findings from claims**: If the paper reports an empirical result, it's a `FINDING`. If the paper proposes something unverified, it's a `HYPOTHESIS`.
-2. **Metric values must include context**: `"28.4 BLEU"` alone is meaningless — always attach dataset, year, and comparison baseline.
+2. **Metric values must include context**: `"28.4 BLEU"` alone is meaningless — attach dataset, year, and baseline in `description`.
 3. **Contribution vs. claim**: Mark contributions (things the paper introduces or proves) separately from claims (things the paper asserts without full proof).
-4. **Citation directionality**: `CITES` is directed. Paper A citing Paper B means A → B (A depends on B's work).
-5. **Don't merge methods carelessly**: "Self-attention" in two different papers may refer to slightly different mechanisms — use paper-scoped IDs like `self_attention_vaswani_2017`.
+4. **Citation directionality**: `CITES` is directed. Paper A citing Paper B means A → B.
+5. **Don't merge methods carelessly**: "Self-attention" in two papers may refer to different mechanisms — use paper-scoped IDs.
+6. **Evidence linkage**: Every entity and relationship must use a `source_id` that matches a real `chunk_id` in `chunks`.
 
 ---
 
@@ -197,14 +188,31 @@ For theory-heavy papers (philosophy of science, formal methods, economics), extr
 ```json
 {
   "entities": [
-    { "id": "h1", "type": "HYPOTHESIS", "label": "Scaling laws hold for all modalities",
-      "properties": { "status": "proposed", "paper": "scaling_laws_2020" } },
-    { "id": "f1", "type": "FINDING", "label": "Language model loss decreases as power law of compute",
-      "properties": { "evidence_type": "empirical", "paper": "scaling_laws_2020" } }
+    {
+      "entity_name": "h1",
+      "entity_type": "HYPOTHESIS",
+      "description": "Scaling laws hold for all modalities (status=proposed; paper=scaling_laws_2020).",
+      "source_id": "chunk_004",
+      "file_path": "scaling_laws_2020.pdf"
+    },
+    {
+      "entity_name": "f1",
+      "entity_type": "FINDING",
+      "description": "Language model loss decreases as power law of compute (evidence_type=empirical).",
+      "source_id": "chunk_006",
+      "file_path": "scaling_laws_2020.pdf"
+    }
   ],
   "relationships": [
-    { "source": "f1", "target": "h1", "type": "SUPPORTS",
-      "properties": { "strength": "strong", "context": "Consistent across 7 orders of magnitude of compute" } }
+    {
+      "src_id": "f1",
+      "tgt_id": "h1",
+      "description": "Findings across 7 orders of magnitude of compute support the hypothesis.",
+      "keywords": "SUPPORTS,strength=strong",
+      "source_id": "chunk_006",
+      "weight": 1.0,
+      "file_path": "scaling_laws_2020.pdf"
+    }
   ]
 }
 ```
@@ -215,21 +223,25 @@ For theory-heavy papers (philosophy of science, formal methods, economics), extr
 
 ```
 1. READ paper(s) — abstract, introduction, related work, methods, results, conclusion
-2. EXTRACT metadata block (title, authors, year, venue, DOI/arXiv)
-3. PASS 1 — Named entity extraction:
+2. CHUNK the text into evidence blocks (sections, paragraphs, or tables)
+   - Assign chunk_id like chunk_001, chunk_002...
+3. EXTRACT metadata block (title, authors, year, venue, DOI/arXiv) into descriptions
+4. PASS 1 — Named entity extraction:
    - Methods, datasets, metrics, tasks proposed or used
    - Authors and institutions
    - Prior works cited (for CITES relationships)
-4. PASS 2 — Finding and hypothesis extraction:
+5. PASS 2 — Finding and hypothesis extraction:
    - Main results from abstract and results sections
    - Ablations as secondary findings
    - Limitations from limitations/conclusion sections
-5. PASS 3 — Relationship extraction:
+6. PASS 3 — Relationship extraction:
    - EXTENDS, IMPROVES_OVER for method lineage
    - CONTRADICTS for conflicting results vs. prior work
    - SUPPORTS for findings supporting hypotheses
-6. For multi-paper corpora: Cross-link after individual extractions
-7. VALIDATE: entity IDs consistent, no orphan relationships
+7. VALIDATE:
+   - No entity_name duplicates
+   - All relationships reference existing entity_name values
+   - Every entity/relationship source_id matches a chunk_id
 8. WRITE to extractions/{filename}_extracted.json
 9. CALL ingest_from_file MCP tool
 ```
@@ -244,43 +256,84 @@ For theory-heavy papers (philosophy of science, formal methods, economics), extr
 **Output:**
 ```json
 {
+  "document_id": "bert_2018",
+  "file_path": "bert_2018.pdf",
+  "timestamp": 1727740800,
+  "chunks": [
+    {
+      "chunk_id": "chunk_001",
+      "content": "We present BERT, a language representation model designed to pre-train deep bidirectional representations by jointly conditioning on both left and right context. BERT achieves state-of-the-art results on eleven NLP tasks, including pushing GLUE to 80.4% (+7.6% absolute improvement).",
+      "chunk_order_index": 1,
+      "file_path": "bert_2018.pdf"
+    }
+  ],
   "entities": [
     {
-      "id": "bert_2018",
-      "type": "PAPER",
-      "label": "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
-      "properties": { "year": 2018, "venue": "NAACL" }
+      "entity_name": "bert_2018_paper",
+      "entity_type": "PAPER",
+      "description": "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding (year=2018; venue=NAACL).",
+      "source_id": "chunk_001",
+      "file_path": "bert_2018.pdf"
     },
     {
-      "id": "bert_method",
-      "type": "METHOD",
-      "label": "BERT (Bidirectional Encoder Representations from Transformers)",
-      "properties": { "approach": "masked language modeling + next sentence prediction" }
+      "entity_name": "bert_method",
+      "entity_type": "METHOD",
+      "description": "BERT method using masked language modeling and next sentence prediction.",
+      "source_id": "chunk_001",
+      "file_path": "bert_2018.pdf"
     },
     {
-      "id": "glue_benchmark",
-      "type": "DATASET",
-      "label": "GLUE Benchmark",
-      "properties": {}
+      "entity_name": "glue_benchmark",
+      "entity_type": "DATASET",
+      "description": "GLUE benchmark used for evaluation.",
+      "source_id": "chunk_001",
+      "file_path": "bert_2018.pdf"
     },
     {
-      "id": "bert_glue_result",
-      "type": "FINDING",
-      "label": "BERT achieves 80.4% on GLUE",
-      "properties": {
-        "value": "80.4%",
-        "dataset": "GLUE",
-        "improvement": "+7.6% absolute",
-        "evidence_type": "empirical"
-      }
+      "entity_name": "bert_glue_result",
+      "entity_type": "FINDING",
+      "description": "BERT achieves 80.4% on GLUE (+7.6% absolute improvement; evidence_type=empirical).",
+      "source_id": "chunk_001",
+      "file_path": "bert_2018.pdf"
     }
   ],
   "relationships": [
-    { "source": "bert_2018", "target": "bert_method", "type": "PROPOSES", "properties": {} },
-    { "source": "bert_2018", "target": "glue_benchmark", "type": "EVALUATES_ON", "properties": {} },
-    { "source": "bert_method", "target": "bert_glue_result", "type": "ACHIEVES", "properties": {} },
-    { "source": "bert_2018", "target": "transformer_2017", "type": "EXTENDS",
-      "properties": { "context": "Uses Transformer encoder with bidirectional pretraining" } }
+    {
+      "src_id": "bert_2018_paper",
+      "tgt_id": "bert_method",
+      "description": "The BERT paper proposes the BERT method.",
+      "keywords": "PROPOSES",
+      "source_id": "chunk_001",
+      "weight": 1.0,
+      "file_path": "bert_2018.pdf"
+    },
+    {
+      "src_id": "bert_2018_paper",
+      "tgt_id": "glue_benchmark",
+      "description": "BERT evaluates on the GLUE benchmark.",
+      "keywords": "EVALUATES_ON",
+      "source_id": "chunk_001",
+      "weight": 1.0,
+      "file_path": "bert_2018.pdf"
+    },
+    {
+      "src_id": "bert_method",
+      "tgt_id": "bert_glue_result",
+      "description": "BERT method achieves the GLUE result.",
+      "keywords": "ACHIEVES",
+      "source_id": "chunk_001",
+      "weight": 1.0,
+      "file_path": "bert_2018.pdf"
+    },
+    {
+      "src_id": "bert_2018_paper",
+      "tgt_id": "transformer_2017_paper",
+      "description": "BERT extends the Transformer encoder with bidirectional pretraining.",
+      "keywords": "EXTENDS",
+      "source_id": "chunk_001",
+      "weight": 1.0,
+      "file_path": "bert_2018.pdf"
+    }
   ]
 }
 ```

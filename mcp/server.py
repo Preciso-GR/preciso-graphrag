@@ -20,7 +20,7 @@ from core.utils import BasicTokenizer
 from ingest.pipeline import ingest_extracted_json
 from mcp.server.fastmcp import FastMCP
 from tools.ingest_from_file_tool import ingest_from_file, reingest_from_file
-from mcp.tools.reconcile_tool import ingest_with_reconciliation
+from tools.reconcile_tool import ingest_with_reconciliation
 
 
 

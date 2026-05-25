@@ -18,6 +18,26 @@ from ingest.reconciler import reconcile_extractions
 from ingest.pipeline import ingest_extracted_json
 
 
+def _is_full_extraction(payload: dict) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    required = {"document_id", "entities", "relationships", "chunks"}
+    return required.issubset(payload.keys())
+
+
+def _is_patch_file(payload: dict) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    patch_keys = {
+        "merge_entities",
+        "remove_relationships",
+        "flag_conflicts",
+        "broken_relationships",
+        "suggested_fixes",
+    }
+    return any(key in payload for key in patch_keys)
+
+
 async def ingest_with_reconciliation(
     extraction_files: list[str],
     storage_instances: dict,
@@ -25,9 +45,10 @@ async def ingest_with_reconciliation(
 ) -> dict:
     """
     Args:
-        extraction_files: list of paths to subagent extraction JSON files
-                          e.g. ["extractions/doc_part1_extracted.json",
-                                "extractions/doc_part2_extracted.json"]
+          extraction_files: list of paths including one base extraction JSON file
+                      plus zero or more reconciliation patch files
+                      e.g. ["extractions/doc_extracted.json",
+                          "extractions/doc_patch_entities.json"]
         storage_instances: initialized storage dict from server startup
         global_config: LightRAG global config dict
 
@@ -59,12 +80,18 @@ async def ingest_with_reconciliation(
 
     # Step 2: Read all extraction files
     extraction_list = []
+    patch_list = []
     read_errors = []
     for fp in extraction_files:
         try:
             with open(fp, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            extraction_list.append(data)
+            if _is_full_extraction(data):
+                extraction_list.append(data)
+            elif _is_patch_file(data):
+                patch_list.append(data)
+            else:
+                read_errors.append(f"Unrecognized payload format in {fp}")
         except json.JSONDecodeError as e:
             read_errors.append(f"Invalid JSON in {fp}: {e}")
         except Exception as e:
@@ -80,7 +107,13 @@ async def ingest_with_reconciliation(
     if not extraction_list:
         return {
             "status": "error",
-            "message": "No valid extraction files could be read",
+            "message": "No valid extraction file could be read",
+        }
+
+    if len(extraction_list) > 1:
+        return {
+            "status": "error",
+            "message": "Multiple base extractions provided; expected exactly one",
         }
 
     # Step 3: Build document_id from first file
@@ -89,9 +122,9 @@ async def ingest_with_reconciliation(
     # Strip _part1, _part2 suffixes to get clean document_id
     document_id = re.sub(r"_part\d+$", "", base_document_id)
 
-    # Step 4: Reconcile all extractions
+    # Step 4: Reconcile base extraction with patches
     try:
-        unified = reconcile_extractions(extraction_list, document_id)
+        unified = reconcile_extractions(first, patch_list)
     except Exception as e:
         return {
             "status": "error",

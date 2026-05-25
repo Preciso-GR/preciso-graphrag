@@ -4,10 +4,13 @@ Manual reconciliation CLI script.
 Test ingest_with_reconciliation without MCP client connectivity.
 
 Usage:
-    python reconcile_manual.py extractions/doc_part1_extracted.json extractions/doc_part2_extracted.json
+    python reconcile_manual.py extractions/doc_extracted.json \
+        extractions/doc_patch_entities.json \
+        extractions/doc_patch_relationships.json \
+        extractions/doc_patch_orphans.json
 
-If no arguments are provided, this script will generate a small demo set
-under extractions/ and reconcile those.
+If no arguments are provided, this script will generate a base extraction
+and patch files under extractions/ and reconcile those.
 """
 
 from __future__ import annotations
@@ -73,11 +76,13 @@ def _write_demo_extractions() -> list[str]:
     demo_dir = Path("extractions")
     demo_dir.mkdir(exist_ok=True)
 
-    part1_path = demo_dir / "demo_doc_part1_extracted.json"
-    part2_path = demo_dir / "demo_doc_part2_extracted.json"
+    base_path = demo_dir / "demo_doc_extracted.json"
+    patch_entities_path = demo_dir / "demo_doc_patch_entities.json"
+    patch_relationships_path = demo_dir / "demo_doc_patch_relationships.json"
+    patch_orphans_path = demo_dir / "demo_doc_patch_orphans.json"
 
-    part1 = {
-        "document_id": "demo_doc_part1",
+    base = {
+        "document_id": "demo_doc",
         "file_path": "demo_doc.txt",
         "timestamp": int(time.time()),
         "entities": [
@@ -95,33 +100,6 @@ def _write_demo_extractions() -> list[str]:
                 "source_id": "chunk_001",
                 "file_path": "demo_doc.txt",
             },
-        ],
-        "relationships": [
-            {
-                "src_id": "Apple Inc.",
-                "tgt_id": "Tim Cook",
-                "description": "Apple Inc. employs Tim Cook as CEO.",
-                "keywords": "EMPLOYS,role=CEO",
-                "source_id": "chunk_001",
-                "weight": 1.0,
-                "file_path": "demo_doc.txt",
-            }
-        ],
-        "chunks": [
-            {
-                "chunk_id": "chunk_001",
-                "content": "Apple Inc. CEO is Tim Cook.",
-                "chunk_order_index": 1,
-                "file_path": "demo_doc.txt",
-            }
-        ],
-    }
-
-    part2 = {
-        "document_id": "demo_doc_part2",
-        "file_path": "demo_doc.txt",
-        "timestamp": int(time.time()),
-        "entities": [
             {
                 "entity_name": "Apple Incorporated",
                 "entity_type": "COMPANY",
@@ -138,6 +116,15 @@ def _write_demo_extractions() -> list[str]:
             },
         ],
         "relationships": [
+            {
+                "src_id": "Apple Inc.",
+                "tgt_id": "Tim Cook",
+                "description": "Apple Inc. employs Tim Cook as CEO.",
+                "keywords": "EMPLOYS,role=CEO",
+                "source_id": "chunk_001",
+                "weight": 1.0,
+                "file_path": "demo_doc.txt",
+            },
             {
                 "src_id": "Apple Incorporated",
                 "tgt_id": "Net Sales FY2024",
@@ -158,10 +145,37 @@ def _write_demo_extractions() -> list[str]:
         ],
     }
 
-    part1_path.write_text(json.dumps(part1, indent=2), encoding="utf-8")
-    part2_path.write_text(json.dumps(part2, indent=2), encoding="utf-8")
+    patch_entities = {
+        "merge_entities": [
+            {
+                "keep": "Apple Inc.",
+                "remove": ["Apple Incorporated"],
+                "reason": "same company, variant names",
+            }
+        ]
+    }
 
-    return [str(part1_path), str(part2_path)]
+    patch_relationships = {
+        "remove_relationships": [],
+        "flag_conflicts": [],
+    }
+
+    patch_orphans = {
+        "broken_relationships": [],
+        "suggested_fixes": [],
+    }
+
+    base_path.write_text(json.dumps(base, indent=2), encoding="utf-8")
+    patch_entities_path.write_text(json.dumps(patch_entities, indent=2), encoding="utf-8")
+    patch_relationships_path.write_text(json.dumps(patch_relationships, indent=2), encoding="utf-8")
+    patch_orphans_path.write_text(json.dumps(patch_orphans, indent=2), encoding="utf-8")
+
+    return [
+        str(base_path),
+        str(patch_entities_path),
+        str(patch_relationships_path),
+        str(patch_orphans_path),
+    ]
 
 
 async def reconcile_manual(file_paths: list[str]) -> None:
@@ -215,7 +229,7 @@ async def reconcile_manual(file_paths: list[str]) -> None:
 def main() -> None:
     file_paths = sys.argv[1:]
     if not file_paths:
-        print("No extraction files provided. Creating demo extraction files...")
+        print("No extraction files provided. Creating demo extraction + patch files...")
         file_paths = _write_demo_extractions()
         print("Demo files:")
         for path in file_paths:

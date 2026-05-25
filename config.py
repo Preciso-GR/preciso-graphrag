@@ -24,6 +24,7 @@ DEFAULT_FILE_PATH_MORE_PLACEHOLDER = "more_paths"  # Placeholder when truncating
 DEFAULT_ENTITY_NAME_MAX_LENGTH = 255           # Max entity name length
 DEFAULT_TOP_K = 20                             # Top K results to return in queries
 DEFAULT_CHUNK_TOP_K = 20                       # Top K chunks to retrieve
+GRAPH_FIELD_SEP = "<SEP>"                      # Internal separator for multi-value graph fields
 
 # ============================================================================
 # MERGING & SOURCE TRACKING DEFAULTS (used by merge.py)

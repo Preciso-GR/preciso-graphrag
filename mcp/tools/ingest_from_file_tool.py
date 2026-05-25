@@ -88,10 +88,15 @@ async def _ingest_file(file_path: str, storage_instances: dict, global_config: d
         "relationships_added": int(result.get("relationships_merged", 0) or 0),
         "chunks_stored": int(result.get("chunks_ingested", 0) or 0),
     }
+    if "message" in result:
+        response["message"] = result["message"]
+    if result.get("summary_events"):
+        response["summary_events"] = result["summary_events"]
+    if result.get("errors"):
+        response["errors"] = result["errors"]
 
     if result.get("status") == "partial_success":
         response["status"] = "validation_failed"
-        response["errors"] = result.get("errors", [])
     elif result.get("status") == "error":
         response["message"] = result.get("message", "pipeline error")
 

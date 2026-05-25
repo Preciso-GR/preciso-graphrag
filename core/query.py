@@ -146,7 +146,10 @@ async def kg_query(
         chunks_vdb,
     )
     if context_result is None:
-        return None
+        empty_raw_data = convert_to_user_format([], [], [], [], query_param.mode)
+        empty_raw_data["status"] = "failure"
+        empty_raw_data["message"] = PROMPTS["fail_response"]
+        return QueryResult(content=PROMPTS["fail_response"], raw_data=empty_raw_data)
     if query_param.only_need_context and not query_param.only_need_prompt:
         return QueryResult(content=context_result.context, raw_data=context_result.raw_data)
     user_prompt = f"\n\n{query_param.user_prompt}" if query_param.user_prompt else "n/a"

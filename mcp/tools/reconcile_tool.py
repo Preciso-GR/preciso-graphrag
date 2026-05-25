@@ -188,9 +188,9 @@ async def ingest_with_reconciliation(
         "unified_file": unified_path,
         "files_reconciled": len(extraction_files),
         "duplicate_entities_merged": duplicate_entities_merged,
-        "entities_added": ingest_result.get("entities_added", 0),
-        "relationships_added": ingest_result.get("relationships_added", 0),
-        "chunks_stored": ingest_result.get("chunks_stored", 0),
+        "entities_added": ingest_result.get("entities_merged", 0),
+        "relationships_added": ingest_result.get("relationships_merged", 0),
+        "chunks_stored": ingest_result.get("chunks_ingested", 0),
         "reconciliation_stats": stats,
         "errors": ingest_result.get("errors", []),
     }

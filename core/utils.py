@@ -77,7 +77,7 @@ def write_json(data: dict[str, Any], file_name: str) -> bool:
     path = Path(file_name)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-    return False
+    return True
 
 
 def compute_args_hash(*args: Any) -> str:

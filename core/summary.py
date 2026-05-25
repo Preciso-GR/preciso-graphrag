@@ -83,6 +83,7 @@ async def _handle_entity_relation_summary(
     if len(description_list) == 1:
         return description_list[0], False, None
     tokenizer = global_config["tokenizer"]
+    use_llm_func = global_config["llm_model_func"]
     summary_context_size = global_config["summary_context_size"]
     summary_max_tokens = global_config["summary_max_tokens"]
     force_llm_summary_on_merge = global_config["force_llm_summary_on_merge"]
@@ -93,6 +94,8 @@ async def _handle_entity_relation_summary(
         total_tokens = 0
         for desc in current_list:
             total_tokens += len(tokenizer.encode(desc))
+        if use_llm_func is None and total_tokens > summary_context_size:
+            return separator.join(current_list), False, "summary_required"
         if total_tokens <= summary_context_size or len(current_list) <= 2:
             if (
                 len(current_list) < force_llm_summary_on_merge

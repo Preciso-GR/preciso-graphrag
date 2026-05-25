@@ -1,55 +1,93 @@
 # GraphRAG MCP
 
-This project turns extracted document knowledge into a reusable graph artifact.
+GraphRAG MCP is an agent-driven workflow for turning raw documents into a reusable knowledge graph artifact.
 
-The key idea is:
+The intended flow is:
 
-`documents -> extraction JSON -> knowledge graph -> downstream reuse`
+`raw files -> agent chooses skill -> extraction JSON -> MCP ingestion -> persistent graph artifact`
 
-MCP is only one interface into that pipeline. The main output is the graph itself, so it can be exported, stored, and reused by:
+The end user does not start with extraction JSON. The end user starts by dropping source material into `to_be_extracted/`, then an agent such as Codex or Claude Code performs extraction using the skills in this repo and calls the ingestion tools.
 
-- Copilot or other MCP clients
-- a simple LLM <-> GraphRAG app
-- internal company search and analysis workflows
-- graph visualization tools
-- future graph databases or enterprise pipelines
+MCP is one runtime interface inside that workflow. The real product output is the persisted graph artifact.
 
-## What This Repo Is
+## Core Product Idea
 
-This repo is an ingestion and retrieval backend for GraphRAG-style workflows.
+This repo is built around six steps:
 
-It accepts structured extraction output like:
+1. A developer places source files in `to_be_extracted/`.
+2. An agent reads those files.
+3. The agent selects the correct extraction skill from `skills/`.
+4. The agent writes structured extraction output into `extractions/`.
+5. The agent calls the appropriate MCP ingestion tool.
+6. The repo persists the graph artifact in `GRAPH_IS_HERE/`.
 
-- entities
-- relationships
-- source chunks
+So the product is not only "an MCP server" and not only "an ingestion backend."
 
-and persists that into a local graph + retrieval artifacts on disk.
+The product is:
 
-The graph is not tied to a single chat session. Once created, it is stored and can be reused later.
+- an agent workflow for extracting graph-ready knowledge from raw documents
+- a set of repo-local extraction skills
+- MCP tools that ingest and query the graph
+- a persistent graph artifact that can be reused later
 
-## Core Product Intention
+## Canonical Folders
 
-The intended workflow is:
+These directories are the workflow contract for developers and agents:
 
-1. An agent reads a source document and produces extraction JSON.
-2. This repo ingests that extraction into a canonical graph artifact.
-3. The graph is exported to disk.
-4. Other systems use that graph for retrieval, question answering, analytics, or enterprise workflows.
+- `to_be_extracted/`: raw user inputs waiting for extraction
+- `skills/`: agent skills used to decide how extraction should happen
+- `extractions/`: agent-generated extraction JSON files
+- `GRAPH_IS_HERE/`: persisted graph and retrieval artifacts
 
-So the deliverable is not just "an MCP server."
+The expected lifecycle is:
 
-The real deliverable is:
+1. raw file arrives in `to_be_extracted/`
+2. agent selects a skill
+3. agent writes `extractions/{source_name}_extracted.json`
+4. agent calls ingestion
+5. graph becomes queryable and reusable
 
-- a generated knowledge graph
-- graph metadata and chunk references
-- retrieval artifacts that can power later tasks
+## Primary Developer Path
 
-## What Gets Exported
+This is the main way a new developer should use the repo.
 
-After ingestion, this repo persists graph artifacts inside `GRAPH_IS_HERE/`.
+### 1. Put raw data in `to_be_extracted/`
 
-Important files:
+Drop one or more source files into `to_be_extracted/`.
+
+Examples:
+
+- financial filing
+- research paper
+- README or technical documentation
+- internal notes or wiki export
+
+### 2. Ask an agent to run the workflow
+
+Use a coding agent that can read files and follow repo-local instructions.
+
+The agent should:
+
+1. inspect files in `to_be_extracted/`
+2. choose the right skill from `skills/`
+3. read and extract the document
+4. write extraction JSON to `extractions/`
+5. call the matching MCP ingestion tool
+
+Example agent request:
+
+```text
+Read the files in to_be_extracted/.
+Choose the appropriate extraction skill from the skills folder.
+Extract entities, relationships, and chunks into extractions/.
+Then call the appropriate ingestion tool so the graph is built in GRAPH_IS_HERE/.
+```
+
+### 3. Confirm graph artifacts were created
+
+After ingestion, the graph is persisted in `GRAPH_IS_HERE/`.
+
+Important artifacts:
 
 - `GRAPH_IS_HERE/graph_graph.graphml`
 - `GRAPH_IS_HERE/kv_store_text_chunks.json`
@@ -59,92 +97,47 @@ Important files:
 - `GRAPH_IS_HERE/vdb_relationships.json`
 - `GRAPH_IS_HERE/vdb_chunks.json`
 
-What they mean:
+## Skill Selection
 
-- `graph_graph.graphml`: the main exported graph structure
-- `kv_store_*.json`: persisted chunk and metadata stores
-- `vdb_*.json`: vector retrieval indexes used during query
+The agent should choose a skill based on the source material.
 
-The most portable artifact today is `graph_graph.graphml`, because it can be reused by other graph-oriented tools and workflows.
+Available extraction skills:
 
-## High-Level Flow
+- `skills/Financial-Graph-Extraction/SKILL.md`
+  Use for 10-Ks, 10-Qs, earnings calls, analyst reports, and other financial material.
+- `skills/Research-paper-graph-extraction-skill/SKILL.md`
+  Use for research papers, scientific literature, and academic corpora.
+- `skills/General-graph-extraction-skill/SKILL.md`
+  Use for codebases, READMEs, wikis, internal docs, and general non-financial content.
+- `skills/Reconciliation-Subagent-Skill/SKILL.md`
+  Use only for cleanup of an already-created extraction JSON, not for raw-document extraction.
 
-1. A source document is processed by an agent or extraction step.
-2. The agent writes extraction output to `extractions/{filename}_extracted.json`.
-3. Ingestion reads that file and merges it into the stored graph.
-4. The graph and retrieval indexes are persisted to disk.
-5. Query tools read from those saved artifacts later.
-
-## Example Workflow
-
-### 1. Extraction
-
-An agent produces a file like:
-
-`extractions/apple_10k_excerpt_extracted.json`
-
-That file should contain:
-
-- `document_id`
-- `entities`
-- `relationships`
-- `chunks`
-
-### 2. Ingestion
-
-The ingestion layer validates the extraction and builds the graph.
-
-This can happen through:
-
-- MCP tool: `ingest_from_file`
-- manual script: `python3 ingest_manual.py ...`
-
-### 3. Persistence
-
-The graph is written to disk automatically.
-
-This means the graph survives:
-
-- Copilot restarts
-- MCP server restarts
-- later query sessions
-
-### 4. Query / Reuse
-
-Once persisted, the graph can be used for:
-
-- MCP-based tool calls
-- local manual retrieval tests
-- downstream LLM applications
-- export into company-specific workflows
+The agent is expected to decide the skill before producing `extractions/{source}_extracted.json`.
 
 ## MCP's Role
 
-MCP is an access layer, not the entire system.
+MCP is the tool interface the agent uses after extraction.
 
-When configured correctly, Copilot can start this repo's MCP server and call tools such as:
+It is responsible for:
+
+- ingesting extracted JSON into the graph
+- retrying ingestion if needed
+- querying the persisted graph
+- supporting reconciliation-based ingestion flows
+
+Important tools exposed by the server in [mcp/server.py](./mcp/server.py):
 
 - `ingest_graph_tool`
 - `ingest_from_file`
 - `reingest_from_file`
-- `ingest_checkpoint_tool`
+- `ingest_with_reconciliation_tool`
 - `query_graph_tool`
 
-Those tools are defined in [mcp/server.py](./mcp/server.py).
+The relationship is:
 
-So the relationship is:
-
-- the graph pipeline creates and stores the artifact
-- MCP exposes that pipeline to Copilot and other compatible clients
-
-## Repository Structure
-
-- [mcp/server.py](./mcp/server.py): MCP server and tool definitions
-- [ingest_manual.py](./ingest_manual.py): manual ingestion test without MCP
-- [query_manual.py](./query_manual.py): manual query test without MCP
-- [config.py](./config.py): global configuration
-- `extractions/`: extracted JSON artifacts created upstream
-- `GRAPH_IS_HERE/`: persisted graph + retrieval artifacts
+- skills produce the extraction payload
+- MCP tools ingest and query that payload
+- the graph artifact is the durable output
 
 ## Local Setup
 
@@ -154,172 +147,99 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Manual Testing Without MCP
+## MCP Setup
 
-This is the simplest way to validate the core product behavior before involving Copilot.
+This repo includes a workspace `.mcp.json` for local development. It points at this checkout's virtualenv and server entrypoint.
 
-### Ingest an Extraction File
+If another developer clones the repo elsewhere, they must update the path values to match their machine or create an equivalent user-level MCP config.
 
-```bash
-python3 ingest_manual.py extractions/apple_10k_excerpt_extracted.json
-```
-
-Expected result:
-
-- extraction is read successfully
-- graph files are written into `GRAPH_IS_HERE/`
-
-### Query the Persisted Graph
-
-```bash
-python3 query_manual.py "What is Tim Cook's role?" mix
-```
-
-Expected result:
-
-- query runs against the saved graph
-- relevant entities, relationships, chunks, and references are returned
-
-## MCP Setup for Copilot CLI
-
-GitHub Copilot CLI no longer relies on `.vscode/mcp.json` alone for MCP startup.
-Use a workspace `.mcp.json` or a valid user config at `~/.copilot/mcp-config.json`.
-
-This repo includes a workspace-level `.mcp.json`.
-
-Minimal example:
+Minimal structure:
 
 ```json
 {
   "mcpServers": {
     "graphrag-mcp": {
       "type": "stdio",
-      "command": "/Users/sanjayelango/Desktop/graphrag-mcp/.venv/bin/python",
+      "command": "/path/to/repo/.venv/bin/python",
       "args": ["mcp/server.py"],
-      "cwd": "/Users/sanjayelango/Desktop/graphrag-mcp",
+      "cwd": "/path/to/repo",
       "tools": ["*"]
     }
   }
 }
 ```
 
-If Copilot shows:
+## Manual Fallback Path
 
-`Invalid MCP server configuration: mcpServers: Required`
+Advanced users can still drive the handoff manually after extraction.
 
-then the file `~/.copilot/mcp-config.json` is malformed and must be fixed before Copilot can start MCP servers.
+This is useful when:
 
-## How MCP Startup Works
+- an agent already wrote extraction JSON
+- you want to inspect or repair extraction output by hand
+- you want to retry ingestion without re-running extraction
 
-When you launch Copilot CLI inside this project:
-
-1. Copilot reads MCP config.
-2. It finds the `graphrag-mcp` server definition.
-3. It starts the Python process for `mcp/server.py`.
-4. It discovers the tools registered by the server.
-5. It can then call those tools during chat.
-
-If config is invalid, the server never starts.
-
-## Using the MCP Server from Copilot
-
-After config is fixed, you can verify server visibility with:
+### Ingest an existing extraction file
 
 ```bash
-copilot mcp list
-copilot mcp get graphrag-mcp
+python3 test/ingest_manual.py extractions/reconciled_apple_10k_2024_1779725404.json
 ```
 
-Inside Copilot CLI, you can inspect MCP state with:
+### Query the persisted graph
 
-```text
-/mcp show
-/mcp show graphrag-mcp
+```bash
+python3 test/query_manual.py "What is Tim Cook's role?" mix
 ```
 
-Example tool requests:
+### Run reconciliation demo flow
 
-```text
-Use the graphrag-mcp server to run ingest_from_file on extractions/apple_10k_excerpt_extracted.json
-Use the graphrag-mcp server to run query_graph_tool with query "What is Tim Cook's role?"
+```bash
+python3 test/reconcile_manual.py
 ```
 
-## Re-Running Ingestion
+## Internal Extraction Contract
 
-If extraction has already succeeded and only ingestion must be retried:
+Extraction JSON is still required as the handoff between extraction and ingestion, but it is not the main user-facing entrypoint.
 
-```text
-reingest_from_file("extractions/{filename}_extracted.json")
-```
+The repo expects a JSON object with:
 
-This avoids re-running the upstream extraction step.
+- `document_id`
+- `entities`
+- `relationships`
+- `chunks`
+
+The extraction skills in `skills/` already define the expected schema and output filename pattern:
+
+- `extractions/{source_filename}_extracted.json`
+
+## What Gets Persisted
+
+The graph is stored in `GRAPH_IS_HERE/` and is reusable across sessions.
+
+The most portable artifact today is:
+
+- `GRAPH_IS_HERE/graph_graph.graphml`
+
+The JSON stores and vector DB files support retrieval and query workflows inside this repo.
+
+## Recommended Developer Mental Model
+
+If you are a developer using this repo, think about it like this:
+
+- I put raw documents in `to_be_extracted/`
+- an agent uses repo-local skills to produce graph-ready extraction JSON
+- the agent calls MCP ingestion tools
+- the repo persists a reusable graph artifact for later querying and downstream reuse
+
+That is the core product.
 
 ## Current Limitations
 
-This repo already proves the core artifact flow, but it is not fully productionized yet.
+This repo already proves the raw-document-to-graph workflow, but it is still early-stage.
 
-### 1. Export is implicit, not a first-class feature
+Notable limitations today:
 
-The graph is persisted automatically, but there is no dedicated `export_graph` MCP tool or export command yet.
-
-### 2. Fallback embeddings are being used
-
-The current server and manual scripts use a fallback embedding function with dummy vectors.
-
-That means:
-
-- graph persistence works
-- graph structure is real
-- retrieval plumbing works
-- semantic vector quality is not production-ready yet
-
-### 3. Single local working directory
-
-The graph is stored in `GRAPH_IS_HERE/` today. There is not yet a polished multi-project or multi-tenant export strategy.
-
-### 4. Limited artifact packaging
-
-Artifacts exist on disk, but there is no packaged export flow yet such as:
-
-- zip export
-- versioned release bundle
-- import/export manifest
-- handoff format for enterprise systems
-
-### 5. No external graph database integration yet
-
-The current implementation writes `GraphML` and local JSON stores. It does not yet push to systems like Neo4j, Neptune, or RDF stores.
-
-## What Still Needs To Be Done
-
-To align the repo with the intended company-facing workflow, these are the next important steps:
-
-1. Add a dedicated export workflow.
-   This should explicitly export the graph, metadata, and retrieval artifacts as a reusable bundle.
-
-2. Replace fallback embeddings with a real embedding model.
-   Without this, downstream semantic retrieval quality will remain weak.
-
-3. Define a canonical artifact contract.
-   Decide what exactly a company receives: `GraphML`, chunk stores, vector indexes, manifest, version, schema.
-
-4. Add import support for downstream systems.
-   Make it easy for a simple LLM app or enterprise workflow to load a previously generated graph artifact.
-
-5. Add graph versioning and lineage.
-   Track which source files, extraction runs, and model settings produced each exported graph.
-
-6. Add better query and validation evaluation.
-   We should measure graph quality, retrieval quality, and failure cases more systematically.
-
-7. Support configurable storage destinations.
-   Instead of always using `GRAPH_IS_HERE/`, allow clean per-customer or per-project output locations.
-
-8. Add enterprise-friendly documentation.
-   Document the schema, artifact meanings, and how downstream teams consume the exported graph safely.
-
-## Recommended Product Positioning
-
-If you want the README to reflect the real vision, the clean positioning is:
-
-This project is an agent-assisted knowledge graph generation and export pipeline, with MCP as one runtime interface and GraphRAG reuse as the broader product outcome.
+- the local MCP config is still path-based and must be adapted per machine
+- export is implicit through persisted files rather than a dedicated export command
+- the default retrieval setup depends on local embedding configuration quality
+- multi-project packaging and developer onboarding can still be simplified further

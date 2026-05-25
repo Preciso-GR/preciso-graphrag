@@ -17,3 +17,9 @@ env/
 *.tmp
 apple*
 0000*
+GRAPH_IS_HERE/*
+!GRAPH_IS_HERE/.gitkeep
+to_be_extracted/*
+!to_be_extracted/.gitkeep
+extractions/demo_doc_*.json
+extractions/reconciled_demo_doc_*.json

@@ -1,0 +1,40 @@
+{
+  "document_id": "demo_doc_part1",
+  "file_path": "demo_doc.txt",
+  "timestamp": 1779635777,
+  "entities": [
+    {
+      "entity_name": "Apple Inc.",
+      "entity_type": "COMPANY",
+      "description": "Apple Inc. is a technology company.",
+      "source_id": "chunk_001",
+      "file_path": "demo_doc.txt"
+    },
+    {
+      "entity_name": "Tim Cook",
+      "entity_type": "PERSON",
+      "description": "Tim Cook is the CEO of Apple Inc.",
+      "source_id": "chunk_001",
+      "file_path": "demo_doc.txt"
+    }
+  ],
+  "relationships": [
+    {
+      "src_id": "Apple Inc.",
+      "tgt_id": "Tim Cook",
+      "description": "Apple Inc. employs Tim Cook as CEO.",
+      "keywords": "EMPLOYS,role=CEO",
+      "source_id": "chunk_001",
+      "weight": 1.0,
+      "file_path": "demo_doc.txt"
+    }
+  ],
+  "chunks": [
+    {
+      "chunk_id": "chunk_001",
+      "content": "Apple Inc. CEO is Tim Cook.",
+      "chunk_order_index": 1,
+      "file_path": "demo_doc.txt"
+    }
+  ]
+}

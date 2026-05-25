@@ -71,9 +71,19 @@ def _find_canonical_groups(names: list[str]) -> dict[str, str]:
         for name_b in canonical_names[i + 1 :]:
             norm_a = _normalize(name_a)
             norm_b = _normalize(name_b)
-            if norm_a in norm_b and name_a not in result:
+            if (
+                norm_a in norm_b
+                and name_a not in result
+                and len(norm_a) >= 10
+                and len(norm_a.split()) >= 2
+            ):
                 result[name_a] = name_b
-            elif norm_b in norm_a and name_b not in result:
+            elif (
+                norm_b in norm_a
+                and name_b not in result
+                and len(norm_b) >= 10
+                and len(norm_b.split()) >= 2
+            ):
                 result[name_b] = name_a
 
     # Pass 3: known abbreviation patterns
@@ -88,11 +98,39 @@ def _find_canonical_groups(names: list[str]) -> dict[str, str]:
         for long_form, short_form in abbreviation_patterns:
             if long_form in norm:
                 variant_norm = norm.replace(long_form, short_form)
+                if len(variant_norm) <= 4:
+                    continue
                 for other_name in canonical_names:
                     if _normalize(other_name) == variant_norm and other_name not in result:
                         result[other_name] = name
 
     return result
+
+
+def _resolve_canonical_chains(canonical_map: dict[str, str]) -> dict[str, str]:
+    """
+    Resolve chained canonical mappings (A->B->C) into direct mappings (A->C).
+    Detect cycles via a seen set and keep the original mapping if found.
+    """
+    resolved = {}
+    for name in canonical_map:
+        seen = set()
+        current = name
+        final_name = None
+
+        while current in canonical_map:
+            next_name = canonical_map[current]
+            if next_name in seen:
+                final_name = canonical_map[name]
+                break
+            seen.add(next_name)
+            current = next_name
+
+        if final_name is None:
+            final_name = current
+        resolved[name] = final_name
+
+    return resolved
 
 
 def build_canonical_map(all_entities: list[dict]) -> dict[str, str]:
@@ -114,7 +152,7 @@ def build_canonical_map(all_entities: list[dict]) -> dict[str, str]:
         group_map = _find_canonical_groups(unique_names)
         canonical_map.update(group_map)
 
-    return canonical_map
+    return _resolve_canonical_chains(canonical_map)
 
 
 def apply_canonical_map(
@@ -209,13 +247,18 @@ def merge_into_unified(
 
     total_entities_before = sum(len(e.get("entities", [])) for e in updated_extractions)
 
+    final_entities = [
+        {key: value for key, value in entity.items() if not key.startswith("_")}
+        for entity in entity_map.values()
+    ]
+
     return {
         "document_id": document_id,
         "file_path": updated_extractions[0].get("file_path", "unknown")
         if updated_extractions
         else "unknown",
         "timestamp": int(time.time()),
-        "entities": list(entity_map.values()),
+        "entities": final_entities,
         "relationships": list(rel_map.values()),
         "chunks": all_chunks,
         "_reconciliation_stats": {

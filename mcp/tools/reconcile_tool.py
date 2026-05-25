@@ -10,6 +10,7 @@ then runs the ingestion pipeline.
 """
 
 import json
+import re
 import time
 from pathlib import Path
 
@@ -86,8 +87,6 @@ async def ingest_with_reconciliation(
     first = extraction_list[0]
     base_document_id = first.get("document_id", "reconciled")
     # Strip _part1, _part2 suffixes to get clean document_id
-    import re
-
     document_id = re.sub(r"_part\d+$", "", base_document_id)
 
     # Step 4: Reconcile all extractions
@@ -97,6 +96,24 @@ async def ingest_with_reconciliation(
         return {
             "status": "error",
             "message": f"Reconciliation failed: {e}",
+        }
+
+    entity_names = {entity.get("entity_name") for entity in unified.get("entities", [])}
+    entity_names.discard(None)
+    relationship_errors = []
+    for rel in unified.get("relationships", []):
+        src_id = rel.get("src_id")
+        tgt_id = rel.get("tgt_id")
+        if src_id not in entity_names:
+            relationship_errors.append(f"Missing src_id entity: {src_id}")
+        if tgt_id not in entity_names:
+            relationship_errors.append(f"Missing tgt_id entity: {tgt_id}")
+
+    if relationship_errors:
+        return {
+            "status": "validation_failed",
+            "message": "Broken relationship references found",
+            "errors": relationship_errors,
         }
 
     stats = unified.pop("_reconciliation_stats", {})

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import time
 from collections import defaultdict
 from typing import Any
@@ -35,6 +36,43 @@ async def ingest_extracted_json(payload, storage_instances, global_config) -> di
         relation_chunks = storage_instances.get("relation_chunks")
         errors: list[str] = []
 
+        max_chunk_tokens = global_config.get("embedding_token_limit")
+        if max_chunk_tokens is None:
+            max_chunk_tokens = int(os.getenv("GRAPHRAG_CHUNK_TOKEN_LIMIT", "0"))
+        max_chunk_chars = int(os.getenv("GRAPHRAG_CHUNK_CHAR_LIMIT", "800"))
+        overlap_tokens = int(os.getenv("GRAPHRAG_CHUNK_TOKEN_OVERLAP", "0"))
+        overlap_chars = int(os.getenv("GRAPHRAG_CHUNK_CHAR_OVERLAP", "50"))
+
+        def split_chunk_content(content: str) -> list[str]:
+            if not content:
+                return []
+            tokenizer = global_config.get("tokenizer")
+            if max_chunk_tokens and getattr(tokenizer, "_encoding", None) is not None:
+                tokens = tokenizer.encode(content)
+                if len(tokens) <= max_chunk_tokens:
+                    return [content]
+                step = max(1, max_chunk_tokens - max(0, overlap_tokens))
+                parts = []
+                start = 0
+                while start < len(tokens):
+                    end = min(start + max_chunk_tokens, len(tokens))
+                    part = tokenizer.decode(tokens[start:end])
+                    if part:
+                        parts.append(part)
+                    start += step
+                if parts:
+                    return parts
+            if max_chunk_chars and len(content) > max_chunk_chars:
+                step = max(1, max_chunk_chars - max(0, overlap_chars))
+                parts = []
+                start = 0
+                while start < len(content):
+                    end = min(start + max_chunk_chars, len(content))
+                    parts.append(content[start:end])
+                    start += step
+                return parts
+            return [content]
+
         chunk_upserts = {}
         chunk_vdb_upserts = {}
         for idx, chunk in enumerate(chunks):
@@ -49,20 +87,30 @@ async def ingest_extracted_json(payload, storage_instances, global_config) -> di
             if not content:
                 errors.append(f"chunk `{chunk_id}` has empty content")
                 continue
-            chunk_record = {
-                "tokens": chunk.get("tokens") or len(global_config["tokenizer"].encode(content)),
-                "content": content,
-                "full_doc_id": document_id,
-                "chunk_order_index": int(chunk.get("chunk_order_index", idx)),
-                "file_path": str(chunk.get("file_path", file_path)) or file_path,
-            }
-            chunk_upserts[chunk_id] = chunk_record
-            chunk_vdb_upserts[compute_mdhash_id(chunk_id, prefix="vchunk-")] = {
-                "content": content,
-                "full_doc_id": document_id,
-                "file_path": chunk_record["file_path"],
-                "chunk_id": chunk_id,
-            }
+            parts = split_chunk_content(content)
+            if not parts:
+                errors.append(f"chunk `{chunk_id}` has empty content after splitting")
+                continue
+            base_order_index = int(chunk.get("chunk_order_index", idx))
+            for part_index, part_content in enumerate(parts):
+                part_id = chunk_id if len(parts) == 1 else f"{chunk_id}-p{part_index + 1}"
+                part_order_index = (
+                    base_order_index if len(parts) == 1 else base_order_index * 1000 + part_index
+                )
+                chunk_record = {
+                    "tokens": chunk.get("tokens") or len(global_config["tokenizer"].encode(part_content)),
+                    "content": part_content,
+                    "full_doc_id": document_id,
+                    "chunk_order_index": part_order_index,
+                    "file_path": str(chunk.get("file_path", file_path)) or file_path,
+                }
+                chunk_upserts[part_id] = chunk_record
+                chunk_vdb_upserts[compute_mdhash_id(part_id, prefix="vchunk-")] = {
+                    "content": part_content,
+                    "full_doc_id": document_id,
+                    "file_path": chunk_record["file_path"],
+                    "chunk_id": part_id,
+                }
         if chunk_upserts:
             await text_chunks.upsert(chunk_upserts)
             await safe_vdb_operation_with_exception(
@@ -91,6 +139,7 @@ async def ingest_extracted_json(payload, storage_instances, global_config) -> di
             src_id, tgt_id, edge_list = agent_json_to_edges_data(rel, timestamp)
             grouped_edges[(src_id, tgt_id)].extend(edge_list)
 
+        pipeline_status = {"summary_events": []}
         merged_nodes = []
         for entity_name, node_list in grouped_nodes.items():
             async with get_storage_keyed_lock(f"node:{entity_name}"):
@@ -100,6 +149,7 @@ async def ingest_extracted_json(payload, storage_instances, global_config) -> di
                     knowledge_graph_inst=graph,
                     entity_vdb=entities_vdb,
                     global_config=global_config,
+                    pipeline_status=pipeline_status,
                     llm_response_cache=llm_cache,
                     entity_chunks_storage=entity_chunks,
                 )
@@ -118,6 +168,7 @@ async def ingest_extracted_json(payload, storage_instances, global_config) -> di
                     relationships_vdb=relationships_vdb,
                     entity_vdb=entities_vdb,
                     global_config=global_config,
+                    pipeline_status=pipeline_status,
                     llm_response_cache=llm_cache,
                     relation_chunks_storage=relation_chunks,
                     entity_chunks_storage=entity_chunks,
@@ -136,7 +187,7 @@ async def ingest_extracted_json(payload, storage_instances, global_config) -> di
             await relation_chunks.index_done_callback()
 
         status = "success" if not errors else "partial_success"
-        return {
+        result = {
             "status": status,
             "message": f"Ingested document `{document_id}`",
             "document_id": document_id,
@@ -146,5 +197,8 @@ async def ingest_extracted_json(payload, storage_instances, global_config) -> di
             "relationships_merged": len(merged_edges),
             "errors": errors,
         }
+        if pipeline_status.get("summary_events"):
+            result["summary_events"] = pipeline_status["summary_events"]
+        return result
     except Exception as exc:
         return {"status": "error", "message": str(exc)}

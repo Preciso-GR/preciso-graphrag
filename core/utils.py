@@ -38,6 +38,9 @@ logger.propagate = False
 class BasicTokenizer:
     def __init__(self, model_name: str = "gpt-4o-mini"):
         self.model_name = model_name
+        self._encoding = None
+        if os.getenv("GRAPHRAG_DISABLE_TIKTOKEN", "0") == "1":
+            return
         try:
             import tiktoken
 

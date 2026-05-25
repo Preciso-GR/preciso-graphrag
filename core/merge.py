@@ -112,7 +112,7 @@ async def _merge_nodes_then_upsert(
         description_list = already_description + [dp["description"] for dp in sorted_nodes]
         if not description_list:
             description_list = [f"Entity {entity_name}"]
-        description, llm_was_used = await _handle_entity_relation_summary(
+        description, llm_was_used, summary_reason = await _handle_entity_relation_summary(
             "Entity",
             entity_name,
             description_list,
@@ -120,6 +120,15 @@ async def _merge_nodes_then_upsert(
             global_config,
             llm_response_cache,
         )
+        if pipeline_status is not None and summary_reason:
+            pipeline_status.setdefault("summary_events", []).append(
+                {
+                    "type": "entity",
+                    "name": entity_name,
+                    "reason": summary_reason,
+                    "description_count": len(description_list),
+                }
+            )
         file_paths_list = []
         seen_paths = set()
         has_placeholder = False
@@ -299,7 +308,7 @@ async def _merge_edges_then_upsert(
         description_list = already_description + [dp["description"] for dp in sorted_edges]
         if not description_list:
             raise ValueError(f"Relation {src_id}~{tgt_id} has no description")
-        description, _ = await _handle_entity_relation_summary(
+            description, llm_was_used, summary_reason = await _handle_entity_relation_summary(
             "Relation",
             f"({src_id}, {tgt_id})",
             description_list,
@@ -307,6 +316,15 @@ async def _merge_edges_then_upsert(
             global_config,
             llm_response_cache,
         )
+            if pipeline_status is not None and summary_reason:
+                pipeline_status.setdefault("summary_events", []).append(
+                    {
+                        "type": "relation",
+                        "name": timing_relation,
+                        "reason": summary_reason,
+                        "description_count": len(description_list),
+                    }
+                )
         file_paths_list = []
         seen_paths = set()
         has_placeholder = False

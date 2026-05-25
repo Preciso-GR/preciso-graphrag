@@ -77,17 +77,18 @@ async def _handle_entity_relation_summary(
     separator: str,
     global_config: dict,
     llm_response_cache: BaseKVStorage | None = None,
-) -> tuple[str, bool]:
+) -> tuple[str, bool, str | None]:
     if not description_list:
-        return "", False
+        return "", False, None
     if len(description_list) == 1:
-        return description_list[0], False
+        return description_list[0], False, None
     tokenizer = global_config["tokenizer"]
     summary_context_size = global_config["summary_context_size"]
     summary_max_tokens = global_config["summary_max_tokens"]
     force_llm_summary_on_merge = global_config["force_llm_summary_on_merge"]
     current_list = description_list[:]
     llm_was_used = False
+    summary_reason = None
     while True:
         total_tokens = 0
         for desc in current_list:
@@ -97,7 +98,9 @@ async def _handle_entity_relation_summary(
                 len(current_list) < force_llm_summary_on_merge
                 and total_tokens < summary_max_tokens
             ):
-                return separator.join(current_list), llm_was_used
+                return separator.join(current_list), llm_was_used, summary_reason
+            if summary_reason is None:
+                summary_reason = "merge_policy"
             final_summary = await _summarize_descriptions(
                 description_type,
                 entity_or_relation_name,
@@ -105,7 +108,9 @@ async def _handle_entity_relation_summary(
                 global_config,
                 llm_response_cache,
             )
-            return final_summary, True
+            return final_summary, True, summary_reason
+        if summary_reason is None:
+            summary_reason = "token_limit"
         chunks = []
         current_chunk = []
         current_tokens = 0

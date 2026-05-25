@@ -55,6 +55,10 @@ Chunks are the evidence base. Every entity and relationship must point to a chun
   "chunk_order_index": 1,
   "file_path": "README.md"
 }
+
+**Chunk size limits (required):**
+- Target 400-800 characters per chunk (or ~200-300 tokens if you have a tokenizer).
+- Hard cap 1,000 characters per chunk. If a paragraph/table is longer, split it.
 ```
 
 ---

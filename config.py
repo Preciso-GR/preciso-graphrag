@@ -5,19 +5,14 @@ import os
 from pathlib import Path
 from typing import Any
 
-# ============================================================================
-# FORMATTING & DELIMITER CONSTANTS
-# ============================================================================
-GRAPH_FIELD_SEP = "<SEP>"  # Used to join multiple values (e.g., source_ids, file_paths)
-
-# ============================================================================
+# ==========================================================================
 # TOKEN LIMIT DEFAULTS (used by summary.py, merge.py, query.py)
 # Prevents LLM calls from exceeding API token limits
-# ============================================================================
-DEFAULT_MAX_ENTITY_TOKENS = 4_000              # Max tokens for a single entity description
-DEFAULT_MAX_RELATION_TOKENS = 4_000            # Max tokens for a single relationship description
-DEFAULT_MAX_TOTAL_TOKENS = 16_000              # Total token budget per query
-DEFAULT_RELATED_CHUNK_NUMBER = 8               # How many text chunks to retrieve per query
+# ==========================================================================
+DEFAULT_MAX_ENTITY_TOKENS = int(os.getenv("GRAPHRAG_MAX_ENTITY_TOKENS", "4000"))
+DEFAULT_MAX_RELATION_TOKENS = int(os.getenv("GRAPHRAG_MAX_RELATION_TOKENS", "4000"))
+DEFAULT_MAX_TOTAL_TOKENS = int(os.getenv("GRAPHRAG_MAX_TOTAL_TOKENS", "16000"))
+DEFAULT_RELATED_CHUNK_NUMBER = int(os.getenv("GRAPHRAG_RELATED_CHUNK_NUMBER", "8"))
 
 # ============================================================================
 # KNOWLEDGE GRAPH DEFAULTS (used by merge.py, query.py)
@@ -42,19 +37,33 @@ VALID_SOURCE_IDS_LIMIT_METHODS = {
     SOURCE_IDS_LIMIT_METHOD_FIFO,
 }
 
-# ============================================================================
+# ==========================================================================
 # QUERY DEFAULTS (used by query.py)
-# ============================================================================
-DEFAULT_HISTORY_TURNS = 3                      # Number of previous turns to include in context
-DEFAULT_SUMMARY_LANGUAGE = "English"           # Language for LLM summaries
+# ==========================================================================
+DEFAULT_HISTORY_TURNS = int(os.getenv("GRAPHRAG_HISTORY_TURNS", "3"))
+DEFAULT_SUMMARY_LANGUAGE = os.getenv("GRAPHRAG_SUMMARY_LANGUAGE", "English")
+
+# ==========================================================================
+# SUMMARY DEFAULTS (used by summary.py, merge.py)
+# ==========================================================================
+DEFAULT_SUMMARY_CONTEXT_TOKENS = int(os.getenv("GRAPHRAG_SUMMARY_CONTEXT_TOKENS", "8000"))
+DEFAULT_SUMMARY_MAX_TOKENS = int(os.getenv("GRAPHRAG_SUMMARY_MAX_TOKENS", "1024"))
+DEFAULT_SUMMARY_LENGTH_RECOMMENDED = int(
+    os.getenv("GRAPHRAG_SUMMARY_LENGTH_RECOMMENDED", "256")
+)
+DEFAULT_FORCE_LLM_SUMMARY_ON_MERGE = int(
+    os.getenv("GRAPHRAG_FORCE_LLM_SUMMARY_ON_MERGE", "3")
+)
 
 # ============================================================================
 # EMBEDDING DEFAULTS
 # ============================================================================
 DEFAULT_EMBEDDING_PROVIDER = os.getenv("GRAPHRAG_EMBEDDING_PROVIDER", "ollama")
-DEFAULT_EMBEDDING_MODEL = os.getenv("GRAPHRAG_EMBEDDING_MODEL", "nomic-embed-text")
+DEFAULT_EMBEDDING_MODEL = os.getenv("GRAPHRAG_EMBEDDING_MODEL", "mxbai-embed-large")
 DEFAULT_EMBEDDING_DIM = int(os.getenv("GRAPHRAG_EMBEDDING_DIM", "768"))
 DEFAULT_EMBEDDING_MAX_TOKENS = int(os.getenv("GRAPHRAG_EMBEDDING_MAX_TOKENS", "8192"))
+DEFAULT_OPENAI_EMBEDDING_MODEL = os.getenv("GRAPHRAG_OPENAI_EMBEDDING_MODEL", "text-embedding-3-large")
+DEFAULT_COHERE_EMBEDDING_MODEL = os.getenv("GRAPHRAG_COHERE_EMBEDDING_MODEL", "embed-english-v3.0")
 
 # ============================================================================
 # LLM PROMPTS (used by summary.py, query.py)
@@ -94,8 +103,54 @@ async def _fallback_embed(texts, **kwargs):
 async def _ollama_embed(texts: list[str], **kwargs) -> list[list[float]]:
     ollama = importlib.import_module("ollama")
     model = kwargs.get("model") or kwargs.get("model_name") or DEFAULT_EMBEDDING_MODEL
-    response = ollama.embeddings(model=model, input=texts)
-    return response["embeddings"]
+    if not isinstance(texts, list):
+        texts = [texts]
+    try:
+        response = ollama.embeddings(model=model, input=texts)
+        return response["embeddings"]
+    except TypeError:
+        # Older ollama client expects prompt=... per request.
+        embeddings: list[list[float]] = []
+        for text in texts:
+            response = ollama.embeddings(model=model, prompt=text)
+            if "embedding" in response:
+                embeddings.append(response["embedding"])
+            else:
+                embeddings.append(response.get("embeddings", [])[0])
+        return embeddings
+
+
+async def _openai_embed(texts: list[str], **kwargs) -> list[list[float]]:
+    try:
+        from openai import OpenAI
+    except Exception as exc:
+        raise ImportError("OpenAI SDK not installed. Run: pip install openai") from exc
+    api_key = os.getenv("GRAPHRAG_OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("OpenAI API key missing. Set GRAPHRAG_OPENAI_API_KEY or OPENAI_API_KEY.")
+    client = OpenAI(api_key=api_key)
+    model = kwargs.get("model") or kwargs.get("model_name") or DEFAULT_OPENAI_EMBEDDING_MODEL
+    if not isinstance(texts, list):
+        texts = [texts]
+    response = client.embeddings.create(model=model, input=texts)
+    return [item.embedding for item in response.data]
+
+
+async def _cohere_embed(texts: list[str], **kwargs) -> list[list[float]]:
+    try:
+        import cohere
+    except Exception as exc:
+        raise ImportError("Cohere SDK not installed. Run: pip install cohere") from exc
+    api_key = os.getenv("GRAPHRAG_COHERE_API_KEY") or os.getenv("COHERE_API_KEY")
+    if not api_key:
+        raise ValueError("Cohere API key missing. Set GRAPHRAG_COHERE_API_KEY or COHERE_API_KEY.")
+    client = cohere.Client(api_key)
+    model = kwargs.get("model") or kwargs.get("model_name") or DEFAULT_COHERE_EMBEDDING_MODEL
+    if not isinstance(texts, list):
+        texts = [texts]
+    response = client.embed(texts=texts, model=model, input_type="search_document")
+    embeddings = getattr(response, "embeddings", None) or response.get("embeddings")
+    return list(embeddings or [])
 
 
 def build_default_embedding_func() -> Any:
@@ -109,6 +164,22 @@ def build_default_embedding_func() -> Any:
             func=_ollama_embed,
             model_name=DEFAULT_EMBEDDING_MODEL,
         )
+    if provider == "openai":
+        return EmbeddingFunc(
+            embedding_dim=DEFAULT_EMBEDDING_DIM,
+            max_token_size=DEFAULT_EMBEDDING_MAX_TOKENS,
+            func=_openai_embed,
+            model_name=DEFAULT_OPENAI_EMBEDDING_MODEL,
+        )
+    if provider == "cohere":
+        return EmbeddingFunc(
+            embedding_dim=DEFAULT_EMBEDDING_DIM,
+            max_token_size=DEFAULT_EMBEDDING_MAX_TOKENS,
+            func=_cohere_embed,
+            model_name=DEFAULT_COHERE_EMBEDDING_MODEL,
+        )
+    if provider == "anthropic":
+        raise ValueError("Anthropic does not provide embeddings. Use openai, cohere, or ollama.")
     if provider == "fallback":
         return EmbeddingFunc(
             embedding_dim=8,
@@ -164,16 +235,16 @@ def build_global_config(
         # SUMMARY & DESCRIPTION SETTINGS (used by summary.py, merge.py)
         # Controls how entity/relationship descriptions are merged
         # ====================================================================
-        "summary_context_size": 8_000,                   # Max tokens to show LLM for summarization
-        "summary_max_tokens": 1_024,                     # Max tokens in final summary
-        "summary_length_recommended": 256,               # Target summary length
-        "force_llm_summary_on_merge": 3,                 # Use LLM if this many descriptions or more
+        "summary_context_size": DEFAULT_SUMMARY_CONTEXT_TOKENS,     # Max tokens to show LLM for summarization
+        "summary_max_tokens": DEFAULT_SUMMARY_MAX_TOKENS,           # Max tokens in final summary
+        "summary_length_recommended": DEFAULT_SUMMARY_LENGTH_RECOMMENDED,  # Target summary length
+        "force_llm_summary_on_merge": DEFAULT_FORCE_LLM_SUMMARY_ON_MERGE,  # Use LLM if this many descriptions or more
         
         # ====================================================================
         # TOKEN LIMITS (used by utils.py, merge.py, query.py)
         # Prevents text from exceeding API token limits
         # ====================================================================
-        "embedding_token_limit": None,                   # Max tokens for embeddings (None = no limit)
+        "embedding_token_limit": int(os.getenv("GRAPHRAG_EMBEDDING_TOKEN_LIMIT", "0")) or None,
         "max_entity_tokens": DEFAULT_MAX_ENTITY_TOKENS,  # Max tokens per entity description
         "max_relation_tokens": DEFAULT_MAX_RELATION_TOKENS,  # Max tokens per relation description
         "max_total_tokens": DEFAULT_MAX_TOTAL_TOKENS,    # Total token budget per query

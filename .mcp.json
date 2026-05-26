@@ -2,11 +2,11 @@
   "mcpServers": {
     "graphrag-mcp": {
       "type": "stdio",
-      "command": "/Users/sanjayelango/Desktop/graphrag-mcp/.venv/bin/python",
+      "command": "python",
       "args": [
         "mcp/server.py"
       ],
-      "cwd": "/Users/sanjayelango/Desktop/graphrag-mcp",
+      "cwd": ".",
       "tools": [
         "*"
       ]

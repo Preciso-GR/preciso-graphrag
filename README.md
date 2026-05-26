@@ -1,6 +1,23 @@
-# GraphRAG MCP
+<div align="center">
+  <h1>Preciso GraphRAG</h1>
+  <p><strong>Precise graph connections from your documents.</strong></p>
+  <p>
+    <img src="https://img.shields.io/badge/Codex-Agent-111111?style=for-the-badge&logo=openai&logoColor=white" alt="Codex agent support" />
+    <img src="https://img.shields.io/badge/Claude%20Code-Agent-C8102E?style=for-the-badge" alt="Claude Code agent support" />
+    <img src="https://img.shields.io/badge/OpenCode-Agent-FFFFFF?style=for-the-badge&logoColor=C8102E&color=C8102E" alt="OpenCode agent support" />
+    <img src="https://img.shields.io/badge/Copilot-Agent-7F1D1D?style=for-the-badge&logo=github&logoColor=white" alt="Copilot agent support" />
+  </p>
+  <p>
+    <img src="https://img.shields.io/badge/Workflow-Agent--First-FFFFFF?style=for-the-badge&logoColor=C8102E&color=C8102E" alt="Agent-first workflow" />
+    <img src="https://img.shields.io/badge/Output-Local%20Graph%20Artifact-C8102E?style=for-the-badge" alt="Local graph artifact" />
+    <img src="https://img.shields.io/badge/Neo4j-Export%20Target-8A2BE2?style=for-the-badge" alt="Neo4j export target" />
+    <img src="https://img.shields.io/badge/Qdrant-Vector%20Export-DC2626?style=for-the-badge" alt="Qdrant vector export" />
+  </p>
+</div>
 
-GraphRAG MCP is an agent-driven workflow for turning raw documents into a reusable knowledge graph artifact.
+Preciso GraphRAG is an agent-driven workflow for turning raw documents into a reusable knowledge graph artifact.
+
+It is designed to feel sharp, direct, and dependable: drop documents in, let the agent choose the right skill, then persist a graph artifact locally in a red-and-white, local-first workflow.
 
 The intended flow is:
 
@@ -9,6 +26,16 @@ The intended flow is:
 The end user does not start with extraction JSON. The end user starts by dropping source material into `to_be_extracted/`, then an agent such as Codex or Claude Code performs extraction using the skills in this repo and calls the ingestion tools.
 
 MCP is one runtime interface inside that workflow. The real product output is the persisted graph artifact.
+
+## Red-White Workflow
+
+Preciso GraphRAG is built around a simple local contract:
+
+- red side: raw source documents arrive in `to_be_extracted/`
+- white side: the agent extracts structured knowledge into `extractions/`
+- final pass: MCP ingests that extraction and persists the graph in `GRAPH_IS_HERE/`
+
+The branding is simple on purpose: bold input, clean extraction, precise graph output.
 
 ## New User In 3 Minutes
 

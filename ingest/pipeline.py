@@ -6,6 +6,7 @@ from collections import defaultdict
 from typing import Any
 
 from core.merge import _merge_edges_then_upsert, _merge_nodes_then_upsert
+from core.runtime_status import update_artifact_manifest
 from core.storage.shared_storage import get_storage_keyed_lock
 from core.utils import compute_mdhash_id, safe_vdb_operation_with_exception
 from ingest.transformer import agent_json_to_edges_data, agent_json_to_nodes_data
@@ -185,6 +186,7 @@ async def ingest_extracted_json(payload, storage_instances, global_config) -> di
             await entity_chunks.index_done_callback()
         if relation_chunks is not None:
             await relation_chunks.index_done_callback()
+        await update_artifact_manifest(storage_instances, global_config)
 
         status = "success" if not errors else "partial_success"
         if (

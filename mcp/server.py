@@ -19,6 +19,7 @@ from core.storage.base import QueryParam
 from core.utils import BasicTokenizer
 from ingest.pipeline import ingest_extracted_json
 from mcp.server.fastmcp import FastMCP
+from tools.export_tool import export_to_neo4j, export_to_qdrant
 from tools.ingest_from_file_tool import ingest_from_file, reingest_from_file
 from tools.reconcile_tool import ingest_with_reconciliation
 from tools.status_tool import get_server_status
@@ -40,6 +41,51 @@ mcp = FastMCP("graphrag-mcp")
 )
 async def get_server_status_tool() -> dict:
     return await get_server_status(storage_instances, global_config)
+
+
+@mcp.tool(
+    name="export_graph_to_neo4j",
+    description="Export the local NetworkX graph artifact in GRAPH_IS_HERE to Neo4j as workspace-scoped nodes and relationships.",
+)
+async def export_graph_to_neo4j_tool(
+    uri: str | None = None,
+    username: str | None = None,
+    password: str | None = None,
+    database: str | None = None,
+    workspace: str | None = None,
+    clear_existing: bool = False,
+) -> dict:
+    return await export_to_neo4j(
+        storage_instances,
+        uri=uri,
+        username=username,
+        password=password,
+        database=database,
+        workspace=workspace,
+        clear_existing=clear_existing,
+    )
+
+
+@mcp.tool(
+    name="export_vectors_to_qdrant",
+    description="Export the local vector artifacts in GRAPH_IS_HERE to Qdrant collections for entities, relationships, and chunks.",
+)
+async def export_vectors_to_qdrant_tool(
+    url: str | None = None,
+    api_key: str | None = None,
+    collection_prefix: str | None = None,
+    workspace: str | None = None,
+    clear_existing: bool = False,
+) -> dict:
+    return await export_to_qdrant(
+        storage_instances,
+        global_config,
+        url=url,
+        api_key=api_key,
+        collection_prefix=collection_prefix,
+        workspace=workspace,
+        clear_existing=clear_existing,
+    )
 
 
 @mcp.tool()

@@ -208,6 +208,8 @@ Important tools exposed by the server in [mcp/server.py](./mcp/server.py):
 - `reingest_from_file`
 - `ingest_with_reconciliation_tool`
 - `query_graph_tool`
+- `export_graph_to_neo4j`
+- `export_vectors_to_qdrant`
 
 The relationship is:
 
@@ -411,6 +413,88 @@ Local persistence in `GRAPH_IS_HERE/` is the source of truth. Downstream exports
 
 Exports are one-way from the local artifact bundle to downstream systems. They are not required for ingestion or querying.
 
+Available MCP tools:
+
+- `export_graph_to_neo4j`
+- `export_vectors_to_qdrant`
+
+Typical flow after local graph creation:
+
+1. ingest and verify that artifacts were written to `GRAPH_IS_HERE/`
+2. keep `GRAPH_IS_HERE/` as the source of truth
+3. configure the downstream target
+4. call the matching export MCP tool
+
+Expected connection config:
+
+- Neo4j: `GRAPHRAG_NEO4J_URI`, `GRAPHRAG_NEO4J_USERNAME`, `GRAPHRAG_NEO4J_PASSWORD`, optional `GRAPHRAG_NEO4J_DATABASE`
+- Qdrant: `GRAPHRAG_QDRANT_URL`, optional `GRAPHRAG_QDRANT_API_KEY`, optional `GRAPHRAG_QDRANT_COLLECTION_PREFIX`
+
+These exports keep `GRAPH_IS_HERE/` as the source of truth. They push a downstream copy after local graph creation.
+
+### Export To Neo4j
+
+Use this when you want the graph structure in Neo4j after local ingestion has completed.
+
+Agent flow:
+
+1. call `get_server_status()`
+2. confirm the local graph in `GRAPH_IS_HERE/` is the version you want to push
+3. call `export_graph_to_neo4j`
+
+Example MCP call shape:
+
+```json
+{
+  "uri": "bolt://localhost:7687",
+  "username": "neo4j",
+  "password": "your-password",
+  "database": "neo4j",
+  "workspace": "default",
+  "clear_existing": false
+}
+```
+
+What it exports:
+
+- graph nodes from local `NetworkX` storage
+- graph edges from local `NetworkX` storage
+- workspace-scoped records so repeated exports can be isolated
+
+### Export To Qdrant
+
+Use this when you want the local vector artifacts copied to Qdrant after graph creation.
+
+Agent flow:
+
+1. confirm local ingestion is complete
+2. confirm embeddings were built with the configuration you want
+3. call `export_vectors_to_qdrant`
+
+Example MCP call shape:
+
+```json
+{
+  "url": "http://localhost:6333",
+  "api_key": null,
+  "collection_prefix": "preciso",
+  "workspace": "default",
+  "clear_existing": false
+}
+```
+
+What it exports:
+
+- entity vectors
+- relationship vectors
+- chunk vectors
+
+Important note:
+
+- Neo4j export is graph export
+- Qdrant export is vector export
+- both happen after local creation, not instead of local creation
+
 ## Recommended Developer Mental Model
 
 If you are a developer using this repo, think about it like this:
@@ -428,6 +512,6 @@ This repo already proves the raw-document-to-graph workflow, but it is still ear
 
 Notable limitations today:
 
-- Neo4j and Qdrant are not implemented yet as downstream export adapters
-- export is still local-first rather than a dedicated push command
 - retrieval quality still depends on embedding configuration quality
+- Neo4j and Qdrant exports require external services plus their Python client dependencies
+- local graph artifacts remain the source of truth; downstream exports are one-way sync targets

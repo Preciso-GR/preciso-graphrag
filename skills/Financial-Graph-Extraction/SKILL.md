@@ -18,6 +18,17 @@ description: >
 
 # Financial Graph Extraction Skill
 
+## Agent Runtime Contract
+
+Use this skill when the raw input file is in `to_be_extracted/` and the content is financial in nature.
+
+Execution contract:
+- Read one raw source file from `to_be_extracted/` at a time unless the user explicitly asks for a combined extraction.
+- Write exactly one extraction JSON for that source file to `extractions/{source_filename}_extracted.json`.
+- Validate entity, relationship, and chunk integrity before ingestion.
+- If you detect duplicates, orphaned references, or conflicts that need cleanup, use the reconciliation skill before calling ingestion.
+- After a clean extraction is written, call `ingest_from_file` with the generated extraction path.
+
 ## Why This Skill Exists
 
 Financial analysts read enormous volumes of documents — 10-Ks, earnings transcripts, research notes — to surface connections between companies, people, risks, and metrics. This skill turns that reading into a structured knowledge graph that an agent can query with precision.
@@ -214,6 +225,7 @@ When processing financial documents, prioritize connections analysts actually qu
    - No entity_name is duplicated
    - No relationship references an undefined entity_name
    - Every source_id matches an existing chunk_id
+   - Output path matches the current source file name
 8. WRITE to extractions/{filename}_extracted.json
 9. CALL ingest_from_file MCP tool with the output path
 ```

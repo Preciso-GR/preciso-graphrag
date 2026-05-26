@@ -16,6 +16,17 @@ description: >
 
 # General Graph Extraction Skill
 
+## Agent Runtime Contract
+
+Use this skill when the raw input file is in `to_be_extracted/` and the content is not primarily financial or academic literature.
+
+Execution contract:
+- Read one raw source file from `to_be_extracted/` at a time unless the user explicitly asks for a combined extraction.
+- Write exactly one extraction JSON for that source file to `extractions/{source_filename}_extracted.json`.
+- Validate entity, relationship, and chunk integrity before ingestion.
+- If the extraction has duplicates, orphaned relationships, or consistency issues, run reconciliation before ingestion.
+- After a clean extraction is written, call `ingest_from_file`.
+
 ## What This Skill Does
 
 This skill guides an agent to read a document or codebase and produce a structured JSON extraction — entities and relationships — that can be ingested into a knowledge graph via the `ingest_from_file` MCP tool.
@@ -203,6 +214,7 @@ In general extraction, if a README says "the auth module handles login and token
    - No entity_name duplicates
    - All relationships reference existing entity_name values
    - Every entity/relationship source_id matches a chunk_id
+   - Output path matches the current source file name
 8. WRITE to extractions/{filename}_extracted.json
 9. CALL ingest_from_file MCP tool
 ```

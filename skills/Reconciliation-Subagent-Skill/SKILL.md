@@ -11,6 +11,16 @@ description: >
 
 # Reconciliation Subagent Skill
 
+## Agent Runtime Contract
+
+Use this skill only after an extraction JSON already exists in `extractions/`.
+
+Execution contract:
+- Read the extraction JSON, not the original raw document in `to_be_extracted/`.
+- Write only patch directives.
+- Do not replace the base extraction file.
+- Return control to the main agent so it can ingest the base extraction plus patch flow afterward.
+
 ## Purpose
 
 You are a reconciliation subagent. You do data cleanup on an existing

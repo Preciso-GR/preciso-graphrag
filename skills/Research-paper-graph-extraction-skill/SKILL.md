@@ -17,6 +17,17 @@ description: >
 
 # Research Paper Graph Extraction Skill
 
+## Agent Runtime Contract
+
+Use this skill when the raw input file is in `to_be_extracted/` and the content is academic or scientific literature.
+
+Execution contract:
+- Read one paper or one raw source file from `to_be_extracted/` at a time unless the user explicitly asks for a combined corpus extraction.
+- Prefer one extraction JSON per source paper so ingestion and retries stay simple.
+- Validate entity, relationship, citation, and chunk integrity before ingestion.
+- If the extraction has duplicates, orphaned relationships, or conflicts that need cleanup, use the reconciliation skill before ingestion.
+- After a clean extraction is written, call `ingest_from_file`.
+
 ## Why This Skill Exists
 
 Researchers and analysts reading literature face a specific problem: insights are scattered across dozens of papers, methods evolve across years, and contradictions between studies are hard to surface. This skill builds a graph that makes a paper collection *queryable* — like having a research assistant who has read everything and can answer:
@@ -246,6 +257,7 @@ For theory-heavy papers (philosophy of science, formal methods, economics), extr
    - No entity_name duplicates
    - All relationships reference existing entity_name values
    - Every entity/relationship source_id matches a chunk_id
+   - Output path matches the current source file name
 8. WRITE to extractions/{filename}_extracted.json
 9. CALL ingest_from_file MCP tool
 ```

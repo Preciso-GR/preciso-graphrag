@@ -10,6 +10,43 @@ The end user does not start with extraction JSON. The end user starts by droppin
 
 MCP is one runtime interface inside that workflow. The real product output is the persisted graph artifact.
 
+## New User In 3 Minutes
+
+### 1. Clone and install dependencies
+
+```bash
+git clone <your-fork-or-this-repo-url>
+cd graphrag-mcp
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Environment expectations:
+
+- use Python 3 with a local virtualenv activated before launching your agent
+- the agent should be opened from this repo root after activation
+- `.mcp.json` now assumes `python` resolves to the active virtualenv interpreter
+- if you want better retrieval quality, configure your preferred embedding runtime separately
+
+### 2. Drop files into `to_be_extracted/`
+
+Put the raw documents you want processed into `to_be_extracted/`.
+
+### 3. Open Codex, Claude Code, or Copilot in this repo and use this prompt
+
+```text
+Read the files in to_be_extracted/.
+Choose the most appropriate extraction skill from the skills folder for each file.
+Extract entities, relationships, and chunks into extractions/{source_name}_extracted.json.
+Validate that every source_id maps to a real chunk_id and that all relationships reference defined entities.
+If the extraction looks clean, call ingest_from_file for each generated extraction file.
+If you find duplicate entities, orphaned relationships, or conflicts, use the reconciliation skill before ingestion.
+Then confirm the graph artifacts written to GRAPH_IS_HERE/ and summarize what was ingested.
+```
+
+That is the fastest supported developer onboarding path.
+
 ## Core Product Idea
 
 This repo is built around six steps:
@@ -72,7 +109,9 @@ The agent should:
 2. choose the right skill from `skills/`
 3. read and extract the document
 4. write extraction JSON to `extractions/`
-5. call the matching MCP ingestion tool
+5. validate chunk/entity/relationship consistency
+6. call the matching MCP ingestion tool
+7. verify graph artifacts in `GRAPH_IS_HERE/`
 
 Example agent request:
 
@@ -149,9 +188,13 @@ pip install -r requirements.txt
 
 ## MCP Setup
 
-This repo includes a workspace `.mcp.json` for local development. It points at this checkout's virtualenv and server entrypoint.
+This repo includes a workspace `.mcp.json` for local development.
 
-If another developer clones the repo elsewhere, they must update the path values to match their machine or create an equivalent user-level MCP config.
+It is agent-first and assumes:
+
+- you activated `.venv` before starting Codex, Claude Code, or Copilot
+- `python` resolves to that active virtualenv
+- the agent is opened from the repo root
 
 Minimal structure:
 
@@ -160,14 +203,16 @@ Minimal structure:
   "mcpServers": {
     "graphrag-mcp": {
       "type": "stdio",
-      "command": "/path/to/repo/.venv/bin/python",
+      "command": "python",
       "args": ["mcp/server.py"],
-      "cwd": "/path/to/repo",
+      "cwd": ".",
       "tools": ["*"]
     }
   }
 }
 ```
+
+If your agent runtime does not inherit the activated virtualenv, replace `command` with the absolute path to your own `.venv/bin/python`.
 
 ## Manual Fallback Path
 
@@ -212,6 +257,13 @@ The extraction skills in `skills/` already define the expected schema and output
 
 - `extractions/{source_filename}_extracted.json`
 
+Recommended execution contract for agents:
+
+- treat each raw input file in `to_be_extracted/` as one extraction unit unless the user asks otherwise
+- write one extraction JSON per source file
+- validate before ingestion
+- use the reconciliation skill only when cleanup is needed
+
 ## What Gets Persisted
 
 The graph is stored in `GRAPH_IS_HERE/` and is reusable across sessions.
@@ -239,7 +291,7 @@ This repo already proves the raw-document-to-graph workflow, but it is still ear
 
 Notable limitations today:
 
-- the local MCP config is still path-based and must be adapted per machine
+- the MCP runtime still depends on the launching shell resolving `python` correctly
 - export is implicit through persisted files rather than a dedicated export command
 - the default retrieval setup depends on local embedding configuration quality
 - multi-project packaging and developer onboarding can still be simplified further

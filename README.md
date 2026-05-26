@@ -1,6 +1,7 @@
 <div align="center">
-  <h1>Preciso GraphRAG</h1>
-  <p><strong>Precise graph connections from your documents.</strong></p>
+  <h1>Preciso</h1>
+  <p><strong>Precise knowledge graphs from your documents.</strong></p>
+  <p><em>Named after Bruno Fernandes. Every pass lands exactly where it needs to.</em></p>
   <p>
     <img src="https://img.shields.io/badge/Codex-Agent-111111?style=for-the-badge&logo=openai&logoColor=white" alt="Codex agent support" />
     <img src="https://img.shields.io/badge/Claude%20Code-Agent-C8102E?style=for-the-badge" alt="Claude Code agent support" />
@@ -8,24 +9,36 @@
     <img src="https://img.shields.io/badge/Copilot-Agent-7F1D1D?style=for-the-badge&logo=github&logoColor=white" alt="Copilot agent support" />
   </p>
   <p>
-    <img src="https://img.shields.io/badge/Workflow-Agent--First-FFFFFF?style=for-the-badge&logoColor=C8102E&color=C8102E" alt="Agent-first workflow" />
-    <img src="https://img.shields.io/badge/Output-Local%20Graph%20Artifact-C8102E?style=for-the-badge" alt="Local graph artifact" />
-    <img src="https://img.shields.io/badge/Neo4j-Export%20Target-8A2BE2?style=for-the-badge" alt="Neo4j export target" />
-    <img src="https://img.shields.io/badge/Qdrant-Vector%20Export-DC2626?style=for-the-badge" alt="Qdrant vector export" />
+    <img src="https://img.shields.io/badge/Local--First-FFFFFF?style=for-the-badge&logoColor=C8102E&color=C8102E" alt="Local-first workflow" />
+    <img src="https://img.shields.io/badge/Python-3.11%2B-111111?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.11+" />
   </p>
 </div>
 
-Preciso GraphRAG is an agent-driven workflow for turning raw documents into a reusable knowledge graph artifact.
+Most RAG tools retrieve documents.
+Preciso builds a graph — so your agent can reason across connections, not just find similar text.
 
-It is designed to feel sharp, direct, and dependable: drop documents in, let the agent choose the right skill, then persist a graph artifact locally in a red-and-white, local-first workflow.
+**The flow is simple:**
+raw files -> agent picks skill -> extraction JSON -> MCP ingest -> local graph
 
-The intended flow is:
+Drop a financial filing, research paper, or codebase into `to_be_extracted/`. An agent reads it, extracts entities and relationships using domain-specific skills, and persists a queryable knowledge graph locally in `GRAPH_IS_HERE/`.
 
-`raw files -> agent chooses skill -> extraction JSON -> MCP ingestion -> persistent graph artifact`
+No cloud required. No pipeline to configure.
+Works with Codex, Claude Code, GitHub Copilot, and OpenCode.
 
-The end user does not start with extraction JSON. The end user starts by dropping source material into `to_be_extracted/`, then an agent such as Codex or Claude Code performs extraction using the skills in this repo and calls the ingestion tools.
+---
 
-MCP is one runtime interface inside that workflow. The real product output is the persisted graph artifact.
+## Why GraphRAG Over Regular RAG?
+
+Regular RAG:
+  "What are Apple's risk factors?"
+  -> returns the Risk Factors section text
+
+Preciso:
+  "What are Apple's risk factors and which executives are responsible for managing them?"
+  -> traverses RISK_FACTOR -> EXPOSED_TO -> COMPANY -> EMPLOYS -> PERSON
+  -> returns a connected answer with evidence
+
+The graph makes multi-hop reasoning possible.
 
 ## Red-White Workflow
 
@@ -59,6 +72,8 @@ Environment expectations:
 ### 2. Drop files into `to_be_extracted/`
 
 Put the raw documents you want processed into `to_be_extracted/`.
+
+Make sure you have at least one file in `to_be_extracted/` before running the agent prompt. A PDF, markdown file, or plain text document works.
 
 ### 3. Open Codex, Claude Code, or Copilot in this repo and use this prompt
 
@@ -171,6 +186,15 @@ Important artifacts:
 - `GRAPH_IS_HERE/vdb_relationships.json`
 - `GRAPH_IS_HERE/vdb_chunks.json`
 - `GRAPH_IS_HERE/artifact_manifest.json`
+
+## What You Can Query After Ingestion
+
+"What are Apple's top 5 disclosed risk factors?"
+"Which executives are connected to the supply chain risks?"
+"What metrics declined year over year?"
+"How does the Services segment relate to overall revenue?"
+
+The graph connects entities across sections of the document so your agent gets reasoned answers, not retrieved chunks.
 
 ## Skill Selection
 
@@ -405,6 +429,11 @@ The manifest is a lightweight summary of the artifact bundle:
 - generation/update timestamps
 
 ## Downstream Export Adapters (Optional)
+
+<p>
+  <img src="https://img.shields.io/badge/Neo4j-Export%20Target-8A2BE2?style=for-the-badge" alt="Neo4j export target" />
+  <img src="https://img.shields.io/badge/Qdrant-Vector%20Export-DC2626?style=for-the-badge" alt="Qdrant vector export" />
+</p>
 
 Local persistence in `GRAPH_IS_HERE/` is the source of truth. Downstream exports are optional, post-creation adapters:
 

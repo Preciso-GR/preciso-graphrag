@@ -1,0 +1,26 @@
+{
+  "working_dir": "/Users/sanjayelango/Desktop/graphrag-mcp/GRAPH_IS_HERE",
+  "graph_storage_type": "networkx",
+  "graph_file": "/Users/sanjayelango/Desktop/graphrag-mcp/GRAPH_IS_HERE/graph_graph.graphml",
+  "embedding": {
+    "provider": "ollama",
+    "model": "mxbai-embed-large",
+    "dimension": 768,
+    "fallback": false
+  },
+  "llm": {
+    "configured": false,
+    "provider": "none",
+    "model": null
+  },
+  "document_count": 0,
+  "entity_count": 0,
+  "relationship_count": 0,
+  "chunk_count": 0,
+  "overall_status": "degraded",
+  "warnings": [
+    "LLM summarization is not configured; extraction and graph creation still work, but summary generation is skipped."
+  ],
+  "generated_at": 1779787480,
+  "updated_at": 1779787480
+}

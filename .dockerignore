@@ -1,9 +1,0 @@
-.git
-.venv
-__pycache__
-*.pyc
-*.pyo
-*.pyd
-.DS_Store
-GRAPH_IS_HERE
-extractions

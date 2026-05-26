@@ -306,22 +306,6 @@ Minimal structure:
 
 If you want a direct fallback, replace `command` with the absolute path to your own `.venv/bin/python`.
 
-## Optional Docker Runtime
-
-Docker is a supported alternative, but it is not the primary path. It runs the same MCP server and uses the same local artifact contract.
-
-Build the image:
-
-```bash
-docker build -f docker/Dockerfile -t graphrag-mcp .
-```
-
-Run the MCP server with the repo mounted:
-
-```bash
-docker run --rm -it -v "$PWD:/workspace" -w /workspace graphrag-mcp
-```
-
 ## Manual Fallback Path
 
 Advanced users can still drive the handoff manually after extraction.

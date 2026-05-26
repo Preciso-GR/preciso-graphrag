@@ -14,12 +14,14 @@ if str(MCP_DIR) not in sys.path:
 from config import build_default_embedding_func, build_global_config
 from core.bootstrap import build_storage_instances, initialize_storage_instances
 from core.query import kg_query
+from core.runtime_status import update_artifact_manifest
 from core.storage.base import QueryParam
 from core.utils import BasicTokenizer
 from ingest.pipeline import ingest_extracted_json
 from mcp.server.fastmcp import FastMCP
 from tools.ingest_from_file_tool import ingest_from_file, reingest_from_file
 from tools.reconcile_tool import ingest_with_reconciliation
+from tools.status_tool import get_server_status
 
 
 tokenizer = BasicTokenizer()
@@ -30,6 +32,14 @@ global_config = build_global_config(
 )
 storage_instances = build_storage_instances(global_config)
 mcp = FastMCP("graphrag-mcp")
+
+
+@mcp.tool(
+    name="get_server_status",
+    description="Return the current MCP runtime status and local graph health summary.",
+)
+async def get_server_status_tool() -> dict:
+    return await get_server_status(storage_instances, global_config)
 
 
 @mcp.tool()
@@ -356,6 +366,7 @@ async def query_graph_tool(
 
 async def startup() -> None:
     await initialize_storage_instances(storage_instances)
+    await update_artifact_manifest(storage_instances, global_config)
 
 
 if __name__ == "__main__":

@@ -22,6 +22,8 @@ description: >
 Use this skill when the raw input file is in `to_be_extracted/` and the content is academic or scientific literature.
 
 Execution contract:
+- Call `get_server_status()` before starting extraction.
+- If overall is `degraded`, explain what is degraded, what still works, and ask whether to proceed or fix first.
 - Read one paper or one raw source file from `to_be_extracted/` at a time unless the user explicitly asks for a combined corpus extraction.
 - Prefer one extraction JSON per source paper so ingestion and retries stay simple.
 - Validate entity, relationship, citation, and chunk integrity before ingestion.
@@ -237,29 +239,30 @@ For theory-heavy papers (philosophy of science, formal methods, economics), extr
 ## Step-by-Step Agent Workflow
 
 ```
-1. READ paper(s) — abstract, introduction, related work, methods, results, conclusion
-2. CHUNK the text into evidence blocks (sections, paragraphs, or tables)
+1. CALL get_server_status() and surface degraded modes before continuing
+2. READ paper(s) — abstract, introduction, related work, methods, results, conclusion
+3. CHUNK the text into evidence blocks (sections, paragraphs, or tables)
    - Assign chunk_id like chunk_001, chunk_002...
-3. EXTRACT metadata block (title, authors, year, venue, DOI/arXiv) into descriptions
-4. PASS 1 — Named entity extraction:
+4. EXTRACT metadata block (title, authors, year, venue, DOI/arXiv) into descriptions
+5. PASS 1 — Named entity extraction:
    - Methods, datasets, metrics, tasks proposed or used
    - Authors and institutions
    - Prior works cited (for CITES relationships)
-5. PASS 2 — Finding and hypothesis extraction:
+6. PASS 2 — Finding and hypothesis extraction:
    - Main results from abstract and results sections
    - Ablations as secondary findings
    - Limitations from limitations/conclusion sections
-6. PASS 3 — Relationship extraction:
+7. PASS 3 — Relationship extraction:
    - EXTENDS, IMPROVES_OVER for method lineage
    - CONTRADICTS for conflicting results vs. prior work
    - SUPPORTS for findings supporting hypotheses
-7. VALIDATE:
+8. VALIDATE:
    - No entity_name duplicates
    - All relationships reference existing entity_name values
    - Every entity/relationship source_id matches a chunk_id
    - Output path matches the current source file name
-8. WRITE to extractions/{filename}_extracted.json
-9. CALL ingest_from_file MCP tool
+9. WRITE to extractions/{filename}_extracted.json
+10. CALL ingest_from_file MCP tool
 ```
 
 ---

@@ -2,9 +2,9 @@
   "mcpServers": {
     "graphrag-mcp": {
       "type": "stdio",
-      "command": "python",
+      "command": "/bin/sh",
       "args": [
-        "mcp/server.py"
+        "scripts/mcp_launcher.sh"
       ],
       "cwd": ".",
       "tools": [

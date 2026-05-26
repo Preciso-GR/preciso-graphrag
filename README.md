@@ -24,9 +24,9 @@ pip install -r requirements.txt
 
 Environment expectations:
 
-- use Python 3 with a local virtualenv activated before launching your agent
-- the agent should be opened from this repo root after activation
-- `.mcp.json` now assumes `python` resolves to the active virtualenv interpreter
+- use Python 3 with a local virtualenv in `.venv`
+- the agent should be opened from this repo root
+- `.mcp.json` uses a repo-local launcher that prefers `.venv/bin/python`
 - if you want better retrieval quality, configure your preferred embedding runtime separately
 
 ### 2. Drop files into `to_be_extracted/`
@@ -36,6 +36,9 @@ Put the raw documents you want processed into `to_be_extracted/`.
 ### 3. Open Codex, Claude Code, or Copilot in this repo and use this prompt
 
 ```text
+Call get_server_status().
+If overall is ready, proceed.
+If overall is degraded, explain what is degraded, what still works, and ask whether to proceed or fix first.
 Read the files in to_be_extracted/.
 Choose the most appropriate extraction skill from the skills folder for each file.
 Extract entities, relationships, and chunks into extractions/{source_name}_extracted.json.
@@ -105,17 +108,22 @@ Use a coding agent that can read files and follow repo-local instructions.
 
 The agent should:
 
-1. inspect files in `to_be_extracted/`
-2. choose the right skill from `skills/`
-3. read and extract the document
-4. write extraction JSON to `extractions/`
-5. validate chunk/entity/relationship consistency
-6. call the matching MCP ingestion tool
-7. verify graph artifacts in `GRAPH_IS_HERE/`
+1. call `get_server_status()`
+2. if overall is degraded, explain warnings and ask before proceeding
+3. inspect files in `to_be_extracted/`
+4. choose the right skill from `skills/`
+5. read and extract the document
+6. write extraction JSON to `extractions/`
+7. validate chunk/entity/relationship consistency
+8. call the matching MCP ingestion tool
+9. verify graph artifacts in `GRAPH_IS_HERE/`
 
 Example agent request:
 
 ```text
+Call get_server_status().
+If overall is ready, proceed.
+If overall is degraded, explain what is degraded, what still works, and ask whether to proceed or fix first.
 Read the files in to_be_extracted/.
 Choose the appropriate extraction skill from the skills folder.
 Extract entities, relationships, and chunks into extractions/.
@@ -135,6 +143,7 @@ Important artifacts:
 - `GRAPH_IS_HERE/vdb_entities.json`
 - `GRAPH_IS_HERE/vdb_relationships.json`
 - `GRAPH_IS_HERE/vdb_chunks.json`
+- `GRAPH_IS_HERE/artifact_manifest.json`
 
 ## Skill Selection
 
@@ -166,6 +175,7 @@ It is responsible for:
 
 Important tools exposed by the server in [mcp/server.py](./mcp/server.py):
 
+- `get_server_status`
 - `ingest_graph_tool`
 - `ingest_from_file`
 - `reingest_from_file`
@@ -177,6 +187,88 @@ The relationship is:
 - skills produce the extraction payload
 - MCP tools ingest and query that payload
 - the graph artifact is the durable output
+
+## Runtime Status Tool (get_server_status)
+
+This tool is the runtime truth surface for agents. Call it before any extraction or ingestion.
+
+Status contract:
+
+- reports embedding mode/provider/model/dimension and status
+- reports local graph storage type and artifact location
+- reports entity/relationship counts from local stores
+- reports LLM configuration status
+- returns `warnings` for degraded states
+- returns an overall `overall`: `ready` or `degraded`
+
+If status is `degraded`, the agent must explain what is degraded, what still works, and ask whether to proceed.
+
+Example (healthy):
+
+```json
+{
+  "overall": "ready",
+  "warnings": [],
+  "embedding": {
+    "mode": "local",
+    "provider": "ollama",
+    "model": "mxbai-embed-large",
+    "dimension": 768,
+    "status": "active"
+  },
+  "graph": {
+    "storage": "networkx",
+    "location": "/path/to/GRAPH_IS_HERE",
+    "graph_file": "/path/to/GRAPH_IS_HERE/graph_graph.graphml",
+    "entities": 142,
+    "relationships": 281,
+    "documents_ingested": 1,
+    "chunks": 96
+  },
+  "llm": {
+    "configured": true,
+    "provider": "custom",
+    "model": "custom_llm",
+    "status": "active"
+  },
+  "updated_at": 1770000000
+}
+```
+
+Example (degraded embeddings + no LLM):
+
+```json
+{
+  "overall": "degraded",
+  "warnings": [
+    "Fallback embeddings are active; graph creation still works, but vector similarity quality is reduced.",
+    "LLM summarization is not configured; extraction and graph creation still work, but summary generation is skipped."
+  ],
+  "embedding": {
+    "mode": "fallback",
+    "provider": "fallback",
+    "model": "fallback",
+    "dimension": 8,
+    "status": "degraded"
+  },
+  "graph": {
+    "storage": "networkx",
+    "location": "/path/to/GRAPH_IS_HERE",
+    "graph_file": "/path/to/GRAPH_IS_HERE/graph_graph.graphml",
+    "entities": 0,
+    "relationships": 0,
+    "documents_ingested": 0,
+    "chunks": 0
+  },
+  "llm": {
+    "configured": false,
+    "provider": "none",
+    "model": null,
+    "status": "inactive"
+  },
+  "updated_at": 1770000000
+}
+```
 
 ## Local Setup
 
@@ -192,9 +284,9 @@ This repo includes a workspace `.mcp.json` for local development.
 
 It is agent-first and assumes:
 
-- you activated `.venv` before starting Codex, Claude Code, or Copilot
-- `python` resolves to that active virtualenv
+- `.venv` exists at the repo root
 - the agent is opened from the repo root
+- the launcher will use `.venv/bin/python`
 
 Minimal structure:
 
@@ -203,8 +295,8 @@ Minimal structure:
   "mcpServers": {
     "graphrag-mcp": {
       "type": "stdio",
-      "command": "python",
-      "args": ["mcp/server.py"],
+      "command": "/bin/sh",
+      "args": ["scripts/mcp_launcher.sh"],
       "cwd": ".",
       "tools": ["*"]
     }
@@ -212,7 +304,23 @@ Minimal structure:
 }
 ```
 
-If your agent runtime does not inherit the activated virtualenv, replace `command` with the absolute path to your own `.venv/bin/python`.
+If you want a direct fallback, replace `command` with the absolute path to your own `.venv/bin/python`.
+
+## Optional Docker Runtime
+
+Docker is a supported alternative, but it is not the primary path. It runs the same MCP server and uses the same local artifact contract.
+
+Build the image:
+
+```bash
+docker build -f docker/Dockerfile -t graphrag-mcp .
+```
+
+Run the MCP server with the repo mounted:
+
+```bash
+docker run --rm -it -v "$PWD:/workspace" -w /workspace graphrag-mcp
+```
 
 ## Manual Fallback Path
 
@@ -261,6 +369,8 @@ Recommended execution contract for agents:
 
 - treat each raw input file in `to_be_extracted/` as one extraction unit unless the user asks otherwise
 - write one extraction JSON per source file
+- call `get_server_status()` first
+- if overall is `degraded`, explain what is degraded, what still works, and ask before continuing
 - validate before ingestion
 - use the reconciliation skill only when cleanup is needed
 
@@ -273,6 +383,22 @@ The most portable artifact today is:
 - `GRAPH_IS_HERE/graph_graph.graphml`
 
 The JSON stores and vector DB files support retrieval and query workflows inside this repo.
+
+The manifest is a lightweight summary of the artifact bundle:
+
+- working directory and graph storage type
+- embedding provider/model/dimension and fallback mode
+- document/entity/relationship counts (when available)
+- generation/update timestamps
+
+## Downstream Export Adapters (Optional)
+
+Local persistence in `GRAPH_IS_HERE/` is the source of truth. Downstream exports are optional, post-creation adapters:
+
+- Neo4j export means graph export (nodes + edges)
+- Qdrant export means vector export (embeddings + metadata)
+
+Exports are one-way from the local artifact bundle to downstream systems. They are not required for ingestion or querying.
 
 ## Recommended Developer Mental Model
 
@@ -291,7 +417,6 @@ This repo already proves the raw-document-to-graph workflow, but it is still ear
 
 Notable limitations today:
 
-- the MCP runtime still depends on the launching shell resolving `python` correctly
-- export is implicit through persisted files rather than a dedicated export command
-- the default retrieval setup depends on local embedding configuration quality
-- multi-project packaging and developer onboarding can still be simplified further
+- Neo4j and Qdrant are not implemented yet as downstream export adapters
+- export is still local-first rather than a dedicated push command
+- retrieval quality still depends on embedding configuration quality

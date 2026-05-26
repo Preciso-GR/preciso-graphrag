@@ -21,6 +21,8 @@ description: >
 Use this skill when the raw input file is in `to_be_extracted/` and the content is not primarily financial or academic literature.
 
 Execution contract:
+- Call `get_server_status()` before starting extraction.
+- If overall is `degraded`, explain what is degraded, what still works, and ask whether to proceed or fix first.
 - Read one raw source file from `to_be_extracted/` at a time unless the user explicitly asks for a combined extraction.
 - Write exactly one extraction JSON for that source file to `extractions/{source_filename}_extracted.json`.
 - Validate entity, relationship, and chunk integrity before ingestion.
@@ -203,20 +205,21 @@ In general extraction, if a README says "the auth module handles login and token
 ## Step-by-Step Agent Workflow
 
 ```
-1. READ the full document (or repo files in scope)
-2. IDENTIFY domain subtype (codebase, wiki, notes, etc.)
-3. CHUNK the text into evidence blocks (sections, paragraphs, or tables)
+1. CALL get_server_status() and surface degraded modes before continuing
+2. READ the full document (or repo files in scope)
+3. IDENTIFY domain subtype (codebase, wiki, notes, etc.)
+4. CHUNK the text into evidence blocks (sections, paragraphs, or tables)
    - Assign chunk_id like chunk_001, chunk_002...
-4. SCAN for all named entities — people, modules, tools, concepts, processes
-5. EXTRACT entities with required fields and chunk-based source_id
-6. EXTRACT relationships by asking: "how does X relate to Y in this text?"
-7. VALIDATE:
+5. SCAN for all named entities — people, modules, tools, concepts, processes
+6. EXTRACT entities with required fields and chunk-based source_id
+7. EXTRACT relationships by asking: "how does X relate to Y in this text?"
+8. VALIDATE:
    - No entity_name duplicates
    - All relationships reference existing entity_name values
    - Every entity/relationship source_id matches a chunk_id
    - Output path matches the current source file name
-8. WRITE to extractions/{filename}_extracted.json
-9. CALL ingest_from_file MCP tool
+9. WRITE to extractions/{filename}_extracted.json
+10. CALL ingest_from_file MCP tool
 ```
 
 ---

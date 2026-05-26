@@ -6,6 +6,7 @@ import os
 import time
 import zlib
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, final
 
 import numpy as np
@@ -39,10 +40,30 @@ class NanoVectorDBStorage(BaseVectorStorage):
         os.makedirs(workspace_dir, exist_ok=True)
         self._client_file_name = os.path.join(workspace_dir, f"vdb_{self.namespace}.json")
         self._max_batch_size = self.global_config["embedding_batch_num"]
-        self._client = NanoVectorDB(
-            self.embedding_func.embedding_dim,
-            storage_file=self._client_file_name,
-        )
+        try:
+            self._client = NanoVectorDB(
+                self.embedding_func.embedding_dim,
+                storage_file=self._client_file_name,
+            )
+        except AssertionError as exc:
+            backup_path = (
+                f"{self._client_file_name}.dim-mismatch-{int(time.time())}.bak"
+            )
+            try:
+                if os.path.exists(self._client_file_name):
+                    Path(self._client_file_name).rename(backup_path)
+            except OSError:
+                backup_path = self._client_file_name
+            warning = (
+                f"Vector index for `{self.namespace}` had an embedding dimension mismatch and was reset. "
+                f"Previous file saved to `{backup_path}`. Reingest data to rebuild vector search."
+            )
+            self.global_config.setdefault("runtime_warnings", []).append(warning)
+            logger.warning("%s Original error: %s", warning, exc)
+            self._client = NanoVectorDB(
+                self.embedding_func.embedding_dim,
+                storage_file=self._client_file_name,
+            )
 
     async def initialize(self):
         self.storage_updated = await get_update_flag(self.namespace, workspace=self.workspace)

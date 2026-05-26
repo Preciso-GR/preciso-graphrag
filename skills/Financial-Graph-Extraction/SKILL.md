@@ -23,6 +23,8 @@ description: >
 Use this skill when the raw input file is in `to_be_extracted/` and the content is financial in nature.
 
 Execution contract:
+- Call `get_server_status()` before starting extraction.
+- If overall is `degraded`, explain what is degraded, what still works, and ask whether to proceed or fix first.
 - Read one raw source file from `to_be_extracted/` at a time unless the user explicitly asks for a combined extraction.
 - Write exactly one extraction JSON for that source file to `extractions/{source_filename}_extracted.json`.
 - Validate entity, relationship, and chunk integrity before ingestion.
@@ -206,28 +208,29 @@ When processing financial documents, prioritize connections analysts actually qu
 ## Step-by-Step Agent Workflow
 
 ```
-1. READ the document in full (or in chunked passes for long filings)
-2. IDENTIFY document type (10-K, 10-Q, earnings transcript, etc.)
-3. CHUNK the text into evidence blocks (sections, paragraphs, or tables)
+1. CALL get_server_status() and surface degraded modes before continuing
+2. READ the document in full (or in chunked passes for long filings)
+3. IDENTIFY document type (10-K, 10-Q, earnings transcript, etc.)
+4. CHUNK the text into evidence blocks (sections, paragraphs, or tables)
    - Assign chunk_id like chunk_001, chunk_002...
-4. EXTRACT metadata for document_id + file_path
-5. PASS 1 — Entity extraction:
+5. EXTRACT metadata for document_id + file_path
+6. PASS 1 — Entity extraction:
    - Scan for all named companies, people, metrics, segments, risks
    - Assign entity_name (snake_case, unique within the file)
    - Set source_id to the chunk_id that contains the evidence
-6. PASS 2 — Relationship extraction:
+7. PASS 2 — Relationship extraction:
    - For each entity pair, determine if a typed relationship exists in the text
    - Encode relationship type in keywords (EMPLOYS, ACQUIRED, etc.)
    - Attach period/as_of in description or keywords
-7. PASS 3 — Validation:
+8. PASS 3 — Validation:
    - All entities have entity_name, entity_type, description, source_id
    - All relationships have src_id, tgt_id, description, source_id
    - No entity_name is duplicated
    - No relationship references an undefined entity_name
    - Every source_id matches an existing chunk_id
    - Output path matches the current source file name
-8. WRITE to extractions/{filename}_extracted.json
-9. CALL ingest_from_file MCP tool with the output path
+9. WRITE to extractions/{filename}_extracted.json
+10. CALL ingest_from_file MCP tool with the output path
 ```
 
 ---

@@ -19,7 +19,9 @@ apple*
 0000*
 GRAPH_IS_HERE/*
 !GRAPH_IS_HERE/.gitkeep
+!GRAPH_IS_HERE/artifact_manifest.json
 to_be_extracted/*
 !to_be_extracted/.gitkeep
+!to_be_extracted/README.md
 extractions/demo_doc_*.json
 extractions/reconciled_demo_doc_*.json

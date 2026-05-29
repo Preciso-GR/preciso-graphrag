@@ -25,3 +25,9 @@ to_be_extracted/*
 !to_be_extracted/README.md
 extractions/demo_doc_*.json
 extractions/reconciled_demo_doc_*.json
+evals/results/*
+evals/test_cases_*.json
+evals/ANALYSIS_REPORT_*.md
+evals/ANALYSIS_REPORT_*.json
+!evals/.gitkeep
+!evals/SKILL.md

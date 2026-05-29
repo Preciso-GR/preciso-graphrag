@@ -159,8 +159,23 @@ def build_default_embedding_func() -> Any:
 
     provider = DEFAULT_EMBEDDING_PROVIDER.lower()
     if provider == "ollama":
+        # Try to auto-detect embedding dimension from the Ollama model.
+        # If detection fails, fall back to the configured default.
+        detected_dim = DEFAULT_EMBEDDING_DIM
+        try:
+            import asyncio
+
+            # Call the async embedder to get a real embedding shape
+            embeddings = asyncio.run(_ollama_embed(["test"], model=DEFAULT_EMBEDDING_MODEL))
+            if embeddings and isinstance(embeddings, list) and len(embeddings) > 0:
+                first = embeddings[0]
+                detected_dim = len(first)
+        except Exception:
+            # ignore detection errors and use default
+            detected_dim = DEFAULT_EMBEDDING_DIM
+
         return EmbeddingFunc(
-            embedding_dim=DEFAULT_EMBEDDING_DIM,
+            embedding_dim=detected_dim,
             max_token_size=DEFAULT_EMBEDDING_MAX_TOKENS,
             func=_ollama_embed,
             model_name=DEFAULT_EMBEDDING_MODEL,

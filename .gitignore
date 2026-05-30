@@ -25,9 +25,18 @@ to_be_extracted/*
 !to_be_extracted/README.md
 extractions/demo_doc_*.json
 extractions/reconciled_demo_doc_*.json
-evals/results/*
-evals/test_cases_*.json
+# Eval artifacts: ignore generated results and generated testcases
+evals/results/*.jsonl
+!evals/results/README.md
+!evals/results/.gitkeep
+evals/test_cases/*.json
+!evals/test_cases/README.md
+!evals/test_cases/.gitkeep
 evals/ANALYSIS_REPORT_*.md
 evals/ANALYSIS_REPORT_*.json
 !evals/.gitkeep
 !evals/SKILL.md
+analysis-1
+*_reconciled.json
+*_reconciled.jsonl
+*_extracted.json

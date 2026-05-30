@@ -40,3 +40,4 @@ analysis-1
 *_reconciled.json
 *_reconciled.jsonl
 *_extracted.json
+artifact_manifest.json

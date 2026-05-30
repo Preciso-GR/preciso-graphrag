@@ -158,6 +158,44 @@ Relationships use `src_id` and `tgt_id` (entity_name values). Encode relationshi
 }
 ```
 
+### Year-over-Year (YoY) Relationships
+
+When the same metric appears in two or more fiscal years
+within the document, ALWAYS:
+
+1. Extract each year as a separate entity
+   entity_name must include the fiscal year
+   CORRECT:   "NET SALES FY2023", "NET SALES FY2022"
+   INCORRECT: "NET SALES" (ambiguous, which year?)
+
+2. Calculate the YoY change yourself from the document values:
+   abs_change = FY2023_value - FY2022_value
+   pct_change = (abs_change / FY2022_value) × 100
+   direction  = "increased" or "decreased"
+
+3. Create a COMPARED_TO relationship between them:
+
+{
+  "src_id": "NET SALES FY2023",
+  "tgt_id": "NET SALES FY2022",
+  "keywords": "COMPARED_TO,yoy_direction=increased,yoy_abs=+38.1B,yoy_pct=+6.7%",
+  "description": "Net sales increased $38.1 billion (+6.7%) 
+                  from $567.8B in FY2022 to $605.9B in FY2023.",
+  "weight": 1.0,
+  "source_id": "chunk_id_where_both_values_appear"
+}
+
+The description field MUST contain:
+  - direction (increased/decreased)
+  - absolute change with dollar sign and B/M suffix
+  - percentage change with + or - sign
+  - both base year value and current year value
+  - both fiscal years named explicitly
+
+This relationship is what the query engine uses to answer
+comparison questions. If this relationship is missing,
+YoY questions will return incomplete answers.
+
 Always attach `period` or `as_of` in `description` or `keywords` for relationships that change over time.
 
 ---
@@ -187,6 +225,7 @@ When processing financial documents, prioritize connections analysts actually qu
 - Top risks disclosed in Risk Factors section
 - Auditor and audit opinion
 - Related-party transactions
+- COMPARED_TO relationships for all metrics present in both fiscal years
 
 ### Tier 2 — Extract When Present
 - Customer concentration (if any customer > 10% revenue)

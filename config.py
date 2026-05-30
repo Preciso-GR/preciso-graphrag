@@ -67,6 +67,23 @@ DEFAULT_OPENAI_EMBEDDING_MODEL = os.getenv("GRAPHRAG_OPENAI_EMBEDDING_MODEL", "t
 DEFAULT_COHERE_EMBEDDING_MODEL = os.getenv("GRAPHRAG_COHERE_EMBEDDING_MODEL", "embed-english-v3.0")
 
 # ============================================================================
+# DOWNSTREAM EXPORT DEFAULTS
+# Optional settings for Neo4j and Qdrant exports.
+# These are read from environment variables so exports stay config-driven.
+# ============================================================================
+DEFAULT_NEO4J_URI = os.getenv("GRAPHRAG_NEO4J_URI", "")
+DEFAULT_NEO4J_USERNAME = os.getenv("GRAPHRAG_NEO4J_USERNAME", "neo4j")
+DEFAULT_NEO4J_PASSWORD = os.getenv("GRAPHRAG_NEO4J_PASSWORD", "")
+DEFAULT_NEO4J_DATABASE = os.getenv("GRAPHRAG_NEO4J_DATABASE", "neo4j")
+
+DEFAULT_QDRANT_URL = os.getenv("GRAPHRAG_QDRANT_URL", "")
+DEFAULT_QDRANT_API_KEY = os.getenv("GRAPHRAG_QDRANT_API_KEY", "")
+DEFAULT_QDRANT_COLLECTION_PREFIX = os.getenv("GRAPHRAG_QDRANT_COLLECTION_PREFIX", "preciso")
+
+DEFAULT_EXPORT_WORKSPACE = os.getenv("GRAPHRAG_EXPORT_WORKSPACE", "default")
+DEFAULT_EXPORT_CLEAR_EXISTING = os.getenv("GRAPHRAG_EXPORT_CLEAR_EXISTING", "false").lower() == "true"
+
+# ============================================================================
 # LLM PROMPTS (used by summary.py, query.py)
 # Templates sent to LLM functions for summarization and response generation
 # ============================================================================

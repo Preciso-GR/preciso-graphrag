@@ -480,12 +480,24 @@ The manifest is a lightweight summary of the artifact bundle:
   <img src="https://img.shields.io/badge/Qdrant-Vector%20Export-DC2626?style=for-the-badge" alt="Qdrant vector export" />
 </p>
 
-Local persistence in `GRAPH_IS_HERE/` is the source of truth. Downstream exports are optional, post-creation adapters:
+## How Graph Storage Works
 
-- Neo4j export means graph export (nodes + edges)
-- Qdrant export means vector export (embeddings + metadata)
+Your graph lives in `GRAPH_IS_HERE/` on your machine.
+That folder is the master copy — always.
 
-Exports are one-way from the local artifact bundle to downstream systems. They are not required for ingestion or querying.
+Neo4j and Qdrant are optional exports you can push to
+after your graph is built. They are downstream copies,
+not the master. If you re-ingest or update locally,
+the local graph updates. The exports do not automatically
+get those changes — you re-export manually when ready.
+
+```
+Local graph → (optional) → Neo4j copy
+Local graph → (optional) → Qdrant copy
+```
+
+Think of it like a Google Doc you can export to PDF.
+The Doc is the real thing. The PDF is a snapshot for sharing.
 
 Available MCP tools:
 

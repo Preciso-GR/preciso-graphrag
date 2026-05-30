@@ -1,0 +1,263 @@
+{
+  "generated_at": "2026-05-30T13:00:00Z",
+  "source_extractions": [
+    "extractions/WALMART_2022_10K_extracted.json",
+    "extractions/WALMART_2023_10K_extracted.json"
+  ],
+  "total_cases": 23,
+  "test_cases": [
+    {
+      "id": "TC001",
+      "question": "What were Walmart's total revenues in FY2023?",
+      "gold_answer": "$611.3 billion",
+      "source_entities": ["walmart_total_revenues_2023"],
+      "source_chunks": ["chunk_001"],
+      "category": "metric_retrieval",
+      "difficulty": "easy",
+      "requires_yoy": false,
+      "query_hints": "total revenues, fiscal 2023"
+    },
+    {
+      "id": "TC002",
+      "question": "What were Walmart's net sales in FY2023?",
+      "gold_answer": "$605.9 billion",
+      "source_entities": ["walmart_net_sales_2023"],
+      "source_chunks": ["chunk_001"],
+      "category": "metric_retrieval",
+      "difficulty": "easy",
+      "requires_yoy": false,
+      "query_hints": "net sales, fiscal 2023"
+    },
+    {
+      "id": "TC003",
+      "question": "What were Walmart U.S. net sales in FY2023?",
+      "gold_answer": "$420.6 billion",
+      "source_entities": ["walmart_u_s_net_sales_2023"],
+      "source_chunks": ["chunk_002"],
+      "category": "metric_retrieval",
+      "difficulty": "easy",
+      "requires_yoy": false,
+      "query_hints": "Walmart U.S., net sales, fiscal 2023"
+    },
+    {
+      "id": "TC004",
+      "question": "What were Sam's Club net sales in FY2023?",
+      "gold_answer": "$84.3 billion",
+      "source_entities": ["sams_club_net_sales_2023"],
+      "source_chunks": ["chunk_002"],
+      "category": "metric_retrieval",
+      "difficulty": "easy",
+      "requires_yoy": false,
+      "query_hints": "Sam's Club, net sales, fiscal 2023"
+    },
+    {
+      "id": "TC005",
+      "question": "How many associates did Walmart have as of January 31, 2023?",
+      "gold_answer": "Approximately 2.1 million associates",
+      "source_entities": ["associates_count_2023"],
+      "source_chunks": ["chunk_003"],
+      "category": "metric_retrieval",
+      "difficulty": "easy",
+      "requires_yoy": false,
+      "query_hints": "associates, headcount, January 31 2023"
+    },
+    {
+      "id": "TC006",
+      "question": "Who is listed as President and Chief Executive Officer of Walmart (2022 filing)?",
+      "gold_answer": "C. Douglas McMillon",
+      "source_entities": ["c_douglas_mcmillon"],
+      "source_chunks": ["chunk_004"],
+      "category": "entity_relationship",
+      "difficulty": "easy",
+      "requires_yoy": false,
+      "query_hints": "executive officers, President, Chief Executive Officer"
+    },
+    {
+      "id": "TC007",
+      "question": "Who is listed as Walmart U.S. CEO in the 2023 filing?",
+      "gold_answer": "John Furner",
+      "source_entities": ["John Furner"],
+      "source_chunks": ["chunk_004"],
+      "category": "entity_relationship",
+      "difficulty": "easy",
+      "requires_yoy": false,
+      "query_hints": "John Furner, Walmart U.S., executive officers"
+    },
+    {
+      "id": "TC008",
+      "question": "What were Walmart U.S. net sales in FY2022?",
+      "gold_answer": "$393.2 billion",
+      "source_entities": ["walmart_u_s_net_sales_2022"],
+      "source_chunks": ["chunk_002"],
+      "category": "metric_retrieval",
+      "difficulty": "easy",
+      "requires_yoy": false,
+      "query_hints": "Walmart U.S., net sales, fiscal 2022"
+    },
+    {
+      "id": "TC009",
+      "question": "What were Sam's Club net sales in FY2022?",
+      "gold_answer": "$73.6 billion",
+      "source_entities": ["sams_club_net_sales_2022"],
+      "source_chunks": ["chunk_002"],
+      "category": "metric_retrieval",
+      "difficulty": "easy",
+      "requires_yoy": false,
+      "query_hints": "Sam's Club, net sales, fiscal 2022"
+    },
+    {
+      "id": "TC010",
+      "question": "What were Walmart's total revenues in FY2022?",
+      "gold_answer": "$572.8 billion",
+      "source_entities": ["walmart_inc_2022","walmart_total_revenues_2022"],
+      "source_chunks": ["chunk_001"],
+      "category": "metric_retrieval",
+      "difficulty": "easy",
+      "requires_yoy": false,
+      "query_hints": "total revenues, fiscal 2022"
+    },
+    {
+      "id": "TC011",
+      "question": "How did Walmart's total revenues change from FY2022 to FY2023?",
+      "gold_answer": "Increased from $572.8B to $611.3B (+$38.5B, +6.7%)",
+      "source_entities": ["walmart_total_revenues_2022","walmart_total_revenues_2023"],
+      "source_chunks": ["chunk_001"],
+      "category": "yoy_comparison",
+      "difficulty": "medium",
+      "requires_yoy": true,
+      "query_hints": "compare, year-over-year, total revenues 2022 2023"
+    },
+    {
+      "id": "TC012",
+      "question": "How did Walmart's net sales change from FY2022 to FY2023?",
+      "gold_answer": "Increased from $567.8B to $605.9B (+$38.1B, +6.7%)",
+      "source_entities": ["walmart_net_sales_2022","walmart_net_sales_2023"],
+      "source_chunks": ["chunk_001"],
+      "category": "yoy_comparison",
+      "difficulty": "medium",
+      "requires_yoy": true,
+      "query_hints": "compare, year-over-year, net sales 2022 2023"
+    },
+    {
+      "id": "TC013",
+      "question": "How did Walmart U.S. net sales change from FY2022 to FY2023?",
+      "gold_answer": "Increased from $393.2B to $420.6B (+$27.4B, +7.0%)",
+      "source_entities": ["walmart_u_s_net_sales_2022","walmart_u_s_net_sales_2023"],
+      "source_chunks": ["chunk_002"],
+      "category": "yoy_comparison",
+      "difficulty": "medium",
+      "requires_yoy": true,
+      "query_hints": "Walmart U.S., year-over-year, 2022 2023"
+    },
+    {
+      "id": "TC014",
+      "question": "How did Sam's Club net sales change from FY2022 to FY2023?",
+      "gold_answer": "Increased from $73.6B to $84.3B (+$10.7B, +14.6%)",
+      "source_entities": ["sams_club_net_sales_2022","sams_club_net_sales_2023"],
+      "source_chunks": ["chunk_002"],
+      "category": "yoy_comparison",
+      "difficulty": "medium",
+      "requires_yoy": true,
+      "query_hints": "Sam's Club, year-over-year, 2022 2023"
+    },
+    {
+      "id": "TC015",
+      "question": "Compare Walmart's total revenues and net sales in FY2023.",
+      "gold_answer": "Total revenues $611.3B; net sales $605.9B",
+      "source_entities": ["walmart_total_revenues_2023","walmart_net_sales_2023"],
+      "source_chunks": ["chunk_001"],
+      "category": "aggregation",
+      "difficulty": "medium",
+      "requires_yoy": false,
+      "query_hints": "total revenues vs net sales, fiscal 2023"
+    },
+    {
+      "id": "TC016",
+      "question": "What was the absolute change in associate headcount from 2022 to 2023?",
+      "gold_answer": "Decreased from ~2.3M to ~2.1M (-0.2M, -8.7%)",
+      "source_entities": ["associates_count_2022","associates_count_2023"],
+      "source_chunks": ["chunk_003"],
+      "category": "yoy_comparison",
+      "difficulty": "medium",
+      "requires_yoy": true,
+      "query_hints": "associates, headcount, compare 2022 2023"
+    },
+    {
+      "id": "TC017",
+      "question": "List Walmart's net sales by segment in FY2023 (Walmart U.S., Walmart International, Sam's Club).",
+      "gold_answer": "Walmart U.S.: $420.6B; Walmart International: $101.0B; Sam's Club: $84.3B",
+      "source_entities": ["walmart_u_s_net_sales_2023","walmart_international_net_sales_2023","sams_club_net_sales_2023"],
+      "source_chunks": ["chunk_002"],
+      "category": "segment_performance",
+      "difficulty": "medium",
+      "requires_yoy": false,
+      "query_hints": "segment performance, net sales by segment, 2023"
+    },
+    {
+      "id": "TC018",
+      "question": "List Walmart's net sales by segment in FY2022 (Walmart U.S., Walmart International, Sam's Club).",
+      "gold_answer": "Walmart U.S.: $393.2B; Walmart International: $101.0B; Sam's Club: $73.6B",
+      "source_entities": ["walmart_u_s_net_sales_2022","walmart_international_net_sales_2022","sams_club_net_sales_2022"],
+      "source_chunks": ["chunk_002"],
+      "category": "segment_performance",
+      "difficulty": "medium",
+      "requires_yoy": false,
+      "query_hints": "segment performance, net sales by segment, 2022"
+    },
+    {
+      "id": "TC019",
+      "question": "Which executive is listed as President & CEO in the 2023 filing?",
+      "gold_answer": "C. Douglas McMillon",
+      "source_entities": ["c_douglas_mcmillon"],
+      "source_chunks": ["chunk_004"],
+      "category": "entity_relationship",
+      "difficulty": "medium",
+      "requires_yoy": false,
+      "query_hints": "executive officers, President, CEO, 2023"
+    },
+    {
+      "id": "TC020",
+      "question": "Which Walmart executive listed in the filings oversees Walmart U.S.?",
+      "gold_answer": "John Furner (Walmart U.S. CEO)",
+      "source_entities": ["John Furner","walmart_inc_2023"],
+      "source_chunks": ["chunk_004"],
+      "category": "multi_hop",
+      "difficulty": "hard",
+      "requires_yoy": false,
+      "query_hints": "Walmart U.S. CEO, executive officers, role mapping"
+    },
+    {
+      "id": "TC021",
+      "question": "Which executive is listed as President and CEO in both the 2022 and 2023 filings?",
+      "gold_answer": "C. Douglas McMillon",
+      "source_entities": ["c_douglas_mcmillon"],
+      "source_chunks": ["chunk_004"],
+      "category": "multi_hop",
+      "difficulty": "hard",
+      "requires_yoy": false,
+      "query_hints": "cross-document, executive consistency, President, CEO"
+    },
+    {
+      "id": "TC022",
+      "question": "Which segment had the largest YoY percent increase in net sales from 2022 to 2023?",
+      "gold_answer": "Sam's Club (+14.6%)",
+      "source_entities": ["sams_club_net_sales_2022","sams_club_net_sales_2023","walmart_u_s_net_sales_2022","walmart_u_s_net_sales_2023"],
+      "source_chunks": ["chunk_002"],
+      "category": "multi_hop",
+      "difficulty": "hard",
+      "requires_yoy": true,
+      "query_hints": "compare percent change, net sales by segment, 2022 2023"
+    },
+    {
+      "id": "TC023",
+      "question": "Identify an executive mentioned in the executive officers listing and their title (from any filing).",
+      "gold_answer": "John David Rainey — Chief Financial Officer",
+      "source_entities": ["John David Rainey"],
+      "source_chunks": ["chunk_004"],
+      "category": "multi_hop",
+      "difficulty": "hard",
+      "requires_yoy": false,
+      "query_hints": "executive officers, titles, CFO, John David Rainey"
+    }
+  ]
+}

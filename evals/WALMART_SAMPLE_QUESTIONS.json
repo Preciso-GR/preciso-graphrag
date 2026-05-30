@@ -1,0 +1,30 @@
+{
+  "source": "Walmart 10-K 2022/2023",
+  "generated_at": "2026-05-30T13:00:00Z",
+  "total_questions": 23,
+  "questions": [
+    {"id": "TC001", "question": "What were Walmart's total revenues in FY2023?"},
+    {"id": "TC002", "question": "What were Walmart's net sales in FY2023?"},
+    {"id": "TC003", "question": "What were Walmart U.S. net sales in FY2023?"},
+    {"id": "TC004", "question": "What were Sam's Club net sales in FY2023?"},
+    {"id": "TC005", "question": "How many associates did Walmart have as of January 31, 2023?"},
+    {"id": "TC006", "question": "Who is listed as President and Chief Executive Officer of Walmart (2022 filing)?"},
+    {"id": "TC007", "question": "Who is listed as Walmart U.S. CEO in the 2023 filing?"},
+    {"id": "TC008", "question": "What were Walmart U.S. net sales in FY2022?"},
+    {"id": "TC009", "question": "What were Sam's Club net sales in FY2022?"},
+    {"id": "TC010", "question": "What were Walmart's total revenues in FY2022?"},
+    {"id": "TC011", "question": "How did Walmart's total revenues change from FY2022 to FY2023?"},
+    {"id": "TC012", "question": "How did Walmart's net sales change from FY2022 to FY2023?"},
+    {"id": "TC013", "question": "How did Walmart U.S. net sales change from FY2022 to FY2023?"},
+    {"id": "TC014", "question": "How did Sam's Club net sales change from FY2022 to FY2023?"},
+    {"id": "TC015", "question": "Compare Walmart's total revenues and net sales in FY2023."},
+    {"id": "TC016", "question": "What was the absolute change in associate headcount from 2022 to 2023?"},
+    {"id": "TC017", "question": "List Walmart's net sales by segment in FY2023 (Walmart U.S., Walmart International, Sam's Club)."},
+    {"id": "TC018", "question": "List Walmart's net sales by segment in FY2022 (Walmart U.S., Walmart International, Sam's Club)."},
+    {"id": "TC019", "question": "Which executive is listed as President & CEO in the 2023 filing?"},
+    {"id": "TC020", "question": "Which Walmart executive listed in the filings oversees Walmart U.S.?"},
+    {"id": "TC021", "question": "Which executive is listed as President and CEO in both the 2022 and 2023 filings?"},
+    {"id": "TC022", "question": "Which segment had the largest YoY percent increase in net sales from 2022 to 2023?"},
+    {"id": "TC023", "question": "Identify an executive mentioned in the executive officers listing and their title (from any filing)."}
+  ]
+}

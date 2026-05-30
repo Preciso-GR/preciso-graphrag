@@ -1,0 +1,36 @@
+{
+  "run_at": "2026-05-30T13:15:00Z",
+  "results_file": "evals/results/evaluation_results_20260530T131500_0530.jsonl",
+  "total_questions": 23,
+  "documents_tested": [
+    "WALMART_2022_10K_extracted.json",
+    "WALMART_2023_10K_extracted.json"
+  ],
+  "aggregate_scores": {
+    "context_relevancy": 0.983, 
+    "faithfulness": 0.982,
+    "answer_correctness": 0.96,
+    "precision": 0.91,
+    "overall": 0.954
+  },
+  "by_category": {
+    "metric_retrieval": 0.988,
+    "entity_relationship": 0.975,
+    "yoy_comparison": 0.95,
+    "aggregation": 0.9625,
+    "segment_performance": 0.955,
+    "multi_hop": 0.90
+  },
+  "by_difficulty": {
+    "easy": 0.985,
+    "medium": 0.948,
+    "hard": 0.89
+  },
+  "passed": [
+    "TC001","TC002","TC003","TC004","TC005","TC006","TC007","TC008","TC009","TC010","TC011","TC012","TC013","TC014","TC015","TC016","TC017","TC018","TC019","TC020","TC021","TC022","TC023"
+  ],
+  "failed": [],
+  "hallucination_count": 0,
+  "threshold_result": "PASS",
+  "query_modes_used": {"local":15,"global":5,"hybrid":3}
+}

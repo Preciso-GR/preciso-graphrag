@@ -1,5 +1,25 @@
 # FAQ: Common Problems and Fixes
 
+## What does "local graph artifacts remain the source of truth" mean?
+
+It means `GRAPH_IS_HERE/` is the real copy of your graph.
+
+If you export to Neo4j or Qdrant, those are downstream copies for sharing or scale. When you re-ingest locally, the local graph updates first. The export targets do not update by themselves; you re-export manually when you want them refreshed.
+
+Think of it like this:
+- `GRAPH_IS_HERE/` = the original file
+- Neo4j/Qdrant = exported copies
+
+If the original changes, the copies stay stale until you export again.
+
+## Do I need Neo4j or Qdrant to use Preciso?
+
+No. Preciso works without them. The local graph in `GRAPH_IS_HERE/` is enough for ingesting and querying. Neo4j and Qdrant are optional if you want shared access, production deployment, or a separate search backend.
+
+## How do I know if my export is out of date?
+
+Check `GRAPH_IS_HERE/artifact_manifest.json` for the latest ingestion metadata. If you re-ingested after the last export, your Neo4j or Qdrant copy is stale and should be refreshed.
+
 ## MCP server not starting
 
 ### Symptom

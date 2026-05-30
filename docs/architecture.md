@@ -60,6 +60,48 @@
      └────────────┘
 ```
 
+## Storage Model
+
+### The Local Graph (Source of Truth)
+
+Everything Preciso builds lands in `GRAPH_IS_HERE/`:
+
+```
+GRAPH_IS_HERE/
+       graph_graph.graphml           ← the graph (nodes + edges)
+       kv_store_text_chunks.json     ← original text evidence
+       kv_store_entity_chunks.json   ← which chunks each entity came from
+       kv_store_relation_chunks.json ← which chunks each relation came from
+       vdb_entities.json             ← entity embeddings for vector search
+       vdb_relationships.json        ← relationship embeddings
+       vdb_chunks.json               ← chunk embeddings
+       artifact_manifest.json        ← summary of what is in the graph
+```
+
+This folder is the graph. It is self-contained. You can copy it, back it up, or rebuild it from your extraction files.
+
+### Downstream Exports (Optional)
+
+Neo4j and Qdrant are export targets, not storage backends.
+
+```
+Ingest flow:
+       extractions/ → MCP → GRAPH_IS_HERE/    ← always happens
+
+Export flow (optional, manual):
+       GRAPH_IS_HERE/ → export tool → Neo4j   ← you trigger this
+       GRAPH_IS_HERE/ → export tool → Qdrant  ← you trigger this
+```
+
+Exports are one-way and do not auto-update. If you re-ingest locally, `GRAPH_IS_HERE/` changes first. Re-export when you want the downstream copy refreshed.
+
+### Why Local First
+
+- works offline with no external services
+- zero infrastructure to set up for v1
+- graph is portable — move the folder, graph moves with it
+- exports are for teams or production systems that need shared access or scale beyond a single machine
+
 ## What each layer does
 
 ### `to_be_extracted/`

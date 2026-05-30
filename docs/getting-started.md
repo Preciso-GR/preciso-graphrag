@@ -83,6 +83,50 @@ You've built a knowledge graph from unstructured text. Instead of retrieving sim
 
 This is GraphRAG: reasoning across connections, not just searching for similar text.
 
+## Optional: Export to Neo4j or Qdrant
+
+These exports are optional. Skip this section unless you need to share your graph with a team or sync it into an existing Neo4j or Qdrant instance.
+
+### Prerequisites
+
+Install the extra packages if you plan to export:
+
+```bash
+pip install neo4j qdrant-client
+```
+
+### Configure `.env`
+
+Create a `.env` file at the repo root. Do not commit it.
+
+```bash
+# Neo4j export (optional)
+GRAPHRAG_NEO4J_URI=bolt://localhost:7687
+GRAPHRAG_NEO4J_USERNAME=neo4j
+GRAPHRAG_NEO4J_PASSWORD=your-password
+GRAPHRAG_NEO4J_DATABASE=neo4j
+
+# Qdrant export (optional)
+GRAPHRAG_QDRANT_URL=http://localhost:6333
+GRAPHRAG_QDRANT_API_KEY=
+GRAPHRAG_QDRANT_COLLECTION_PREFIX=preciso
+
+# Optional shared workspace label for exports
+GRAPHRAG_EXPORT_WORKSPACE=default
+```
+
+### Export flow
+
+After your graph is built in `GRAPH_IS_HERE/`, call the export tool manually:
+
+```text
+Call get_server_status() to confirm the local graph exists.
+Then call export_graph_to_neo4j with your Neo4j connection settings.
+Or call export_vectors_to_qdrant with your Qdrant connection settings.
+```
+
+Remember: these are snapshots. If you re-ingest locally, export again when you want Neo4j or Qdrant refreshed.
+
 ---
 
 **Next steps:**

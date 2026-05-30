@@ -22,7 +22,7 @@ DEFAULT_KG_CHUNK_PICK_METHOD = "WEIGHT"        # Method to select important chun
 DEFAULT_MAX_FILE_PATHS = 8                     # Max source file paths to store per entity/relation
 DEFAULT_FILE_PATH_MORE_PLACEHOLDER = "more_paths"  # Placeholder when truncating file paths
 DEFAULT_ENTITY_NAME_MAX_LENGTH = 255           # Max entity name length
-DEFAULT_TOP_K = 20                             # Top K results to return in queries
+DEFAULT_TOP_K = 5                              # Top K results to return in queries
 DEFAULT_CHUNK_TOP_K = 20                       # Top K chunks to retrieve
 GRAPH_FIELD_SEP = "<SEP>"                      # Internal separator for multi-value graph fields
 
@@ -237,7 +237,7 @@ def build_global_config(
         # ====================================================================
         "embedding_batch_num": 8,                        # Batch size for embedding operations
         "vector_db_storage_cls_kwargs": {
-            "cosine_better_than_threshold": 0.2,         # Min similarity threshold for results
+            "cosine_better_than_threshold": 0.6,         # Min similarity threshold for results
         },
         
         # ====================================================================

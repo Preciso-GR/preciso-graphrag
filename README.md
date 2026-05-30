@@ -398,6 +398,29 @@ The repo expects a JSON object with:
 - `relationships`
 - `chunks`
 
+---
+
+## Evaluation Results (Walmart 2022/2023)
+
+- **Test sources:** `extractions/WALMART_2022_10K_extracted.json` and `extractions/WALMART_2023_10K_extracted.json`
+- **Test cases:** `evals/test_cases_20260530T130000_0530.json` (23 cases)
+- **Per-run results:** `evals/results/evaluation_results_20260530T131500_0530.jsonl`
+- **Aggregated summary:** `evals/results/summary_20260530T131500_0530.json`
+
+**Key metrics**
+
+- Total test cases: 23
+- Passed: 23
+- Aggregate overall score: 0.954 (PASS)
+- Multi-hop (hard) mean score: ~0.90
+- Hallucinations detected: 0
+
+Notes:
+
+- This evaluation was run against the two Walmart extraction JSONs listed above. Scoring used retrieved evidence chunks and heuristic metrics (context relevance, faithfulness, answer correctness, precision). The repository's LLM summarization was inactive during this run, so no LLM-based faithfulness checks were performed.
+- To reproduce or run additional repetitions (recommended R>=3 for stability), start the MCP server (scripts/mcp_launcher.sh or your preferred local launcher) and run the evaluation harness in `evals/`.
+
+
 The extraction skills in `skills/` already define the expected schema and output filename pattern:
 
 - `extractions/{source_filename}_extracted.json`

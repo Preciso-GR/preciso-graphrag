@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+from dataclasses import replace
 from functools import partial
 from typing import Any
 
@@ -40,6 +41,35 @@ from core.utils import (
     use_llm_func_with_cache,
     CacheData,
 )
+
+YOY_SIGNAL_PHRASES = [
+    "change from",
+    "changed from",
+    "compare",
+    "comparison",
+    "growth from",
+    "grew from",
+    "increase from",
+    "increased from",
+    "decrease from",
+    "decreased from",
+    "year over year",
+    "yoy",
+    "from fiscal",
+    "from fy",
+    "versus",
+    " vs ",
+    "compared to",
+    "relative to",
+]
+
+
+def _detect_comparison_query(query: str) -> bool:
+    """
+    Returns True if query is asking for a comparison between two time periods.
+    """
+    query_lower = query.lower()
+    return any(phrase in query_lower for phrase in YOY_SIGNAL_PHRASES)
 
 
 async def extract_keywords_only(
@@ -124,6 +154,9 @@ async def kg_query(
 ) -> QueryResult | None:
     if not query:
         return QueryResult(content=PROMPTS["fail_response"])
+    if query_param.mode == "hybrid" and _detect_comparison_query(query):
+        query_param = replace(query_param, mode="global")
+        logger.info("Query auto-upgraded to global mode: comparison intent detected")
     use_model_func = query_param.model_func or global_config.get("llm_model_func")
     if use_model_func is not None:
         use_model_func = partial(use_model_func, _priority=5)

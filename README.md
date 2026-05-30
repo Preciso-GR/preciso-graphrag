@@ -40,6 +40,28 @@ Preciso:
 
 The graph makes multi-hop reasoning possible.
 
+## Benchmark Results
+
+We evaluated Preciso on 23 financial QA questions from Walmart FY2022 + FY2023 10-K filings:
+
+| Metric              | Score |
+|---------------------|-------|
+| Context Relevancy   | 0.983 |
+| Faithfulness        | 1.000 |
+| Answer Correctness  | 0.960 |
+| Precision           | 0.910 |
+| **Overall**         | **0.954** |
+
+- Hallucinations: **0/23**
+- Failed questions: **0/23**
+
+**How we compare:**
+- Preciso: **95.4%**
+- GPT-4 + long context (79k tokens): ~79%
+- GPT-4 + standard RAG: ~19%
+
+See [eval-guide.md](docs/eval-guide.md) for detailed methodology and multi-hop breakdowns.
+
 ## Red-White Workflow
 
 Preciso GraphRAG is built around a simple local contract:

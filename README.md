@@ -14,6 +14,10 @@
   </p>
 </div>
 
+## License
+
+This project is licensed under the Business Source License 1.1. See [LICENSE](LICENSE) for the full terms and change-date details.
+
 Most RAG tools retrieve documents.
 Preciso builds a graph — so your agent can reason across connections, not just find similar text.
 

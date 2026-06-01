@@ -1,5 +1,13 @@
 # FAQ: Common Problems and Fixes
 
+## Does Preciso parse PDFs?
+
+No. Preciso does not include a built-in PDF parser or OCR layer.
+
+For the best graph quality, use `.md` and `.txt` inputs in `to_be_extracted/`. Those formats give the agent cleaner structure, more predictable chunking, and a more reliable extraction path.
+
+PDFs are discouraged in the default workflow. They may still work with agents that have strong native PDF understanding, but that behavior comes from the external agent, not from Preciso itself.
+
 ## What does "local graph artifacts remain the source of truth" mean?
 
 It means `GRAPH_IS_HERE/` is the real copy of your graph.
@@ -336,4 +344,3 @@ git checkout HEAD -- GRAPH_IS_HERE/
 2. Verify `get_server_status()` returns `"overall": "ready"`.
 3. Try the Walmart sample evaluation to confirm your setup works.
 4. Review [architecture.md](architecture.md) to understand data flow.
-

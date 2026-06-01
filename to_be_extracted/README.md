@@ -4,9 +4,15 @@ Drop raw source material here before asking an agent to run the workflow.
 
 Good inputs:
 
-- financial filings and earnings transcripts
-- research papers and scientific PDFs
+- `.md` and `.txt` files
 - READMEs, technical docs, wikis, notes, and codebase-adjacent text
+- financial filings and earnings transcripts that have already been converted to text or markdown
+- research material that is already in a text-first format
+
+For better graph quality, prefer `.md` and `.txt` inputs.
+
+Warning:
+Preciso does not include built-in PDF parsing or OCR. PDFs are discouraged in the default workflow unless you convert them first or rely on an external agent with strong native PDF support.
 
 Recommended agent prompt:
 

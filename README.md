@@ -22,9 +22,11 @@ Most RAG tools retrieve documents.
 Preciso builds a graph — so your agent can reason across connections, not just find similar text.
 
 **The flow is simple:**
-raw files -> agent picks skill -> extraction JSON -> MCP ingest -> local graph
+raw `.md` / `.txt` files -> agent picks skill -> extraction JSON -> MCP ingest -> local graph
 
-Drop a financial filing, research paper, or codebase into `to_be_extracted/`. An agent reads it, extracts entities and relationships using domain-specific skills, and persists a queryable knowledge graph locally in `GRAPH_IS_HERE/`.
+Drop markdown, plain text, or other agent-readable source material into `to_be_extracted/`. An agent reads it, extracts entities and relationships using domain-specific skills, and persists a queryable knowledge graph locally in `GRAPH_IS_HERE/`.
+
+Preciso does not include a built-in document parser or OCR layer. The repo starts at agent extraction, not document conversion, so `.md` and `.txt` are the best inputs for higher-quality graph creation and the most reliable workflow.
 
 No cloud required. No pipeline to configure.
 Works with Codex, Claude Code, GitHub Copilot, and OpenCode.
@@ -97,9 +99,19 @@ Environment expectations:
 
 ### 2. Drop files into `to_be_extracted/`
 
-Put the raw documents you want processed into `to_be_extracted/`.
+Put the source files you want processed into `to_be_extracted/`.
 
-Make sure you have at least one file in `to_be_extracted/` before running the agent prompt. A PDF, markdown file, or plain text document works.
+Make sure you have at least one file in `to_be_extracted/` before running the agent prompt.
+
+Recommended inputs:
+
+- `.md`
+- `.txt`
+- README files, notes, wiki exports, and other text-first source material
+
+For better graph quality, prefer `.md` and `.txt`.
+
+PDFs are discouraged in the default workflow. Preciso does not parse PDFs itself, so PDF handling depends on the external agent's native capabilities or on user-side conversion before the file is dropped into `to_be_extracted/`.
 
 ### 3. Open Codex, Claude Code, or Copilot in this repo and use this prompt
 
@@ -122,7 +134,7 @@ That is the fastest supported developer onboarding path.
 
 This repo is built around six steps:
 
-1. A developer places source files in `to_be_extracted/`.
+1. A developer places source files in `to_be_extracted/`, ideally as `.md` or `.txt`.
 2. An agent reads those files.
 3. The agent selects the correct extraction skill from `skills/`.
 4. The agent writes structured extraction output into `extractions/`.
@@ -133,7 +145,7 @@ So the product is not only "an MCP server" and not only "an ingestion backend."
 
 The product is:
 
-- an agent workflow for extracting graph-ready knowledge from raw documents
+- an agent workflow for extracting graph-ready knowledge from agent-readable source material
 - a set of repo-local extraction skills
 - MCP tools that ingest and query the graph
 - a persistent graph artifact that can be reused later
@@ -142,14 +154,14 @@ The product is:
 
 These directories are the workflow contract for developers and agents:
 
-- `to_be_extracted/`: raw user inputs waiting for extraction
+- `to_be_extracted/`: source files waiting for agent extraction
 - `skills/`: agent skills used to decide how extraction should happen
 - `extractions/`: agent-generated extraction JSON files
 - `GRAPH_IS_HERE/`: persisted graph and retrieval artifacts
 
 The expected lifecycle is:
 
-1. raw file arrives in `to_be_extracted/`
+1. source file arrives in `to_be_extracted/`
 2. agent selects a skill
 3. agent writes `extractions/{source_name}_extracted.json`
 4. agent calls ingestion
@@ -163,12 +175,19 @@ This is the main way a new developer should use the repo.
 
 Drop one or more source files into `to_be_extracted/`.
 
+The best path for graph quality is markdown or plain text. If you start from PDF, convert it yourself first or rely on an external agent that can read PDFs well.
+
 Examples:
 
 - financial filing
 - research paper
 - README or technical documentation
 - internal notes or wiki export
+
+Best format choices for this repo:
+
+- `.md`
+- `.txt`
 
 ### 2. Ask an agent to run the workflow
 
@@ -235,7 +254,7 @@ Available extraction skills:
 - `skills/General-graph-extraction-skill/SKILL.md`
   Use for codebases, READMEs, wikis, internal docs, and general non-financial content.
 - `skills/Reconciliation-Subagent-Skill/SKILL.md`
-  Use only for cleanup of an already-created extraction JSON, not for raw-document extraction.
+  Use only for cleanup of an already-created extraction JSON, not for raw source extraction.
 
 The agent is expected to decide the skill before producing `extractions/{source}_extracted.json`.
 

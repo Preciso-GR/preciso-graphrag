@@ -18,13 +18,17 @@ pip install -r requirements.txt
 
 ## Step 2: Drop a document
 
-Place any document into `to_be_extracted/`. Supported formats:
-- PDF (plain text extraction)
-- Markdown
-- Plain text
-- Financial filings (10-K, 10-Q, etc.)
-- Research papers
-- Codebase documentation
+Place source material into `to_be_extracted/`.
+
+Recommended inputs for the best graph quality:
+- Markdown (`.md`)
+- Plain text (`.txt`)
+- READMEs, technical docs, notes, wiki exports, and other text-first material
+
+Discouraged in the default workflow:
+- PDF files
+
+Preciso does not include a built-in PDF parser or OCR layer. For the most reliable graph creation, use `.md` and `.txt` inputs. PDF success depends on the external agent's native document-reading capabilities or on user-side conversion before the file is dropped into `to_be_extracted/`.
 
 For example:
 ```bash

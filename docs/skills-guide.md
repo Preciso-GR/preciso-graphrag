@@ -2,7 +2,9 @@
 
 ## What a skill is
 
-A skill is an agent-readable instruction file that teaches the system how to extract entities and relationships from a specific type of document. Skills are domain-specific — a financial skill knows how to find revenue, executives, and risks in a 10-K filing, while a research skill knows how to find hypotheses, datasets, and conclusions in a paper. Each skill is a markdown file in `skills/` that an agent reads before deciding how to extract and structure knowledge from a raw document.
+A skill is an agent-readable instruction file that teaches the system how to extract entities and relationships from a specific type of document. Skills are domain-specific — a financial skill knows how to find revenue, executives, and risks in a 10-K filing, while a research skill knows how to find hypotheses, datasets, and conclusions in a paper. Each skill is a markdown file in `skills/` that an agent reads before deciding how to extract and structure knowledge from source material the agent can read reliably.
+
+For the best graph quality in this repo, prefer markdown and plain text inputs. Preciso does not include a built-in parser or OCR layer, so PDFs are outside the recommended default path.
 
 ## The three built-in skills
 

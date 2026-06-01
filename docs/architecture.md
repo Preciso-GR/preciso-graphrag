@@ -105,7 +105,9 @@ Exports are one-way and do not auto-update. If you re-ingest locally, `GRAPH_IS_
 ## What each layer does
 
 ### `to_be_extracted/`
-Raw documents waiting to be processed. Developers drop files here; agents read them and decide which skill applies.
+Source files waiting to be processed. Developers drop files here; agents read them and decide which skill applies. For the best graph quality, prefer `.md` and `.txt` inputs over PDFs.
+
+Preciso does not perform document normalization, OCR, or PDF parsing as part of the core architecture. Those concerns stay outside the repo boundary.
 
 ### Skills
 Domain-specific instructions defining:

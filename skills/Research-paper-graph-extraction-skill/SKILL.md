@@ -3,7 +3,7 @@ name: research-paper-graph-extraction
 description: >
   Use this skill whenever a user wants to extract and connect knowledge from academic
   research papers, scientific literature, or multi-paper corpora for graph-based ingestion.
-  Triggers include: PDFs of research papers, arXiv links, literature reviews, citation networks,
+  Triggers include: research papers, arXiv links, literature reviews, citation networks,
   hypothesis graphs, experiment comparisons, method lineages, or any academic/scientific text.
   Also trigger when the user says: "map citations in these papers", "connect findings across studies",
   "build a literature graph", "link hypotheses", "trace the origin of this method", "compare results
@@ -25,6 +25,7 @@ Execution contract:
 - Call `get_server_status()` before starting extraction.
 - If overall is `degraded`, explain what is degraded, what still works, and ask whether to proceed or fix first.
 - Read one paper or one raw source file from `to_be_extracted/` at a time unless the user explicitly asks for a combined corpus extraction.
+- For the best graph quality, prefer `.md` and `.txt` source files. If the source is PDF, assume there is no built-in repo parser or OCR layer and be more conservative about noisy layout, broken equations, and repeated headers/footers.
 - Prefer one extraction JSON per source paper so ingestion and retries stay simple.
 - Validate entity, relationship, citation, and chunk integrity before ingestion.
 - If the extraction has duplicates, orphaned relationships, or conflicts that need cleanup, use the reconciliation skill before ingestion.
@@ -39,6 +40,64 @@ Researchers and analysts reading literature face a specific problem: insights ar
 - "Which findings from Paper A were contradicted by Paper B?"
 - "What methods does Method X build upon?"
 - "Which authors published together across these papers?"
+
+This skill should produce extraction output that is:
+- clean: remove layout junk, repeated headers, page numbers, citation clutter, and OCR noise
+- concise: capture the paper's real contributions without bloating the graph with every sentence
+- formula-aware: preserve the meaning of core equations and symbol definitions when they matter to the method or findings
+- evidence-grounded: anchor claims in abstract, figures, tables, results, and discussion rather than vague paraphrase
+
+---
+
+## Scholar Reading Protocol
+
+Model the extraction process on how experienced researchers read papers:
+
+### Pass 1 — Triage and structure map
+
+Read:
+- title
+- abstract
+- introduction
+- section and subsection headings
+- conclusion or discussion ending
+- references at a glance
+
+At the end of this pass, identify:
+- paper category: empirical study, theory paper, benchmark paper, survey, systems paper, review, position paper
+- main question or hypothesis
+- claimed contributions
+- likely important sections, figures, tables, and equations
+- whether the paper is readable enough for high-confidence extraction
+
+### Pass 2 — Evidence-oriented reading
+
+Read for substance using the paper's structure, usually close to IMRaD:
+- abstract and introduction for question, scope, and contribution framing
+- methods for setup, assumptions, datasets, models, baselines, and evaluation design
+- results with special attention to figures, tables, captions, and ablations
+- discussion/conclusion for interpretation, limitations, and future work
+
+During this pass, extract:
+- the main method, task, datasets, baselines, metrics, findings, and limitations
+- key citations and method lineage
+- the strongest evidence supporting each major claim
+
+### Pass 3 — Deep verification
+
+Do a focused deep pass only on parts that materially affect graph quality:
+- central equations
+- major figures and tables
+- experimental setup details needed to understand findings
+- assumptions, caveats, and failure cases
+
+During this pass, challenge:
+- unsupported claims
+- overgeneralized conclusions
+- missing baselines
+- ambiguous references to prior work
+
+If evidence is weak or the text is corrupted, reduce extraction density instead of guessing.
 
 ---
 
@@ -87,6 +146,7 @@ Chunks are the evidence base. Every entity and relationship must point to a chun
 | `AUTHOR` | Named researcher | Ashish Vaswani |
 | `INSTITUTION` | University, lab, company | Google Brain, MIT CSAIL |
 | `METHOD` | Named technique or algorithm | Transformer, BERT, LoRA |
+| `EQUATION` | Core formula or objective | Scaled dot-product attention, ELBO, cross-entropy objective |
 | `DATASET` | Named evaluation dataset | ImageNet, SQuAD, MMLU |
 | `METRIC` | Evaluation measure | BLEU score, F1, Perplexity |
 | `FINDING` | A stated result or claim | "Transformer outperforms RNN on WMT14" |
@@ -95,6 +155,7 @@ Chunks are the evidence base. Every entity and relationship must point to a chun
 | `TASK` | An NLP/ML/scientific task | Machine translation, question answering |
 | `VENUE` | Publication venue | NeurIPS, ICML, Nature, arXiv |
 | `LIMITATION` | An acknowledged weakness | "Quadratic complexity in sequence length" |
+| `EXPERIMENT` | A distinct evaluation or ablation setup | WMT14 En-De main benchmark, ablation without positional encoding |
 
 ---
 
@@ -124,6 +185,20 @@ For `FINDING` entities, include evidence details in `description`:
 
 `evidence_type` values: `empirical`, `theoretical`, `ablation`, `observational`, `claimed`
 
+For `EQUATION` entities:
+
+```json
+{
+  "entity_name": "scaled_dot_product_attention",
+  "entity_type": "EQUATION",
+  "description": "Attention(Q, K, V) = softmax(QK^T / sqrt(d_k))V; role=core scoring function; symbols=Q queries, K keys, V values, d_k key dimension.",
+  "source_id": "chunk_004",
+  "file_path": "attention_is_all_you_need_2017.md"
+}
+```
+
+Only extract equations that are central to the paper's contribution, method, analysis, or reported objective. Do not create entities for every inline symbol or routine algebra step.
+
 ---
 
 ## Relationship Types for Research Literature
@@ -136,9 +211,11 @@ For `FINDING` entities, include evidence details in `description`:
 | `CITES` | Paper → Paper (source cites target) |
 | `EXTENDS` | Method/Paper → Prior method/paper |
 | `PROPOSES` | Paper → Method/Concept |
+| `DEFINES` | Paper/Method → Equation or concept |
 | `EVALUATES_ON` | Paper → Dataset |
 | `REPORTS_METRIC` | Paper → Metric (with value) |
 | `ACHIEVES` | Paper/Method → Finding |
+| `COMPARES_AGAINST` | Paper/Method → Baseline method/paper |
 | `CONTRADICTS` | Finding → Finding (conflicting results) |
 | `SUPPORTS` | Finding → Hypothesis (evidence for) |
 | `ADDRESSES` | Paper → Task |
@@ -195,6 +272,80 @@ After individual extractions, make one pass to find:
 4. **Citation directionality**: `CITES` is directed. Paper A citing Paper B means A → B.
 5. **Don't merge methods carelessly**: "Self-attention" in two papers may refer to different mechanisms — use paper-scoped IDs.
 6. **Evidence linkage**: Every entity and relationship must use a `source_id` that matches a real `chunk_id` in `chunks`.
+7. **Figures and tables are first-class evidence**: Prefer extracting concrete claims from captions, result summaries, and linked discussion text instead of from speculative prose alone.
+8. **Equations need semantic interpretation**: Preserve the role of an equation, its main symbols, and what it computes or optimizes; do not dump raw math without context.
+9. **Keep extraction concise**: One strong `FINDING` entity with grounded detail is better than five overlapping paraphrases of the same result.
+
+---
+
+## What To Extract First
+
+Prioritize these sections in order of graph value:
+
+1. Abstract:
+   capture the problem, method, headline findings, and claimed contribution
+2. Introduction:
+   capture the research question, motivation, and positioning against prior work
+3. Figures and tables:
+   capture metrics, comparisons, trends, error bars, ablations, and best evidence
+4. Methods:
+   capture setup, model design, datasets, baselines, and assumptions
+5. Results:
+   capture measured outcomes and what changed versus prior work
+6. Discussion / Conclusion:
+   capture interpretation, limitations, caveats, and future directions
+7. References / Related work:
+   capture only important lineage and citation structure, not every citation mention
+
+Ignore or downweight:
+- publisher boilerplate
+- author footnotes unless they matter scientifically
+- repeated section headers/footers
+- raw citation clusters with no semantic contribution
+- appendix detail unless it changes the meaning of a key result
+
+---
+
+## Formula, Figure, and Table Handling
+
+### Formula handling
+
+- Extract only central equations, objectives, loss functions, update rules, or theorem-defining expressions.
+- Convert formulas into concise semantic descriptions in `description`.
+- Include symbol definitions only for the symbols needed to understand the method or finding.
+- Link equations to the methods, findings, or concepts they support using `DEFINES`, `PROPOSES`, `SUPPORTS`, or `EXTENDS`.
+- If equation text is corrupted by OCR or broken line wraps, do not hallucinate the full expression. Extract the role instead, or skip it.
+
+### Figure and table handling
+
+- Treat major figures and tables as dense evidence summaries.
+- Read captions together with the nearby results/discussion text.
+- Extract:
+  - best model or method comparisons
+  - key metric values
+  - ablation outcomes
+  - trend direction
+  - statistically or substantively meaningful differences
+- When possible, represent a result as:
+  - `METHOD` or `PAPER` `ACHIEVES` `FINDING`
+  - `PAPER` or `METHOD` `COMPARES_AGAINST` baseline
+  - `PAPER` `REPORTS_METRIC` metric
+- Do not create graph entities for every row in a large table unless the rows are central to downstream querying.
+
+---
+
+## Clean, Concise Extraction Principles
+
+- Prefer the paper's actual contribution language over long paraphrase.
+- Separate:
+  - what the paper proposes
+  - what the paper measures
+  - what the authors conclude
+  - what limitations remain
+- If multiple sentences restate the same idea, collapse them into one entity or relationship with the strongest wording and evidence.
+- Use chunk boundaries that preserve scientific meaning:
+  abstract block, contribution paragraph, method definition, figure caption with linked result text, limitation paragraph.
+- Do not let related-work name-dropping overwhelm the graph. Extract lineage, not bibliography noise.
 
 ---
 

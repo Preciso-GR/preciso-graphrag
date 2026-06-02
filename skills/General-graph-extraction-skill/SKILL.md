@@ -24,6 +24,7 @@ Execution contract:
 - Call `get_server_status()` before starting extraction.
 - If overall is `degraded`, explain what is degraded, what still works, and ask whether to proceed or fix first.
 - Read one raw source file from `to_be_extracted/` at a time unless the user explicitly asks for a combined extraction.
+- For the best graph quality, prefer `.md` and `.txt` source files. If the source is PDF or heavily formatted export text, assume there is no built-in repo parser or OCR layer and be conservative about layout noise.
 - Write exactly one extraction JSON for that source file to `extractions/{source_filename}_extracted.json`.
 - Validate entity, relationship, and chunk integrity before ingestion.
 - If the extraction has duplicates, orphaned relationships, or consistency issues, run reconciliation before ingestion.
@@ -38,6 +39,53 @@ Unlike financial extraction (which enforces strict numerical precision), general
 - "Which modules are owned by the payments team?"
 - "What broke when we changed the database schema?"
 - "Who are the experts on the recommendation engine?"
+
+The goal is not to graph every noun. The goal is to build a graph with high-signal, reusable structure:
+- who owns what
+- what depends on what
+- what decisions were made
+- what actions, risks, blockers, and systems matter
+- what evidence supports those links
+
+---
+
+## General Reading Strategy
+
+Read the source in layers instead of linearly dumping entities:
+
+### Pass 1 — Identify document subtype and signal
+
+Classify the source before extracting:
+- codebase or technical docs
+- internal wiki or knowledge base
+- meeting notes or ticket
+- policy or process document
+- product spec or decision record
+
+During this pass, decide:
+- what the main units of knowledge are
+- what should count as entities versus plain context
+- which sections are likely high signal
+- whether the source is clean enough for dense extraction
+
+### Pass 2 — Extract structure first
+
+Prioritize:
+- named systems, modules, APIs, tools, teams, people, processes, decisions, projects
+- explicit ownership
+- explicit dependencies
+- procedural order
+- blockers, action items, and operational constraints
+
+### Pass 3 — Add only useful semantic detail
+
+Add broader concepts only when they help downstream queries:
+- architecture patterns
+- operational policies
+- domain concepts
+- known issues
+
+If the text is noisy, repetitive, or weakly structured, reduce extraction density instead of inflating the graph.
 
 ---
 
@@ -142,6 +190,7 @@ Relevant relationship keywords: `ASSIGNED_TO`, `BLOCKS`, `RELATES_TO`, `DECIDED_
 - `entity_type`: pick from the relevant profile list
 - `description`: include concrete facts and properties from the text (owner, path, constraints)
 - `source_id`: must match a real `chunk_id` in `chunks`
+- prefer one strong entity per real concept, not many aliases for the same thing
 
 ---
 
@@ -164,6 +213,20 @@ Relevant relationship keywords: `ASSIGNED_TO`, `BLOCKS`, `RELATES_TO`, `DECIDED_
 - `keywords` should include the relationship type (e.g., `CALLS`, `OWNS`, `DEPENDS_ON`)
 - Add `context=...` or `source_section=...` in `keywords` when useful
 - Directed relationships: source → target; for bidirectional add both directions
+- only create a relationship when the source text gives direct support for it or the implication is extremely clear from local context
+
+---
+
+## What To Ignore
+
+Do not extract:
+- repeated headers, navigation text, sidebars, export boilerplate, template labels
+- generic filler like "this document describes" unless it carries a real relationship
+- every file path, import, or config key in bulk when they add no query value
+- every attendee name in notes if they are not tied to a decision, action, or ownership signal
+- duplicate concepts restated in multiple sections
+
+Prefer signal over completeness. A smaller, cleaner graph is better than a bloated one.
 
 ---
 
@@ -175,17 +238,20 @@ Relevant relationship keywords: `ASSIGNED_TO`, `BLOCKS`, `RELATES_TO`, `DECIDED_
 - Surface configuration: key env vars and their consuming modules
 - Capture architectural patterns mentioned (MVC, event-driven, etc.)
 - Note TODOs/FIXMEs as `KNOWN_ISSUE` entities if they're significant
+- Distinguish between implementation details and stable concepts; prefer stable concepts unless the user clearly wants code-level granularity
 
 ### For Documentation
 - Every named concept becomes an entity
 - Every "see also", "refer to", "documented in" becomes a `REFERENCES` relationship
 - Every "owned by", "maintained by" becomes an `OWNS` relationship
 - Procedural steps → sequence of `PROCESS` entities linked by `PRECEDES`
+- Collapse repeated explanations into one canonical entity with the clearest supporting chunk
 
 ### For Notes/Tickets
 - Every named person is an entity
 - Every task or action item is an entity
 - Capture blockers as explicit `BLOCKER` entities with `BLOCKS` relationships
+- Favor decisions, owners, due dates, and blockers over conversational filler
 
 ---
 
@@ -199,6 +265,34 @@ Relevant relationship keywords: `ASSIGNED_TO`, `BLOCKS`, `RELATES_TO`, `DECIDED_
 | Missing values | Leave blank, don't guess | Infer from context if confident |
 
 In general extraction, if a README says "the auth module handles login and token refresh", it's reasonable to extract a `CONCEPT` entity `token_refresh` and link it to the auth module via `IMPLEMENTS` even if not explicitly stated that way.
+
+But do not stretch this into speculation. If the text is ambiguous, prefer fewer entities and relationships.
+
+---
+
+## Better Chunking For General Sources
+
+Use chunk boundaries that preserve meaning:
+- one architectural paragraph
+- one decision paragraph
+- one action-item block
+- one API section
+- one process step group
+
+Avoid chunks that mix unrelated topics just to hit a length target. Semantic coherence matters more than uniform size.
+
+---
+
+## Better Graph Outcomes
+
+Optimize extraction for the questions users actually ask later:
+- ownership: who owns this system, process, or document
+- dependency: what calls, uses, imports, or relies on what
+- decision history: what changed, why, and what it replaced
+- operations: what blocks what, what must happen first, what is risky
+- expertise: who is associated with which subsystem or domain
+
+If an extracted entity or relationship is unlikely to help answer one of those question types, think twice before adding it.
 
 ---
 

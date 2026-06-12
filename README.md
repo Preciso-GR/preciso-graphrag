@@ -12,7 +12,7 @@
   <p>
     <img src="https://img.shields.io/badge/Local--First-FFFFFF?style=for-the-badge&logoColor=C8102E&color=C8102E" alt="Local-first workflow" />
     <img src="https://img.shields.io/badge/Python-3.11%2B-111111?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.11+" />
-    <img src="https://img.shields.io/badge/License-BSL%201.1-blue?style=for-the-badge" alt="BSL 1.1 License" />
+    <img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=for-the-badge" alt="Apache 2.0 License" />
   </p>
 </div>
 
@@ -388,4 +388,4 @@ Output filename pattern: `extractions/{source_filename}_extracted.json`
 
 ## License
 
-This project is licensed under the **Business Source License 1.1**. See [LICENSE](LICENSE) for full terms and change-date details.
+This project is licensed under the **Apache License, Version 2.0**. See [LICENSE](LICENSE) for full terms.

@@ -382,7 +382,7 @@ Output filename pattern: `extractions/{source_filename}_extracted.json`
 - Retrieval quality depends on embedding configuration quality
 - Neo4j and Qdrant exports require external services plus their Python client dependencies
 - Local graph artifacts remain the source of truth; downstream exports are one-way sync targets
-- PDF handling requires user-side conversion or an external agent with native PDF support
+- PDF handling requires user-side conversion or an external agent with native PDF support ( claude code and Codex doesnt neet conversion )
 
 ---
 

@@ -380,5 +380,5 @@ python3 test/reconcile_manual.py
 
 Licensed under the **Apache License, Version 2.0**. See [LICENSE](LICENSE) for full terms.
 
-Core graph merge and storage logic adapted from [LightRAG](https://github.com/HKUDS/LightRAG) by HKUDS, licensed under BUSL 1.1.
+
 The extraction pipeline, skills system, MCP tooling, reconciliation layer, and evaluation framework are original work licensed under Apache 2.0.

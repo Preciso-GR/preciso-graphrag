@@ -3,10 +3,10 @@
   "graph_storage_type": "networkx",
   "graph_file": "/Users/sanjayelango/Desktop/github_repos/preciso-graphrag/GRAPH_IS_HERE/graph_graph.graphml",
   "embedding": {
-    "provider": "ollama",
+    "provider": "fallback",
     "model": "mxbai-embed-large",
     "dimension": 768,
-    "fallback": false
+    "fallback": true
   },
   "llm": {
     "configured": false,
@@ -19,9 +19,9 @@
   "chunk_count": 12,
   "overall_status": "degraded",
   "warnings": [
+    "Fallback embeddings are active; graph creation still works, but vector similarity quality is reduced.",
     "LLM summarization is not configured; extraction and graph creation still work, but summary generation is skipped."
   ],
-  "generated_at": 1780121054,
-  "updated_at": 1781284170
+  "generated_at": 1782231162,
+  "updated_at": 1782316719
 }
-//an example of an artifact manifest file for a graph created using the GraphRag framework. It contains metadata about the graph, including the working directory, graph storage type, embedding provider and model, LLM configuration, counts of documents, entities, relationships, and chunks, as well as any warnings about the graph's status.

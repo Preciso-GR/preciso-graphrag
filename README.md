@@ -2,44 +2,29 @@
   <h1>Preciso</h1>
   <p><strong>Precise knowledge graphs from your documents.</strong></p>
   <p><em>Named after Bruno Fernandes. Every pass lands exactly where it needs to.</em></p>
-
   <p>
-    <img src="https://img.shields.io/badge/Codex-Agent-111111?style=for-the-badge&logo=openai&logoColor=white" alt="Codex agent support" />
-    <img src="https://img.shields.io/badge/Claude%20Code-Agent-C8102E?style=for-the-badge" alt="Claude Code agent support" />
-    <img src="https://img.shields.io/badge/OpenCode-Agent-FFFFFF?style=for-the-badge&logoColor=C8102E&color=C8102E" alt="OpenCode agent support" />
-    <img src="https://img.shields.io/badge/Copilot-Agent-7F1D1D?style=for-the-badge&logo=github&logoColor=white" alt="Copilot agent support" />
+    <img src="https://img.shields.io/badge/Codex-Agent-111111?style=for-the-badge&logo=openai&logoColor=white" alt="Codex" />
+    <img src="https://img.shields.io/badge/Claude%20Code-Agent-C8102E?style=for-the-badge" alt="Claude Code" />
+    <img src="https://img.shields.io/badge/OpenCode-Agent-FFFFFF?style=for-the-badge&logoColor=C8102E&color=C8102E" alt="OpenCode" />
+    <img src="https://img.shields.io/badge/Copilot-Agent-7F1D1D?style=for-the-badge&logo=github&logoColor=white" alt="Copilot" />
   </p>
   <p>
-    <img src="https://img.shields.io/badge/Local--First-FFFFFF?style=for-the-badge&logoColor=C8102E&color=C8102E" alt="Local-first workflow" />
+    <img src="https://img.shields.io/badge/Local--First-FFFFFF?style=for-the-badge&logoColor=C8102E&color=C8102E" alt="Local-first" />
     <img src="https://img.shields.io/badge/Python-3.11%2B-111111?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.11+" />
-    <img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=for-the-badge" alt="Apache 2.0 License" />
+    <img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=for-the-badge" alt="Apache 2.0" />
   </p>
 </div>
 
 ---
 
-Most RAG tools retrieve documents. Preciso builds a **knowledge graph** — so your agent can reason across connections, not just find similar text.
+Most RAG tools retrieve documents.
+Preciso builds a **knowledge graph** — so your agent can reason across connections, not just find similar text.
 
 ```
-raw .md / .txt files → agent picks skill → extraction JSON → MCP ingest → local graph
+Documents → Agent picks skill → Extraction JSON → MCP ingest → Local graph
 ```
 
 Drop source files into `to_be_extracted/`. An agent reads them, extracts entities and relationships using domain-specific skills, and persists a queryable knowledge graph locally in `GRAPH_IS_HERE/`. No cloud required. No pipeline to configure.
-
----
-
-## Table of Contents
-
-- [Why GraphRAG?](#why-graphrag-over-regular-rag)
-- [Benchmark Results](#benchmark-results)
-- [Quickstart](#quickstart-3-minutes)
-- [How It Works](#how-it-works)
-- [Skill Selection](#skill-selection)
-- [MCP Tools](#mcp-tools)
-- [Querying the Graph](#what-you-can-query-after-ingestion)
-- [Downstream Exports](#downstream-exports-optional)
-- [Manual Fallback](#manual-fallback-path)
-- [License](#license)
 
 ---
 
@@ -64,28 +49,26 @@ The graph makes multi-hop reasoning possible.
 
 ## Benchmark Results
 
-Evaluated on 23 financial QA questions from Walmart FY2022 + FY2023 10-K filings:
+Tested on 23 financial QA questions from Walmart FY2022 + FY2023 10-K filings, scored on four dimensions:
 
-| Metric             | Score    |
-|--------------------|----------|
-| Context Relevancy  | 0.983    |
-| Faithfulness       | **1.000**|
-| Answer Correctness | 0.960    |
-| Precision          | 0.910    |
-| **Overall**        | **0.954**|
+| Metric             | Score     |
+|--------------------|-----------|
+| Context Relevancy  | 0.983     |
+| Faithfulness       | **1.000** |
+| Answer Correctness | 0.960     |
+| Precision          | 0.910     |
+| **Preciso Score**  | **95 / 100** |
 
 - **Hallucinations:** 0 / 23
 - **Failed questions:** 0 / 23
 
-**How Preciso compares:**
+| System                            | Score     |
+|-----------------------------------|-----------|
+| **Preciso**                       | **95.4%** |
+| GPT-4 + long context (79k tokens) | ~79%      |
+| GPT-4 + standard RAG              | ~19%      |
 
-| System                           | Score  |
-|----------------------------------|--------|
-| **Preciso**                      | **95.4%** |
-| GPT-4 + long context (79k tokens)| ~79%   |
-| GPT-4 + standard RAG             | ~19%   |
-
-See [eval-guide.md](docs/eval-guide.md) for detailed methodology and multi-hop breakdowns.
+See [docs/eval-guide.md](docs/eval-guide.md) for full methodology and multi-hop breakdowns.
 
 ---
 
@@ -94,108 +77,111 @@ See [eval-guide.md](docs/eval-guide.md) for detailed methodology and multi-hop b
 ### 1. Clone and install
 
 ```bash
-git clone <your-fork-or-this-repo-url>
-cd graphrag-mcp
+git clone https://github.com/Preciso-GR/preciso-graphrag
+cd preciso-graphrag
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-> Preciso expects Python 3.11+, a local virtualenv at `.venv`, and the agent opened from the repo root. `.mcp.json` uses a repo-local launcher that prefers `.venv/bin/python`.
+> Requires Python 3.11+, a local virtualenv at `.venv`, and the agent opened from the repo root.
 
 ### 2. Drop files into `to_be_extracted/`
 
-Best input formats:
-- `.md`
-- `.txt`
-- README files, wiki exports, notes, and other text-first source material
+Best inputs: `.md`, `.txt`, README files, wiki exports, notes.
 
-> PDFs are discouraged by default. Preciso does not parse PDFs itself — convert them to `.md` or `.txt` first, or rely on an external agent with native PDF support.
+> For PDFs: convert to `.md` first, or use Claude Code / Codex which can read PDFs natively.
 
-### 3. Run the agent prompt
+### 3. Run this prompt in your agent
 
-Open Codex, Claude Code, GitHub Copilot, or OpenCode in this repo and run:
+Open Codex, Claude Code, Copilot, or OpenCode from the repo root.
 
-```text
+**Quick version:**
+```
+Process the files in to_be_extracted/ using Preciso.
+```
+
+<details>
+<summary>Full agent prompt (recommended for first run)</summary>
+
+```
 Call get_server_status().
 If overall is ready, proceed.
-If overall is degraded, explain what is degraded, what still works, and ask whether to proceed or fix first.
+If overall is degraded, explain what is degraded, what still works,
+and ask whether to proceed or fix first.
 Read the files in to_be_extracted/.
 Choose the most appropriate extraction skill from the skills folder for each file.
 Extract entities, relationships, and chunks into extractions/{source_name}_extracted.json.
-Validate that every source_id maps to a real chunk_id and that all relationships reference defined entities.
+Validate that every source_id maps to a real chunk_id and that all relationships
+reference defined entities.
 If the extraction looks clean, call ingest_from_file for each generated extraction file.
-If you find duplicate entities, orphaned relationships, or conflicts, use the reconciliation skill before ingestion.
-Then confirm the graph artifacts written to GRAPH_IS_HERE/ and summarize what was ingested.
+If you find duplicate entities, orphaned relationships, or conflicts,
+use the reconciliation skill before ingestion.
+Confirm the graph artifacts written to GRAPH_IS_HERE/ and summarize what was ingested.
 ```
+
+</details>
 
 ---
 
 ## How It Works
 
-Preciso is built around a six-step contract between your agent, the repo-local skills, and the MCP server:
+Six steps, always in this order:
 
-1. Developer places source files in `to_be_extracted/`
-2. Agent reads those files
-3. Agent selects the correct extraction skill from `skills/`
-4. Agent writes structured extraction output to `extractions/`
-5. Agent calls the appropriate MCP ingestion tool
-6. Repo persists the graph artifact in `GRAPH_IS_HERE/`
+| Step | Who        | What happens                                          |
+|------|------------|-------------------------------------------------------|
+| 1    | You        | Drop source files into `to_be_extracted/`             |
+| 2    | Agent      | Reads the files                                       |
+| 3    | Agent      | Selects the right skill from `skills/`                |
+| 4    | Agent      | Writes `extractions/{source_name}_extracted.json`     |
+| 5    | Agent      | Calls the MCP ingestion tool                          |
+| 6    | Preciso    | Persists graph in `GRAPH_IS_HERE/` — queryable immediately |
 
-### Red-White Workflow
-
-| Stage       | Directory         | Description                                      |
-|-------------|-------------------|--------------------------------------------------|
-| 🔴 Red side | `to_be_extracted/`| Raw source documents arrive here                 |
-| ⚪ White side| `extractions/`    | Agent writes structured extraction JSON here     |
-| Final pass  | `GRAPH_IS_HERE/`  | MCP ingests extraction and persists the graph    |
-
-### Canonical Folders
+### Folder Contract
 
 ```
-to_be_extracted/     ← source files waiting for agent extraction
-skills/              ← domain-specific extraction skills
-extractions/         ← agent-generated extraction JSON files
-GRAPH_IS_HERE/       ← persisted graph and retrieval artifacts
+to_be_extracted/    ← drop your source files here (.md, .txt)
+skills/             ← agent reads these to know how to extract
+extractions/        ← agent writes extraction JSON here
+GRAPH_IS_HERE/      ← graph artifacts live here (source of truth)
+docs/               ← guides and architecture reference
+evals/              ← benchmark test cases and results
 ```
 
 ---
 
 ## Skill Selection
 
-The agent selects a skill based on the source material type:
-
-| Skill | Path | Use For |
-|-------|------|---------|
-| Financial extraction | `skills/Financial-Graph-Extraction/SKILL.md` | 10-Ks, 10-Qs, earnings calls, analyst reports |
-| Research paper extraction | `skills/Research-paper-graph-extraction-skill/SKILL.md` | Research papers, scientific literature, academic corpora |
-| General extraction | `skills/General-graph-extraction-skill/SKILL.md` | Codebases, READMEs, wikis, internal docs |
-| Reconciliation | `skills/Reconciliation-Subagent-Skill/SKILL.md` | Cleanup of existing extraction JSON only — not for raw sources |
+| Skill | Path | Use When |
+|-------|------|----------|
+| Financial | `skills/Financial-Graph-Extraction/SKILL.md` | 10-Ks, 10-Qs, earnings calls, analyst reports |
+| Research | `skills/Research-paper-graph-extraction-skill/SKILL.md` | Research papers, scientific literature, academic corpora |
+| General | `skills/General-graph-extraction-skill/SKILL.md` | Codebases, READMEs, wikis, internal docs |
+| Reconciliation | `skills/Reconciliation-Subagent-Skill/SKILL.md` | Cleanup of existing extraction JSON only |
+| Eval | `skills/Eval-Skill/SKILL.md` | Evaluating a built graph — not for extraction |
 
 ---
 
 ## MCP Tools
 
-MCP is the tool interface the agent uses after extraction. It is responsible for ingesting extracted JSON, querying the graph, and optional downstream exports.
-
-### Core tools
-
 | Tool | Description |
 |------|-------------|
-| `get_server_status` | Runtime health check — call before any extraction or ingestion |
-| `ingest_graph_tool` | Ingest extraction payload into the graph |
-| `ingest_from_file` | Ingest from a named extraction JSON file |
-| `reingest_from_file` | Re-ingest an existing extraction file |
-| `ingest_with_reconciliation_tool` | Ingest with conflict resolution |
+| `get_server_status` | Runtime health check — call before anything |
+| `ingest_from_file` | Ingest a completed extraction JSON file |
+| `reingest_from_file` | Retry ingestion without re-extracting |
+| `ingest_graph_tool` | Ingest an inline extraction payload |
+| `ingest_with_reconciliation_tool` | Ingest after reconciliation subagents finish |
 | `query_graph_tool` | Query the persisted graph |
-| `export_graph_to_neo4j` | Export graph structure to Neo4j |
-| `export_vectors_to_qdrant` | Export vector artifacts to Qdrant |
+| `export_graph_to_neo4j` | Optional: push graph structure to Neo4j |
+| `export_vectors_to_qdrant` | Optional: push vector artifacts to Qdrant |
 
-### `get_server_status` — runtime truth surface
+### Runtime Status
 
-Call this before any extraction or ingestion. It returns the current state of embeddings, graph storage, and LLM config.
+Always call `get_server_status()` first. It reports embedding mode, graph health, and LLM config before any work starts.
 
-**Healthy response:**
+<details>
+<summary>Healthy response example</summary>
+
 ```json
 {
   "overall": "ready",
@@ -209,7 +195,6 @@ Call this before any extraction or ingestion. It returns the current state of em
   },
   "graph": {
     "storage": "networkx",
-    "location": "/path/to/GRAPH_IS_HERE",
     "entities": 142,
     "relationships": 281,
     "documents_ingested": 1,
@@ -217,27 +202,31 @@ Call this before any extraction or ingestion. It returns the current state of em
   },
   "llm": {
     "configured": true,
-    "provider": "custom",
-    "model": "custom_llm",
     "status": "active"
   }
 }
 ```
 
-**Degraded response:**
+</details>
+
+<details>
+<summary>Degraded response example</summary>
+
 ```json
 {
   "overall": "degraded",
   "warnings": [
-    "Fallback embeddings are active; graph creation still works, but vector similarity quality is reduced.",
-    "LLM summarization is not configured; extraction and graph creation still work, but summary generation is skipped."
+    "Fallback embeddings active — graph creation works, vector search quality reduced.",
+    "LLM summarization not configured — extraction works, summary generation skipped."
   ],
   "embedding": { "mode": "fallback", "status": "degraded" },
   "llm": { "configured": false, "status": "inactive" }
 }
 ```
 
-If `overall` is `degraded`, the agent must explain what is degraded, what still works, and ask before continuing.
+</details>
+
+If `overall` is `degraded`, the agent explains what still works and asks before proceeding. It never silently continues.
 
 ---
 
@@ -256,7 +245,7 @@ The graph connects entities across document sections so your agent gets reasoned
 
 ## Graph Artifacts
 
-After ingestion, the graph is persisted in `GRAPH_IS_HERE/` and is reusable across sessions:
+After ingestion the graph persists in `GRAPH_IS_HERE/` and is reusable across sessions:
 
 ```
 GRAPH_IS_HERE/
@@ -270,25 +259,28 @@ GRAPH_IS_HERE/
 └── artifact_manifest.json
 ```
 
+The most portable artifact is `graph_graph.graphml`. Copy the whole folder to move the graph to another machine.
+
 ---
 
 ## Downstream Exports (Optional)
 
 <p>
-  <img src="https://img.shields.io/badge/Neo4j-Export%20Target-8A2BE2?style=for-the-badge" alt="Neo4j export target" />
-  <img src="https://img.shields.io/badge/Qdrant-Vector%20Export-DC2626?style=for-the-badge" alt="Qdrant vector export" />
+  <img src="https://img.shields.io/badge/Neo4j-Export%20Target-8A2BE2?style=for-the-badge" alt="Neo4j" />
+  <img src="https://img.shields.io/badge/Qdrant-Vector%20Export-DC2626?style=for-the-badge" alt="Qdrant" />
 </p>
 
-`GRAPH_IS_HERE/` is always the source of truth. Neo4j and Qdrant are optional downstream copies — not replacements.
+`GRAPH_IS_HERE/` is always the source of truth. Neo4j and Qdrant are optional downstream copies — not storage backends.
 
 ```
-Local graph (master) → (optional) → Neo4j copy
-Local graph (master) → (optional) → Qdrant copy
+Local graph (master) → optional → Neo4j copy
+Local graph (master) → optional → Qdrant copy
 ```
 
-Think of it like a Google Doc you export to PDF. The Doc is the real thing. The PDF is a snapshot for sharing.
+Think of it like a Google Doc you export to PDF. The Doc is the real thing. The PDF is a snapshot for sharing. If you re-ingest locally, the local graph updates. Downstream copies do not auto-update — you re-export when ready.
 
-### Export to Neo4j
+<details>
+<summary>Neo4j export config</summary>
 
 ```json
 {
@@ -301,9 +293,12 @@ Think of it like a Google Doc you export to PDF. The Doc is the real thing. The 
 }
 ```
 
-Required env vars: `GRAPHRAG_NEO4J_URI`, `GRAPHRAG_NEO4J_USERNAME`, `GRAPHRAG_NEO4J_PASSWORD`, optionally `GRAPHRAG_NEO4J_DATABASE`
+Required env vars: `GRAPHRAG_NEO4J_URI`, `GRAPHRAG_NEO4J_USERNAME`, `GRAPHRAG_NEO4J_PASSWORD`
 
-### Export to Qdrant
+</details>
+
+<details>
+<summary>Qdrant export config</summary>
 
 ```json
 {
@@ -315,32 +310,17 @@ Required env vars: `GRAPHRAG_NEO4J_URI`, `GRAPHRAG_NEO4J_USERNAME`, `GRAPHRAG_NE
 }
 ```
 
-Required env vars: `GRAPHRAG_QDRANT_URL`, optionally `GRAPHRAG_QDRANT_API_KEY`, `GRAPHRAG_QDRANT_COLLECTION_PREFIX`
+Required env vars: `GRAPHRAG_QDRANT_URL`, optionally `GRAPHRAG_QDRANT_API_KEY`
 
-> Neo4j exports graph structure. Qdrant exports vector artifacts. Both happen after local creation, not instead of it.
+</details>
 
----
-
-## Manual Fallback Path
-
-For advanced users who want to drive ingestion manually after extraction:
-
-```bash
-# Ingest an existing extraction file
-python3 test/ingest_manual.py extractions/reconciled_apple_10k_2024_1779725404.json
-
-# Query the persisted graph
-python3 test/query_manual.py "What is Tim Cook's role?" mix
-
-# Run reconciliation demo flow
-python3 test/reconcile_manual.py
-```
+See [docs/getting-started.md](docs/getting-started.md) for full export setup including `.env` configuration.
 
 ---
 
 ## MCP Setup
 
-This repo includes a workspace `.mcp.json` for local development:
+`.mcp.json` uses a repo-local launcher that finds the right Python automatically:
 
 ```json
 {
@@ -356,36 +336,49 @@ This repo includes a workspace `.mcp.json` for local development:
 }
 ```
 
-If you want a direct fallback, replace `command` with the absolute path to your `.venv/bin/python`.
+---
+
+## Manual Fallback
+
+For users who want to drive ingestion and querying directly without an agent:
+
+```bash
+# Ingest an extraction file
+python3 test/ingest_manual.py extractions/your_file_extracted.json
+
+# Query the graph
+python3 test/query_manual.py "What is Tim Cook's role?" mix
+
+# Run reconciliation demo
+python3 test/reconcile_manual.py
+```
 
 ---
 
-## Extraction Contract
+## Docs
 
-Extraction JSON must include:
-
-```json
-{
-  "document_id": "...",
-  "entities": [...],
-  "relationships": [...],
-  "chunks": [...]
-}
-```
-
-Output filename pattern: `extractions/{source_filename}_extracted.json`
+| Guide | What it covers |
+|-------|----------------|
+| [docs/getting-started.md](docs/getting-started.md) | Full setup including embeddings and exports |
+| [docs/skills-guide.md](docs/skills-guide.md) | How to use and write extraction skills |
+| [docs/eval-guide.md](docs/eval-guide.md) | How to run evaluation and read results |
+| [docs/architecture.md](docs/architecture.md) | How the system works internally |
+| [docs/faq.md](docs/faq.md) | Common problems and fixes |
 
 ---
 
 ## Current Limitations
 
-- Retrieval quality depends on embedding configuration quality
-- Neo4j and Qdrant exports require external services plus their Python client dependencies
-- Local graph artifacts remain the source of truth; downstream exports are one-way sync targets
-- PDF handling requires user-side conversion or an external agent with native PDF support ( claude code and Codex doesnt need conversion )
+- Best input format is `.md` or `.txt` — PDF handling depends on external conversion or a native PDF-capable agent
+- Retrieval quality depends on embedding configuration
+- Neo4j and Qdrant exports require those services running externally
+- Single-user local workflow — no built-in multi-user or shared graph support yet
 
 ---
 
 ## License
 
-This project is licensed under the **Apache License, Version 2.0**. See [LICENSE](LICENSE) for full terms.
+Licensed under the **Apache License, Version 2.0**. See [LICENSE](LICENSE) for full terms.
+
+Core graph merge and storage logic adapted from [LightRAG](https://github.com/HKUDS/LightRAG) by HKUDS, licensed under BUSL 1.1.
+The extraction pipeline, skills system, MCP tooling, reconciliation layer, and evaluation framework are original work licensed under Apache 2.0.

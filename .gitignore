@@ -42,3 +42,5 @@ analysis-1
 *_reconciled.jsonl
 *_extracted.json
 artifact_manifest.json
+preciso-agent/.env
+preciso-agent

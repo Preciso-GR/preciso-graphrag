@@ -126,6 +126,8 @@ Confirm the graph artifacts written to GRAPH_IS_HERE/ and summarize what was ing
 
 ## How It Works
 
+![Preciso Architecture](assets/preciso_arch_org.png)
+
 Six steps, always in this order:
 
 | Step | Who        | What happens                                          |
@@ -240,6 +242,8 @@ If `overall` is `degraded`, the agent explains what still works and asks before 
 ```
 
 The graph connects entities across document sections so your agent gets reasoned answers, not retrieved chunks.
+
+![Sample Knowledge Graph — Walmart FY2023 10-K](assets/preciso_graph_exa.png)
 
 ---
 

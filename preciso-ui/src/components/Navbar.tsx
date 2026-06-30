@@ -21,9 +21,9 @@ export default function Navbar() {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b-2 border-border ${
         scrolled
-          ? "bg-background/90 backdrop-blur-md border-b-2 border-border"
+          ? "bg-background/90 backdrop-blur-md"
           : "bg-transparent"
       }`}
     >
@@ -42,14 +42,14 @@ export default function Navbar() {
             <a
               key={link.label}
               href={link.href}
-              className="relative font-barlow text-sm uppercase tracking-[0.12em] text-muted hover:text-foreground px-4 py-2 group transition-colors duration-150"
+              className="relative font-barlow text-sm font-bold uppercase tracking-[0.12em] text-foreground px-4 py-2 group transition-colors duration-150"
             >
               {link.label}
               {/* Red underline on hover */}
               <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-[var(--red)] scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
               {/* Separator dot */}
               {i < NAV_LINKS.length - 1 && (
-                <span className="absolute right-0 top-1/2 -translate-y-1/2 w-px h-3 bg-border" />
+                <span className="absolute right-0 top-1/2 -translate-y-1/2 w-px h-3 bg-foreground/30" />
               )}
             </a>
           ))}

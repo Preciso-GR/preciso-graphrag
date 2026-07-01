@@ -7,6 +7,7 @@ const NAV_LINKS = [
   { label: "Skills",       href: "#skills" },
   { label: "MCP Tools",    href: "#mcp-tools" },
   { label: "Quickstart",   href: "#quickstart" },
+  { label: "Visualizer",   href: "/visualizer" },
 ];
 
 export default function Navbar() {
@@ -27,11 +28,11 @@ export default function Navbar() {
           : "bg-transparent"
       }`}
     >
-      <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-8">
+      <div className="max-w-6xl mx-auto px-6 h-12 flex items-center justify-between gap-6">
 
         {/* Logo */}
         <a href="#" className="shrink-0 group">
-          <span className="font-anton text-[26px] leading-none tracking-tight text-foreground group-hover:text-[var(--red)] transition-colors duration-200 uppercase">
+          <span className="font-anton text-[20px] leading-none tracking-tight text-foreground group-hover:text-[var(--red)] transition-colors duration-200 uppercase">
             Preciso
           </span>
         </a>
@@ -42,11 +43,11 @@ export default function Navbar() {
             <a
               key={link.label}
               href={link.href}
-              className="relative font-barlow text-sm font-bold uppercase tracking-[0.12em] text-foreground px-4 py-2 group transition-colors duration-150"
+              className="relative font-barlow text-xs font-bold uppercase tracking-[0.10em] text-foreground px-3 py-1.5 group transition-colors duration-150"
             >
               {link.label}
               {/* Red underline on hover */}
-              <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-[var(--red)] scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
+              <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-[var(--red)] scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
               {/* Separator dot */}
               {i < NAV_LINKS.length - 1 && (
                 <span className="absolute right-0 top-1/2 -translate-y-1/2 w-px h-3 bg-foreground/30" />
@@ -63,7 +64,7 @@ export default function Navbar() {
             href="https://github.com/Preciso-GR/preciso-graphrag"
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden sm:flex items-center gap-1.5 font-barlow text-sm uppercase tracking-wide text-muted hover:text-foreground transition-colors border-2 border-border hover:border-[var(--red)] px-3 py-1.5"
+            className="hidden sm:flex items-center gap-1.5 font-barlow text-xs uppercase tracking-wide text-muted hover:text-foreground transition-colors border-2 border-border hover:border-[var(--red)] px-2.5 py-1"
           >
             <GitHubIcon />
             GitHub
@@ -71,7 +72,7 @@ export default function Navbar() {
 
           <a
             href="#quickstart"
-            className="font-barlow text-sm uppercase tracking-wide font-black bg-[var(--red)] hover:bg-[var(--red-bright)] text-[var(--stripe-text)] px-4 py-2 transition-colors duration-150"
+            className="font-barlow text-xs uppercase tracking-wide font-black bg-[var(--red)] hover:bg-[var(--red-bright)] text-[var(--stripe-text)] px-3 py-1.5 transition-colors duration-150"
           >
             Get Started
           </a>

@@ -89,7 +89,7 @@ export function VisualizerShell() {
         {workbenchOpen && (
           <aside
             className="w-[380px] flex flex-col border-l overflow-hidden"
-            style={{ borderColor: 'color-mix(in srgb, var(--muted) 20%, transparent)', background: 'var(--bg)' }}
+            style={{ borderColor: 'var(--border)', background: 'var(--bg)' }}
           >
             <WorkbenchPanel
               graph={graph}

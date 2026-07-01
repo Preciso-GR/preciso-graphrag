@@ -7,6 +7,7 @@ export default function VisualizerLayout({ children }: { children: React.ReactNo
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[var(--bg)]">
       <Navbar />
+      <div className="h-12 shrink-0" />
       <DesktopOnlyGuard>
         {children}
       </DesktopOnlyGuard>

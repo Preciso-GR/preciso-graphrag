@@ -28,8 +28,8 @@ export function SubBar({ graph, onGraphLoaded, workbenchOpen, onToggleWorkbench 
 
   return (
     <div
-      className="h-10 px-4 border-b flex items-center gap-3 font-mono text-xs text-[var(--muted)] shrink-0"
-      style={{ borderColor: 'color-mix(in srgb, var(--muted) 20%, transparent)' }}
+      className="h-10 px-4 border-b flex items-center gap-3 font-mono text-xs shrink-0"
+      style={{ borderColor: 'var(--border)', color: 'var(--fg)' }}
     >
       {graph ? (
         <>

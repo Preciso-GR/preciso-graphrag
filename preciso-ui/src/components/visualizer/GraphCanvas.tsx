@@ -25,15 +25,17 @@ function mulberry32(seed: number) {
   };
 }
 
+// Precise pencil wobble — engineer's sketch, not napkin scrawl
 function drawRoughCircle(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, seed: number) {
   const rng = mulberry32(seed);
-  const jitter = 0.8;
+  const jitter = 0.3; // absolute px — subtle, deliberate
+  const segments = 48;
   ctx.beginPath();
-  const segments = 36;
   for (let i = 0; i <= segments; i++) {
     const angle = (i / segments) * Math.PI * 2;
-    const jx = x + Math.cos(angle) * (r + (rng() - 0.5) * jitter);
-    const jy = y + Math.sin(angle) * (r + (rng() - 0.5) * jitter);
+    const jr = r + (rng() - 0.5) * jitter * 2;
+    const jx = x + Math.cos(angle) * jr;
+    const jy = y + Math.sin(angle) * jr;
     if (i === 0) ctx.moveTo(jx, jy);
     else ctx.lineTo(jx, jy);
   }
@@ -62,7 +64,7 @@ export function GraphCanvas({ graph, selectedNodeId, hiddenTypes, citedNodeIds, 
     citedNodeIds: [] as string[],
   });
 
-  const getNodeRadius = (n: GraphNode) => Math.max(12, Math.min(28, 10 + n.degree * 1.6));
+  const getNodeRadius = (n: GraphNode) => Math.max(20, Math.min(44, 16 + n.degree * 3));
 
   const hitTest = useCallback((wx: number, wy: number) => {
     const s = stateRef.current;
@@ -91,15 +93,28 @@ export function GraphCanvas({ graph, selectedNodeId, hiddenTypes, citedNodeIds, 
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, W, H);
 
-    // Get CSS variable values
     const style = getComputedStyle(document.documentElement);
-    const fgColor = style.getPropertyValue('--fg').trim() || '#1A1212';
-    const bgColor = style.getPropertyValue('--bg').trim() || '#F5F0E8';
-    const mutedColor = style.getPropertyValue('--muted').trim() || '#7A6E67';
-    const stripeColor = style.getPropertyValue('--stripe').trim() || '#8B1A1A';
+    const fgColor   = style.getPropertyValue('--fg').trim()     || '#1A1212';
+    const bgColor   = style.getPropertyValue('--bg').trim()     || '#F5F0E8';
+    const mutedColor= style.getPropertyValue('--muted').trim()  || '#7A6E67';
+    const stripeColor= style.getPropertyValue('--stripe').trim()|| '#8B1A1A';
 
+    // Background fill
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, W, H);
+
+    // Dot grid — screen-space, fixed (workbench paper texture)
+    const gridSpacing = 28;
+    ctx.fillStyle = mutedColor;
+    ctx.globalAlpha = 0.16;
+    for (let gx = gridSpacing / 2; gx < W; gx += gridSpacing) {
+      for (let gy = gridSpacing / 2; gy < H; gy += gridSpacing) {
+        ctx.beginPath();
+        ctx.arc(gx, gy, 0.85, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
 
     ctx.save();
     ctx.translate(s.panX, s.panY);
@@ -108,7 +123,6 @@ export function GraphCanvas({ graph, selectedNodeId, hiddenTypes, citedNodeIds, 
     const selectedId = s.selectedNodeId;
     const hasSelection = selectedId !== null;
 
-    // Get adjacency for dimming
     const adjacentIds = new Set<string>();
     if (hasSelection) {
       s.edges.forEach((e) => {
@@ -126,11 +140,9 @@ export function GraphCanvas({ graph, selectedNodeId, hiddenTypes, citedNodeIds, 
       if (!src || !tgt) return;
       if (s.hiddenTypes.has(src.type) || s.hiddenTypes.has(tgt.type)) return;
 
-      const srcId = src.id;
-      const tgtId = tgt.id;
-      const isConnected = !hasSelection || srcId === selectedId || tgtId === selectedId;
-      const alpha = hasSelection ? (isConnected ? 0.35 : 0.08) : 0.35;
-      const w = Math.max(0.5, Math.min(1.2, e.weight));
+      const isConnected = !hasSelection || src.id === selectedId || tgt.id === selectedId;
+      const alpha = hasSelection ? (isConnected ? 0.45 : 0.06) : 0.3;
+      const w = Math.max(0.8, Math.min(1.6, e.weight));
 
       ctx.beginPath();
       ctx.moveTo(src.x ?? 0, src.y ?? 0);
@@ -140,21 +152,20 @@ export function GraphCanvas({ graph, selectedNodeId, hiddenTypes, citedNodeIds, 
       ctx.lineWidth = w;
       ctx.stroke();
 
-      // Edge labels when zoomed in
-      if (s.zoom > 0.7 && e.label && isConnected) {
+      if (s.zoom > 0.85 && e.label && isConnected) {
         const mx = ((src.x ?? 0) + (tgt.x ?? 0)) / 2;
         const my = ((src.y ?? 0) + (tgt.y ?? 0)) / 2;
-        ctx.globalAlpha = alpha * 0.8;
+        ctx.globalAlpha = alpha * 0.65;
         ctx.font = `9px monospace`;
         ctx.fillStyle = mutedColor;
         ctx.textAlign = 'center';
-        ctx.fillText(e.label, mx, my);
+        ctx.fillText(e.label, mx, my - 3);
       }
     });
 
     ctx.globalAlpha = 1;
 
-    // Draw nodes
+    // Draw nodes — fully monochrome
     const now = Date.now();
     s.nodes.forEach((n) => {
       if (s.hiddenTypes.has(n.type)) return;
@@ -163,87 +174,121 @@ export function GraphCanvas({ graph, selectedNodeId, hiddenTypes, citedNodeIds, 
       const ny = n.y ?? 0;
       const isSelected = n.id === selectedId;
       const isAdjacent = adjacentIds.has(n.id);
-      const nodeAlpha = hasSelection ? (isSelected || isAdjacent ? 1 : 0.25) : 1;
+      const nodeAlpha = hasSelection ? (isSelected || isAdjacent ? 1 : 0.2) : 1;
+      const isHovered = s.hoverNode?.id === n.id;
+
       const isCited = s.citedNodeIds.includes(n.id);
       const citedAt = s.citedTimestamps[n.id];
-      const citedAlpha = isCited && citedAt ? Math.max(0, 1 - (now - citedAt) / 4000) : 0;
-      const isHovered = s.hoverNode?.id === n.id;
+      const citedFade = isCited && citedAt ? Math.max(0, 1 - (now - citedAt) / 4000) : 0;
 
       ctx.globalAlpha = nodeAlpha;
 
-      // Cited ring
-      if (citedAlpha > 0) {
+      // Cited ring — dashed fg ring, no color
+      if (citedFade > 0) {
+        ctx.save();
         ctx.beginPath();
-        ctx.arc(nx, ny, r + 6, 0, Math.PI * 2);
-        ctx.strokeStyle = stripeColor;
-        ctx.globalAlpha = nodeAlpha * citedAlpha * 0.6;
-        ctx.lineWidth = 4;
+        ctx.arc(nx, ny, r + 7, 0, Math.PI * 2);
+        ctx.strokeStyle = fgColor;
+        ctx.globalAlpha = nodeAlpha * citedFade * 0.5;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 4]);
         ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
         ctx.globalAlpha = nodeAlpha;
       }
 
-      // Node fill
+      // Node fill — always bg
       drawRoughCircle(ctx, nx, ny, r, n._jitterSeed ?? 0);
       ctx.fillStyle = bgColor;
       ctx.fill();
 
-      // Node stroke
-      const strokeW = isSelected ? 2.5 : isHovered ? 2 : 1.5;
-      const strokeC = isSelected ? stripeColor : fgColor;
-      ctx.strokeStyle = strokeC;
-      ctx.lineWidth = strokeW;
+      // Node stroke — fg normally, stripe (red) only when selected
       drawRoughCircle(ctx, nx, ny, r, n._jitterSeed ?? 0);
+      ctx.strokeStyle = isSelected ? stripeColor : fgColor;
+      ctx.lineWidth = isSelected ? 2.5 : isHovered ? 2.0 : 1.5;
       ctx.stroke();
 
-      // Entity type tag inside node
-      ctx.font = `9px monospace`;
-      ctx.fillStyle = mutedColor;
+      // Type initial — fg, muted opacity
+      const initial = (n.type[0] ?? '?').toUpperCase();
+      const fontSize = Math.max(11, Math.round(r * 0.45));
+      ctx.font = `500 ${fontSize}px monospace`;
+      ctx.fillStyle = isSelected ? stripeColor : fgColor;
+      ctx.globalAlpha = nodeAlpha * (isSelected ? 0.75 : 0.35);
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      const typeLabel = n.type.length > 7 ? n.type.slice(0, 6) + '…' : n.type;
-      ctx.fillText(typeLabel, nx, ny);
+      ctx.fillText(initial, nx, ny);
+      ctx.globalAlpha = nodeAlpha;
 
-      // Node label below
+      // Label below — bg strip for legibility
+      const label = n.label.length > 16 ? n.label.slice(0, 15) + '…' : n.label;
       ctx.font = `11px monospace`;
-      ctx.fillStyle = fgColor;
+      const lw = ctx.measureText(label).width;
+      const lx = nx - lw / 2 - 3;
+      const ly = ny + r + 4;
+
+      ctx.fillStyle = bgColor;
+      ctx.globalAlpha = nodeAlpha * 0.82;
+      ctx.fillRect(lx, ly, lw + 6, 13);
+      ctx.globalAlpha = nodeAlpha;
+
+      ctx.fillStyle = isSelected ? stripeColor : fgColor;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
-      const label = n.label.length > 18 ? n.label.slice(0, 17) + '…' : n.label;
-      ctx.fillText(label, nx, ny + r + 4);
+      ctx.fillText(label, nx, ly + 1);
 
       ctx.globalAlpha = 1;
     });
 
     ctx.restore();
 
-    // Tooltip overlay
+    // Hover tooltip
     if (s.hoverNode) {
       const n = s.hoverNode;
-      const desc = n.description ? n.description.slice(0, 80) + (n.description.length > 80 ? '…' : '') : '';
-      const lines = [`${n.label} (${n.type})`, desc].filter(Boolean);
+      const lines = [
+        n.label,
+        `${n.type}  ·  degree ${n.degree}`,
+        ...(n.description ? [n.description.slice(0, 72) + (n.description.length > 72 ? '…' : '')] : []),
+      ];
       ctx.save();
       ctx.font = '11px monospace';
       const maxW = Math.max(...lines.map(l => ctx.measureText(l).width));
-      const boxW = maxW + 16;
-      const boxH = lines.length * 16 + 12;
+      const boxW = maxW + 20;
+      const boxH = lines.length * 16 + 14;
+
       ctx.fillStyle = bgColor;
+      ctx.globalAlpha = 0.96;
+      ctx.fillRect(10, 10, boxW, boxH);
       ctx.strokeStyle = fgColor;
       ctx.lineWidth = 1;
-      ctx.globalAlpha = 0.95;
-      ctx.fillRect(8, 8, boxW, boxH);
-      ctx.strokeRect(8, 8, boxW, boxH);
       ctx.globalAlpha = 1;
+      ctx.strokeRect(10, 10, boxW, boxH);
+
       ctx.fillStyle = fgColor;
       ctx.textBaseline = 'top';
       ctx.textAlign = 'left';
-      lines.forEach((l, i) => ctx.fillText(l, 16, 14 + i * 16));
+      lines.forEach((l, i) => {
+        ctx.globalAlpha = i === 0 ? 1 : 0.55;
+        ctx.fillText(l, 20, 17 + i * 16);
+      });
+      ctx.globalAlpha = 1;
       ctx.restore();
     }
+
+    // Zoom indicator
+    ctx.save();
+    ctx.font = '10px monospace';
+    ctx.fillStyle = mutedColor;
+    ctx.globalAlpha = 0.45;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(`${Math.round(s.zoom * 100)}%`, W - 8, H - 6);
+    ctx.restore();
 
     ctx.restore();
   }, []);
 
-  // Init graph and simulation
+  // Init simulation
   useEffect(() => {
     const s = stateRef.current;
     const canvas = canvasRef.current;
@@ -256,18 +301,19 @@ export function GraphCanvas({ graph, selectedNodeId, hiddenTypes, citedNodeIds, 
     canvas.width = W * dpr;
     canvas.height = H * dpr;
 
-    // Clone nodes with jitter seeds
     s.nodes = graph.nodes.map((n, i) => ({ ...n, _jitterSeed: (i + 1) * 12345 })) as SimNode[];
     s.edges = graph.edges.map(e => ({ ...e }));
     s.zoom = 1;
     s.panX = 0;
     s.panY = 0;
 
+    const nodeR = (d: SimNode) => Math.max(20, Math.min(44, 16 + d.degree * 3));
+
     const sim = forceSimulation<SimNode>(s.nodes)
-      .force('charge', forceManyBody().strength(-400))
-      .force('link', forceLink<SimNode, GraphEdge>(s.edges).id((d) => d.id).distance(120).strength(0.5))
+      .force('charge', forceManyBody().strength(-700))
+      .force('link', forceLink<SimNode, GraphEdge>(s.edges).id((d) => d.id).distance(180).strength(0.4))
       .force('center', forceCenter(W / 2, H / 2))
-      .force('collide', forceCollide<SimNode>().radius((d) => 14 + d.degree * 1.6 + 4))
+      .force('collide', forceCollide<SimNode>().radius((d) => nodeR(d) + 10))
       .alphaMin(0.005)
       .on('tick', () => {
         cancelAnimationFrame(s.rafId);
@@ -278,24 +324,22 @@ export function GraphCanvas({ graph, selectedNodeId, hiddenTypes, citedNodeIds, 
     return () => { sim.stop(); cancelAnimationFrame(s.rafId); };
   }, [graph, render]);
 
-  // Sync selected/hidden/cited into ref
+  // Sync reactive props
   useEffect(() => {
     const s = stateRef.current;
     s.selectedNodeId = selectedNodeId;
     s.hiddenTypes = hiddenTypes;
-    // When new cited nodes arrive, record timestamp
     citedNodeIds.forEach(id => {
       if (!s.citedTimestamps[id]) s.citedTimestamps[id] = Date.now();
     });
     s.citedNodeIds = citedNodeIds;
-    // Clear timestamps for nodes no longer cited
     Object.keys(s.citedTimestamps).forEach(id => {
       if (!citedNodeIds.includes(id)) delete s.citedTimestamps[id];
     });
     render();
   }, [selectedNodeId, hiddenTypes, citedNodeIds, render]);
 
-  // Mouse events
+  // Events
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -370,7 +414,7 @@ export function GraphCanvas({ graph, selectedNodeId, hiddenTypes, citedNodeIds, 
       const mx = e.clientX - rect.left;
       const my = e.clientY - rect.top;
       const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
-      const newZoom = Math.max(0.2, Math.min(4, s.zoom * factor));
+      const newZoom = Math.max(0.15, Math.min(5, s.zoom * factor));
       s.panX = mx - (mx - s.panX) * (newZoom / s.zoom);
       s.panY = my - (my - s.panY) * (newZoom / s.zoom);
       s.zoom = newZoom;
@@ -378,9 +422,7 @@ export function GraphCanvas({ graph, selectedNodeId, hiddenTypes, citedNodeIds, 
       s.rafId = requestAnimationFrame(render);
     };
 
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onDeselect();
-    };
+    const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onDeselect(); };
 
     canvas.addEventListener('mousedown', onMouseDown);
     canvas.addEventListener('mousemove', onMouseMove);

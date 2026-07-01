@@ -43,7 +43,7 @@ export default function Navbar() {
             <a
               key={link.label}
               href={link.href}
-              className="relative font-barlow text-xs font-bold uppercase tracking-[0.10em] text-foreground px-3 py-1.5 group transition-colors duration-150"
+              className="relative font-barlow text-sm font-bold uppercase tracking-[0.10em] text-foreground px-3 py-1.5 group transition-colors duration-150"
             >
               {link.label}
               {/* Red underline on hover */}
@@ -64,7 +64,7 @@ export default function Navbar() {
             href="https://github.com/Preciso-GR/preciso-graphrag"
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden sm:flex items-center gap-1.5 font-barlow text-xs uppercase tracking-wide text-muted hover:text-foreground transition-colors border-2 border-border hover:border-[var(--red)] px-2.5 py-1"
+            className="hidden sm:flex items-center gap-1.5 font-barlow text-sm uppercase tracking-wide text-muted hover:text-foreground transition-colors border-2 border-border hover:border-[var(--red)] px-2.5 py-1"
           >
             <GitHubIcon />
             GitHub
@@ -72,7 +72,7 @@ export default function Navbar() {
 
           <a
             href="#quickstart"
-            className="font-barlow text-xs uppercase tracking-wide font-black bg-[var(--red)] hover:bg-[var(--red-bright)] text-[var(--stripe-text)] px-3 py-1.5 transition-colors duration-150"
+            className="font-barlow text-sm uppercase tracking-wide font-black bg-[var(--red)] hover:bg-[var(--red-bright)] text-[var(--stripe-text)] px-3 py-1.5 transition-colors duration-150"
           >
             Get Started
           </a>

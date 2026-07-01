@@ -7,6 +7,7 @@ interface Props {
   graph: ParsedGraph | null;
   contextNodeIds: string[];
   onRemoveContext: (id: string) => void;
+  onClearAllContext: () => void;
   onCitationClick: (id: string) => void;
   onCitedNodesChange: (ids: string[]) => void;
 }
@@ -37,10 +38,22 @@ function renderWithCitations(text: string, onCite: (id: string) => void) {
   });
 }
 
-const SectionHeader = ({ title, count }: { title: string; count?: number }) => (
-  <div className="px-4 py-2 border-b font-mono text-xs uppercase tracking-widest"
-    style={{ color: 'var(--fg)', borderColor: 'var(--border)' }}>
-    {title}{count !== undefined && <span className="ml-1.5 opacity-50">({count})</span>}
+// countKey is used as the React key on the count badge to trigger the pulse animation on change
+const SectionHeader = ({ title, count, countKey }: { title: string; count?: number; countKey?: number }) => (
+  <div
+    className="px-4 py-2 border-b font-mono text-xs uppercase tracking-widest flex items-center justify-between"
+    style={{
+      color: 'var(--fg)',
+      borderColor: 'var(--border)',
+      background: 'color-mix(in srgb, var(--fg) 5%, var(--bg))',
+    }}
+  >
+    <span className="font-bold">{title}</span>
+    {count !== undefined && (
+      <span key={countKey ?? count} className="count-pulse tabular-nums" style={{ color: 'var(--muted)' }}>
+        {count}
+      </span>
+    )}
   </div>
 );
 
@@ -48,7 +61,7 @@ const Divider = () => (
   <div className="border-t" style={{ borderColor: 'var(--border)' }} />
 );
 
-export function WorkbenchPanel({ graph, contextNodeIds, onRemoveContext, onCitationClick, onCitedNodesChange }: Props) {
+export function WorkbenchPanel({ graph, contextNodeIds, onRemoveContext, onClearAllContext, onCitationClick, onCitedNodesChange }: Props) {
   const [provider, setProvider] = useState<'openai' | 'cohere'>('openai');
   const [model, setModel] = useState('gpt-4o-mini');
   const [apiKey, setApiKey] = useState('');
@@ -59,7 +72,6 @@ export function WorkbenchPanel({ graph, contextNodeIds, onRemoveContext, onCitat
   const [error, setError] = useState('');
   const [history, setHistory] = useState<QueryRun[]>([]);
 
-  // Load API key from localStorage
   useEffect(() => {
     const key = localStorage.getItem(`preciso.${provider}_key`) || '';
     setApiKey(key);
@@ -69,7 +81,12 @@ export function WorkbenchPanel({ graph, contextNodeIds, onRemoveContext, onCitat
   const contextNodes = graph ? graph.nodes.filter(n => contextNodeIds.includes(n.id)) : [];
 
   async function runQuery() {
-    if (!prompt.trim() || !apiKey || !graph) return;
+    if (!graph) return;
+    if (!apiKey) return; // button is disabled anyway, belt + suspenders
+    if (!prompt.trim()) {
+      setError('Enter a prompt to run a query.');
+      return;
+    }
     setStreaming(true);
     setResponse('');
     setError('');
@@ -115,6 +132,7 @@ export function WorkbenchPanel({ graph, contextNodeIds, onRemoveContext, onCitat
   }
 
   const models = provider === 'openai' ? OPENAI_MODELS : COHERE_MODELS;
+  const canRun = !streaming && !!apiKey && !!graph;
 
   return (
     <div className="flex-1 flex flex-col overflow-y-auto text-sm" style={{ color: 'var(--fg)' }}>
@@ -147,7 +165,7 @@ export function WorkbenchPanel({ graph, contextNodeIds, onRemoveContext, onCitat
               autoFocus
               className="flex-1 px-2 py-1 border text-xs font-mono"
               style={{ background: 'var(--bg)', color: 'var(--fg)', borderColor: 'var(--stripe)' }}
-              placeholder={`${provider === 'openai' ? 'sk-...' : 'your-cohere-key'}`} />
+              placeholder={provider === 'openai' ? 'sk-...' : 'your-cohere-key'} />
           ) : (
             <div className="flex-1 flex items-center gap-2">
               <span style={{ color: apiKey ? 'var(--fg)' : 'var(--muted)' }}>
@@ -159,24 +177,42 @@ export function WorkbenchPanel({ graph, contextNodeIds, onRemoveContext, onCitat
             </div>
           )}
         </div>
-        <p style={{ color: 'var(--muted)', opacity: 0.6, fontSize: 10 }}>Key stays in browser. Never sent to Preciso servers.</p>
+        <p style={{ color: 'var(--muted)', opacity: 0.55, fontSize: 10 }}>Key stays in browser. Never sent to Preciso servers.</p>
       </div>
 
       <Divider />
 
       {/* Context */}
-      <SectionHeader title="Context" count={contextNodeIds.length} />
-      <div className="px-4 py-3 flex flex-wrap gap-2">
+      <SectionHeader title="Context" count={contextNodeIds.length} countKey={contextNodeIds.length} />
+      <div className="px-4 py-3">
         {contextNodes.length === 0 ? (
           <p className="text-xs font-mono" style={{ color: 'var(--muted)' }}>Click a node on the graph to add context</p>
-        ) : contextNodes.map(n => (
-          <div key={n.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-mono"
-            style={{ borderColor: 'var(--border)', background: 'var(--bg)', color: 'var(--fg)' }}>
-            <span className="w-1.5 h-1.5 rounded-full border" style={{ borderColor: 'var(--fg)', background: 'var(--bg)' }} />
-            <span className="truncate max-w-[160px]">{n.label}</span>
-            <button onClick={() => onRemoveContext(n.id)} className="ml-1 hover:opacity-100 opacity-50">×</button>
-          </div>
-        ))}
+        ) : (
+          <>
+            <div className="flex flex-wrap gap-2">
+              {contextNodes.map(n => (
+                <div
+                  key={n.id}
+                  className="chip-appear inline-flex items-center gap-1.5 px-2.5 py-1 border text-xs font-mono"
+                  style={{ borderColor: 'var(--border)', background: 'var(--bg)', color: 'var(--fg)' }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full border" style={{ borderColor: 'var(--fg)', background: 'var(--bg)' }} />
+                  <span className="truncate max-w-[140px]">{n.label}</span>
+                  <button onClick={() => onRemoveContext(n.id)} className="ml-1 opacity-40 hover:opacity-100 transition-opacity">×</button>
+                </div>
+              ))}
+            </div>
+            {contextNodes.length >= 3 && (
+              <button
+                onClick={onClearAllContext}
+                className="mt-2 text-xs font-mono transition-colors hover:text-[var(--fg)]"
+                style={{ color: 'var(--muted)' }}
+              >
+                Clear all
+              </button>
+            )}
+          </>
+        )}
       </div>
 
       <Divider />
@@ -186,24 +222,32 @@ export function WorkbenchPanel({ graph, contextNodeIds, onRemoveContext, onCitat
       <div className="px-4 py-3 flex flex-col gap-2">
         <textarea
           value={prompt}
-          onChange={e => setPrompt(e.target.value)}
+          onChange={e => { setPrompt(e.target.value); if (error) setError(''); }}
           onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) runQuery(); }}
           rows={4}
           placeholder="Ask a question about this graph…"
           className="w-full px-3 py-2 text-xs font-mono border resize-none focus:outline-none"
-          style={{
-            background: 'var(--bg)', color: 'var(--fg)',
-            borderColor: 'var(--border)',
-          }}
+          style={{ background: 'var(--bg)', color: 'var(--fg)', borderColor: 'var(--border)' }}
         />
         <button
           onClick={runQuery}
-          disabled={streaming || !prompt.trim() || !apiKey || !graph}
+          disabled={!canRun}
           className="self-start px-4 py-2 text-xs font-mono transition-colors disabled:opacity-40"
           style={{ background: 'var(--stripe)', color: 'var(--stripe-text)' }}
         >
           {streaming ? 'Running…' : 'Run query → ⌘↵'}
         </button>
+        {/* Inline explanation for why button is disabled */}
+        {!apiKey && (
+          <p className="text-xs font-mono" style={{ color: 'var(--muted)' }}>
+            Set API key above to run
+          </p>
+        )}
+        {!graph && (
+          <p className="text-xs font-mono" style={{ color: 'var(--muted)' }}>
+            Load a graph to run queries
+          </p>
+        )}
       </div>
 
       <Divider />
@@ -225,7 +269,9 @@ export function WorkbenchPanel({ graph, contextNodeIds, onRemoveContext, onCitat
             </div>
           </div>
         ) : (
-          <p style={{ color: 'var(--muted)' }}>{graph ? 'Set an API key, add context, and run a query.' : 'Load a graph first.'}</p>
+          <p style={{ color: 'var(--muted)' }}>
+            {!graph ? 'Load a graph first.' : !apiKey ? 'Set API key and run a query.' : 'Add context and run a query.'}
+          </p>
         )}
       </div>
 
@@ -240,16 +286,16 @@ export function WorkbenchPanel({ graph, contextNodeIds, onRemoveContext, onCitat
           <>
             {history.map(item => (
               <button key={item.id} onClick={() => loadHistoryItem(item)}
-                className="w-full text-left py-1.5 flex items-start gap-2 hover:bg-[var(--surface)] px-2 -mx-2 rounded transition-colors">
+                className="w-full text-left py-1.5 flex items-start gap-2 hover:bg-[var(--surface)] px-2 -mx-2 transition-colors">
                 <span style={{ color: 'var(--muted)' }}>·</span>
                 <span className="flex-1 truncate" style={{ color: 'var(--fg)' }}>{item.prompt}</span>
-                <span style={{ color: 'var(--muted)', opacity: 0.6, fontSize: 10, flexShrink: 0 }}>
+                <span style={{ color: 'var(--muted)', opacity: 0.55, fontSize: 10, flexShrink: 0 }}>
                   {Math.round((Date.now() - item.timestamp) / 60000)}m ago
                 </span>
               </button>
             ))}
             <button onClick={() => setHistory([])}
-              className="mt-2 text-xs font-mono"
+              className="mt-2 text-xs font-mono hover:text-[var(--fg)] transition-colors"
               style={{ color: 'var(--muted)' }}>
               Clear history
             </button>

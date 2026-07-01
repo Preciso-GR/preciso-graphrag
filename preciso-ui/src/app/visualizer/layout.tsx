@@ -1,4 +1,4 @@
-import Navbar from '@/components/Navbar';
+import { VisualizerNav } from '@/components/visualizer/VisualizerNav';
 import { DesktopOnlyGuard } from '@/components/visualizer/DesktopOnlyGuard';
 
 export const metadata = { title: 'Visualizer — Preciso' };
@@ -6,7 +6,7 @@ export const metadata = { title: 'Visualizer — Preciso' };
 export default function VisualizerLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[var(--bg)]">
-      <Navbar />
+      <VisualizerNav />
       <div className="h-12 shrink-0" />
       <DesktopOnlyGuard>
         {children}

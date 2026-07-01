@@ -95,6 +95,7 @@ export function VisualizerShell() {
               graph={graph}
               contextNodeIds={contextNodeIds}
               onRemoveContext={(id) => setContextNodeIds(prev => prev.filter(x => x !== id))}
+              onClearAllContext={() => setContextNodeIds([])}
               onCitationClick={(id) => { setSelectedNodeId(id); }}
               onCitedNodesChange={setCitedNodeIds}
             />

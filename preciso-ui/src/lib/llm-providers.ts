@@ -66,6 +66,49 @@ export async function* streamCohere(opts: {
   }
 }
 
+// ── Embeddings ──────────────────────────────────────────────────────────────
+
+export async function embedOpenAI(texts: string[], model: string, apiKey: string): Promise<number[][]> {
+  const res = await fetch('https://api.openai.com/v1/embeddings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ model, input: texts }),
+  });
+  if (!res.ok) throw new Error(`OpenAI embed error ${res.status}: ${await res.text()}`);
+  const json = await res.json();
+  return (json.data as { embedding: number[] }[]).map(d => d.embedding);
+}
+
+export async function embedCohere(texts: string[], model: string, apiKey: string, inputType: 'search_document' | 'search_query' = 'search_document'): Promise<number[][]> {
+  const res = await fetch('https://api.cohere.ai/v1/embed', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ model, texts, input_type: inputType }),
+  });
+  if (!res.ok) throw new Error(`Cohere embed error ${res.status}: ${await res.text()}`);
+  const json = await res.json();
+  return json.embeddings as number[][];
+}
+
+export async function embedBatch(
+  texts: string[],
+  provider: 'openai' | 'cohere',
+  model: string,
+  apiKey: string,
+  inputType: 'search_document' | 'search_query' = 'search_document',
+): Promise<number[][]> {
+  if (provider === 'openai') return embedOpenAI(texts, model, apiKey);
+  return embedCohere(texts, model, apiKey, inputType);
+}
+
+export function cosineSimilarity(a: number[], b: number[]): number {
+  if (!a.length || a.length !== b.length) return 0;
+  let dot = 0, na = 0, nb = 0;
+  for (let i = 0; i < a.length; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
+  const denom = Math.sqrt(na) * Math.sqrt(nb);
+  return denom === 0 ? 0 : dot / denom;
+}
+
 export const SYSTEM_PROMPT = `You are a knowledge graph reasoning assistant for Preciso. Answer using ONLY the provided graph context. Cite entity IDs inline using [n1] [n2] format matching the IDs in the context. Be concise. If the graph doesn't contain the answer, say so — do not speculate.`;
 
 export function buildContextString(graph: ParsedGraph, contextNodeIds: string[]): string {

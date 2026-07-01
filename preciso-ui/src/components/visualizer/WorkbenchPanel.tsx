@@ -39,13 +39,13 @@ function renderWithCitations(text: string, onCite: (id: string) => void) {
 
 const SectionHeader = ({ title, count }: { title: string; count?: number }) => (
   <div className="px-4 py-2 border-b font-mono text-xs uppercase tracking-widest"
-    style={{ color: 'var(--muted)', borderColor: 'color-mix(in srgb, var(--muted) 15%, transparent)' }}>
-    {title}{count !== undefined && <span className="ml-1.5 opacity-60">({count})</span>}
+    style={{ color: 'var(--fg)', borderColor: 'var(--border)' }}>
+    {title}{count !== undefined && <span className="ml-1.5 opacity-50">({count})</span>}
   </div>
 );
 
 const Divider = () => (
-  <div className="border-t" style={{ borderColor: 'color-mix(in srgb, var(--muted) 15%, transparent)' }} />
+  <div className="border-t" style={{ borderColor: 'var(--border)' }} />
 );
 
 export function WorkbenchPanel({ graph, contextNodeIds, onRemoveContext, onCitationClick, onCitedNodesChange }: Props) {
@@ -125,7 +125,7 @@ export function WorkbenchPanel({ graph, contextNodeIds, onRemoveContext, onCitat
           <span style={{ color: 'var(--muted)', width: 80 }}>Provider</span>
           <select value={provider} onChange={e => setProvider(e.target.value as 'openai' | 'cohere')}
             className="flex-1 px-2 py-1 border text-xs font-mono"
-            style={{ background: 'var(--bg)', color: 'var(--fg)', borderColor: 'color-mix(in srgb, var(--muted) 25%, transparent)' }}>
+            style={{ background: 'var(--bg)', color: 'var(--fg)', borderColor: 'var(--border)' }}>
             <option value="openai">OpenAI</option>
             <option value="cohere">Cohere</option>
           </select>
@@ -134,7 +134,7 @@ export function WorkbenchPanel({ graph, contextNodeIds, onRemoveContext, onCitat
           <span style={{ color: 'var(--muted)', width: 80 }}>Model</span>
           <select value={model} onChange={e => setModel(e.target.value)}
             className="flex-1 px-2 py-1 border text-xs font-mono"
-            style={{ background: 'var(--bg)', color: 'var(--fg)', borderColor: 'color-mix(in srgb, var(--muted) 25%, transparent)' }}>
+            style={{ background: 'var(--bg)', color: 'var(--fg)', borderColor: 'var(--border)' }}>
             {models.map(m => <option key={m} value={m}>{m}</option>)}
           </select>
         </div>
@@ -171,7 +171,7 @@ export function WorkbenchPanel({ graph, contextNodeIds, onRemoveContext, onCitat
           <p className="text-xs font-mono" style={{ color: 'var(--muted)' }}>Click a node on the graph to add context</p>
         ) : contextNodes.map(n => (
           <div key={n.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-mono"
-            style={{ borderColor: 'color-mix(in srgb, var(--muted) 30%, transparent)', background: 'var(--bg)', color: 'var(--fg)' }}>
+            style={{ borderColor: 'var(--border)', background: 'var(--bg)', color: 'var(--fg)' }}>
             <span className="w-1.5 h-1.5 rounded-full border" style={{ borderColor: 'var(--fg)', background: 'var(--bg)' }} />
             <span className="truncate max-w-[160px]">{n.label}</span>
             <button onClick={() => onRemoveContext(n.id)} className="ml-1 hover:opacity-100 opacity-50">×</button>
@@ -193,7 +193,7 @@ export function WorkbenchPanel({ graph, contextNodeIds, onRemoveContext, onCitat
           className="w-full px-3 py-2 text-xs font-mono border resize-none focus:outline-none"
           style={{
             background: 'var(--bg)', color: 'var(--fg)',
-            borderColor: 'color-mix(in srgb, var(--muted) 25%, transparent)',
+            borderColor: 'var(--border)',
           }}
         />
         <button
@@ -219,7 +219,7 @@ export function WorkbenchPanel({ graph, contextNodeIds, onRemoveContext, onCitat
             <div className="flex gap-2 mt-3">
               <button onClick={() => navigator.clipboard.writeText(response)}
                 className="px-2 py-1 border text-xs font-mono hover:bg-[var(--surface)]"
-                style={{ borderColor: 'color-mix(in srgb, var(--muted) 25%, transparent)' }}>
+                style={{ borderColor: 'var(--border)' }}>
                 ⟲ Copy
               </button>
             </div>

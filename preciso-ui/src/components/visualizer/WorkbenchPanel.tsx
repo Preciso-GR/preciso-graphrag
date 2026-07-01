@@ -1,19 +1,30 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { ParsedGraph, QueryRun } from '@/lib/graph-types';
-import { streamOpenAI, streamCohere, SYSTEM_PROMPT, buildContextString } from '@/lib/llm-providers';
+import {
+  streamOpenAI, streamCohere, SYSTEM_PROMPT, buildContextString,
+  embedBatch, cosineSimilarity,
+} from '@/lib/llm-providers';
 
 interface Props {
   graph: ParsedGraph | null;
   contextNodeIds: string[];
   onRemoveContext: (id: string) => void;
   onClearAllContext: () => void;
+  onAddContext: (ids: string[]) => void;
   onCitationClick: (id: string) => void;
   onCitedNodesChange: (ids: string[]) => void;
 }
 
-const OPENAI_MODELS = ['gpt-4o-mini', 'gpt-4o', 'o1-mini'];
-const COHERE_MODELS = ['command-r', 'command-r-plus'];
+const LLM_MODELS = {
+  openai: ['gpt-4o-mini', 'gpt-4o', 'o1-mini'],
+  cohere: ['command-r', 'command-r-plus'],
+};
+
+const EMBED_MODELS = {
+  openai: ['text-embedding-3-small', 'text-embedding-3-large', 'text-embedding-ada-002'],
+  cohere: ['embed-english-v3.0', 'embed-multilingual-v3.0', 'embed-english-light-v3.0'],
+};
 
 function parseCitations(text: string): string[] {
   const matches = text.match(/\[n\d+\]/g) || [];
@@ -21,14 +32,13 @@ function parseCitations(text: string): string[] {
 }
 
 function renderWithCitations(text: string, onCite: (id: string) => void) {
-  const parts = text.split(/(\[n\d+\])/g);
-  return parts.map((part, i) => {
+  return text.split(/(\[n\d+\])/g).map((part, i) => {
     const match = part.match(/^\[n(\d+)\]$/);
     if (match) {
       const id = `n${match[1]}`;
       return (
         <button key={i} onClick={() => onCite(id)}
-          className="inline-flex items-center px-1 py-0.5 mx-0.5 text-[10px] font-mono border rounded"
+          className="inline-flex items-center px-1 py-0.5 mx-0.5 text-[10px] font-mono border"
           style={{ color: 'var(--stripe)', borderColor: 'var(--stripe)', background: 'color-mix(in srgb, var(--stripe) 8%, transparent)' }}>
           {part}
         </button>
@@ -38,13 +48,12 @@ function renderWithCitations(text: string, onCite: (id: string) => void) {
   });
 }
 
-// countKey is used as the React key on the count badge to trigger the pulse animation on change
 const SectionHeader = ({ title, count, countKey }: { title: string; count?: number; countKey?: number }) => (
   <div
     className="px-4 py-2 border-b font-mono text-xs uppercase tracking-widest flex items-center justify-between"
     style={{
       color: 'var(--fg)',
-      borderColor: 'var(--border)',
+      borderColor: 'color-mix(in srgb, var(--fg) 25%, var(--bg))',
       background: 'color-mix(in srgb, var(--fg) 5%, var(--bg))',
     }}
   >
@@ -57,39 +66,104 @@ const SectionHeader = ({ title, count, countKey }: { title: string; count?: numb
   </div>
 );
 
+// Solid black-based divider — the main visual separator between sections
 const Divider = () => (
-  <div className="border-t" style={{ borderColor: 'var(--border)' }} />
+  <div className="border-t" style={{ borderColor: 'color-mix(in srgb, var(--fg) 25%, var(--bg))' }} />
 );
 
-export function WorkbenchPanel({ graph, contextNodeIds, onRemoveContext, onClearAllContext, onCitationClick, onCitedNodesChange }: Props) {
+// Lighter divider for within a section (e.g. between embedding rows)
+const InnerDivider = () => (
+  <div className="border-t mx-4" style={{ borderColor: 'color-mix(in srgb, var(--fg) 10%, var(--bg))' }} />
+);
+
+export function WorkbenchPanel({
+  graph, contextNodeIds, onRemoveContext, onClearAllContext,
+  onAddContext, onCitationClick, onCitedNodesChange,
+}: Props) {
+  // LLM config
   const [provider, setProvider] = useState<'openai' | 'cohere'>('openai');
   const [model, setModel] = useState('gpt-4o-mini');
   const [apiKey, setApiKey] = useState('');
   const [editingKey, setEditingKey] = useState(false);
+
+  // Embedding config
+  const [embedEnabled, setEmbedEnabled] = useState(false);
+  const [embedProvider, setEmbedProvider] = useState<'openai' | 'cohere'>('openai');
+  const [embedModel, setEmbedModel] = useState('text-embedding-3-small');
+  const [embedKey, setEmbedKey] = useState('');
+  const [editingEmbedKey, setEditingEmbedKey] = useState(false);
+  const [embedStatus, setEmbedStatus] = useState('');
+
+  // Node embedding cache — keyed by `nodeId:::provider:::model`
+  const nodeEmbCache = useRef<Map<string, number[]>>(new Map());
+
+  // Query state
   const [prompt, setPrompt] = useState('');
   const [response, setResponse] = useState('');
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState('');
   const [history, setHistory] = useState<QueryRun[]>([]);
 
+  // Load keys from localStorage
   useEffect(() => {
-    const key = localStorage.getItem(`preciso.${provider}_key`) || '';
-    setApiKey(key);
-    setModel(provider === 'openai' ? 'gpt-4o-mini' : 'command-r');
+    setApiKey(localStorage.getItem(`preciso.${provider}_key`) || '');
+    setModel(LLM_MODELS[provider][0]);
   }, [provider]);
+
+  useEffect(() => {
+    setEmbedKey(localStorage.getItem(`preciso.embed_${embedProvider}_key`) || '');
+    setEmbedModel(EMBED_MODELS[embedProvider][0]);
+    nodeEmbCache.current.clear(); // clear cache when embed provider changes
+  }, [embedProvider]);
+
+  // Clear cache when graph changes
+  useEffect(() => { nodeEmbCache.current.clear(); }, [graph]);
 
   const contextNodes = graph ? graph.nodes.filter(n => contextNodeIds.includes(n.id)) : [];
 
   async function runQuery() {
-    if (!graph) return;
-    if (!apiKey) return; // button is disabled anyway, belt + suspenders
-    if (!prompt.trim()) {
-      setError('Enter a prompt to run a query.');
-      return;
-    }
+    if (!graph || !apiKey) return;
+    if (!prompt.trim()) { setError('Enter a prompt to run a query.'); return; }
+
     setStreaming(true);
     setResponse('');
     setError('');
+
+    // Semantic retrieval — compute embeddings and auto-select context
+    if (embedEnabled && embedKey) {
+      try {
+        setEmbedStatus('Embedding query…');
+
+        // Query embedding
+        const [queryVec] = await embedBatch([prompt], embedProvider, embedModel, embedKey, 'search_query');
+
+        // Find which nodes need embedding
+        const cacheKey = (id: string) => `${id}:::${embedProvider}:::${embedModel}`;
+        const missing = graph.nodes.filter(n => !nodeEmbCache.current.has(cacheKey(n.id)));
+
+        if (missing.length > 0) {
+          setEmbedStatus(`Embedding ${missing.length} nodes…`);
+          const texts = missing.map(n => `${n.label}: ${n.description || n.type}`);
+          const vecs = await embedBatch(texts, embedProvider, embedModel, embedKey, 'search_document');
+          missing.forEach((n, i) => nodeEmbCache.current.set(cacheKey(n.id), vecs[i]));
+        }
+
+        // Rank nodes by cosine similarity
+        const ranked = graph.nodes
+          .map(n => ({ id: n.id, score: cosineSimilarity(queryVec, nodeEmbCache.current.get(cacheKey(n.id)) ?? []) }))
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 5)
+          .map(r => r.id);
+
+        onAddContext(ranked);
+        setEmbedStatus('');
+      } catch (err: unknown) {
+        setEmbedStatus('');
+        setError(`Embedding failed: ${err instanceof Error ? err.message : 'unknown error'}`);
+        setStreaming(false);
+        return;
+      }
+    }
 
     const context = buildContextString(graph, contextNodeIds);
     const userMsg = `${context}\n\nQUESTION: ${prompt}`;
@@ -125,39 +199,30 @@ export function WorkbenchPanel({ graph, contextNodeIds, onRemoveContext, onClear
     }
   }
 
-  function loadHistoryItem(item: QueryRun) {
-    setPrompt(item.prompt);
-    setResponse(item.response);
-    onCitedNodesChange(item.citedNodeIds);
-  }
-
-  const models = provider === 'openai' ? OPENAI_MODELS : COHERE_MODELS;
   const canRun = !streaming && !!apiKey && !!graph;
 
   return (
     <div className="flex-1 flex flex-col overflow-y-auto text-sm" style={{ color: 'var(--fg)' }}>
-      {/* Run Config */}
+
+      {/* ── RUN CONFIG ─────────────────────────────────────── */}
       <SectionHeader title="Run Config" />
       <div className="px-4 py-3 space-y-2 font-mono text-xs">
-        <div className="flex items-center gap-2">
-          <span style={{ color: 'var(--muted)', width: 80 }}>Provider</span>
+        <Row label="Provider">
           <select value={provider} onChange={e => setProvider(e.target.value as 'openai' | 'cohere')}
             className="flex-1 px-2 py-1 border text-xs font-mono"
-            style={{ background: 'var(--bg)', color: 'var(--fg)', borderColor: 'var(--border)' }}>
+            style={{ background: 'var(--bg)', color: 'var(--fg)', borderColor: 'color-mix(in srgb, var(--fg) 25%, var(--bg))' }}>
             <option value="openai">OpenAI</option>
             <option value="cohere">Cohere</option>
           </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <span style={{ color: 'var(--muted)', width: 80 }}>Model</span>
+        </Row>
+        <Row label="Model">
           <select value={model} onChange={e => setModel(e.target.value)}
             className="flex-1 px-2 py-1 border text-xs font-mono"
-            style={{ background: 'var(--bg)', color: 'var(--fg)', borderColor: 'var(--border)' }}>
-            {models.map(m => <option key={m} value={m}>{m}</option>)}
+            style={{ background: 'var(--bg)', color: 'var(--fg)', borderColor: 'color-mix(in srgb, var(--fg) 25%, var(--bg))' }}>
+            {LLM_MODELS[provider].map(m => <option key={m} value={m}>{m}</option>)}
           </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <span style={{ color: 'var(--muted)', width: 80 }}>API key</span>
+        </Row>
+        <Row label="API key">
           {editingKey ? (
             <input type="password" value={apiKey}
               onChange={e => setApiKey(e.target.value)}
@@ -165,49 +230,117 @@ export function WorkbenchPanel({ graph, contextNodeIds, onRemoveContext, onClear
               autoFocus
               className="flex-1 px-2 py-1 border text-xs font-mono"
               style={{ background: 'var(--bg)', color: 'var(--fg)', borderColor: 'var(--stripe)' }}
-              placeholder={provider === 'openai' ? 'sk-...' : 'your-cohere-key'} />
+              placeholder={provider === 'openai' ? 'sk-…' : 'your-cohere-key'} />
           ) : (
-            <div className="flex-1 flex items-center gap-2">
-              <span style={{ color: apiKey ? 'var(--fg)' : 'var(--muted)' }}>
-                {apiKey ? '•'.repeat(Math.min(12, apiKey.length)) : 'Not set'}
-              </span>
-              <button onClick={() => setEditingKey(true)} style={{ color: 'var(--muted)' }} className="hover:text-[var(--fg)]">
-                ✎
-              </button>
-            </div>
+            <span style={{ color: apiKey ? 'var(--fg)' : 'var(--muted)' }}>
+              {apiKey ? '•'.repeat(Math.min(12, apiKey.length)) : 'Not set'}
+              <button onClick={() => setEditingKey(true)} className="ml-2 opacity-50 hover:opacity-100"> ✎</button>
+            </span>
           )}
+        </Row>
+        <p style={{ color: 'var(--muted)', opacity: 0.55, fontSize: 10, marginTop: 2 }}>
+          Key stays in browser — never sent to Preciso servers.
+        </p>
+      </div>
+
+      <InnerDivider />
+
+      {/* Embedding sub-section */}
+      <div className="px-4 py-2.5 space-y-2 font-mono text-xs">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setEmbedEnabled(v => !v)}
+            className="flex items-center gap-2 text-xs font-mono transition-colors"
+            style={{ color: embedEnabled ? 'var(--fg)' : 'var(--muted)' }}
+          >
+            <span
+              className="w-7 h-3.5 border flex items-center transition-colors"
+              style={{
+                borderColor: embedEnabled ? 'var(--fg)' : 'color-mix(in srgb, var(--fg) 25%, var(--bg))',
+                background: embedEnabled ? 'color-mix(in srgb, var(--fg) 12%, var(--bg))' : 'transparent',
+              }}
+            >
+              <span
+                className="w-2.5 h-2.5 border transition-all"
+                style={{
+                  borderColor: 'var(--fg)',
+                  background: 'var(--fg)',
+                  marginLeft: embedEnabled ? 'auto' : '1px',
+                  marginRight: embedEnabled ? '1px' : 'auto',
+                  opacity: embedEnabled ? 1 : 0.3,
+                }}
+              />
+            </span>
+            Embeddings {embedEnabled ? '— auto-select context' : '(off)'}
+          </button>
         </div>
-        <p style={{ color: 'var(--muted)', opacity: 0.55, fontSize: 10 }}>Key stays in browser. Never sent to Preciso servers.</p>
+
+        {embedEnabled && (
+          <div className="space-y-2 pt-1">
+            <Row label="Embed via">
+              <select value={embedProvider} onChange={e => setEmbedProvider(e.target.value as 'openai' | 'cohere')}
+                className="flex-1 px-2 py-1 border text-xs font-mono"
+                style={{ background: 'var(--bg)', color: 'var(--fg)', borderColor: 'color-mix(in srgb, var(--fg) 25%, var(--bg))' }}>
+                <option value="openai">OpenAI</option>
+                <option value="cohere">Cohere</option>
+              </select>
+            </Row>
+            <Row label="Model">
+              <select value={embedModel} onChange={e => setEmbedModel(e.target.value)}
+                className="flex-1 px-2 py-1 border text-xs font-mono"
+                style={{ background: 'var(--bg)', color: 'var(--fg)', borderColor: 'color-mix(in srgb, var(--fg) 25%, var(--bg))' }}>
+                {EMBED_MODELS[embedProvider].map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </Row>
+            <Row label="Embed key">
+              {editingEmbedKey ? (
+                <input type="password" value={embedKey}
+                  onChange={e => setEmbedKey(e.target.value)}
+                  onBlur={() => { setEditingEmbedKey(false); localStorage.setItem(`preciso.embed_${embedProvider}_key`, embedKey); }}
+                  autoFocus
+                  className="flex-1 px-2 py-1 border text-xs font-mono"
+                  style={{ background: 'var(--bg)', color: 'var(--fg)', borderColor: 'var(--stripe)' }}
+                  placeholder={embedProvider === 'openai' ? 'sk-…' : 'your-cohere-key'} />
+              ) : (
+                <span style={{ color: embedKey ? 'var(--fg)' : 'var(--muted)' }}>
+                  {embedKey ? '•'.repeat(Math.min(12, embedKey.length)) : 'Not set'}
+                  <button onClick={() => setEditingEmbedKey(true)} className="ml-2 opacity-50 hover:opacity-100"> ✎</button>
+                </span>
+              )}
+            </Row>
+            <p style={{ color: 'var(--muted)', opacity: 0.55, fontSize: 10 }}>
+              On query: top-5 most similar nodes auto-added as context.
+            </p>
+          </div>
+        )}
       </div>
 
       <Divider />
 
-      {/* Context */}
+      {/* ── CONTEXT ────────────────────────────────────────── */}
       <SectionHeader title="Context" count={contextNodeIds.length} countKey={contextNodeIds.length} />
       <div className="px-4 py-3">
         {contextNodes.length === 0 ? (
-          <p className="text-xs font-mono" style={{ color: 'var(--muted)' }}>Click a node on the graph to add context</p>
+          <p className="text-xs font-mono" style={{ color: 'var(--muted)' }}>
+            {embedEnabled ? 'Run a query — nodes auto-selected by semantic similarity.' : 'Click a node on the graph to add context.'}
+          </p>
         ) : (
           <>
             <div className="flex flex-wrap gap-2">
               {contextNodes.map(n => (
-                <div
-                  key={n.id}
+                <div key={n.id}
                   className="chip-appear inline-flex items-center gap-1.5 px-2.5 py-1 border text-xs font-mono"
-                  style={{ borderColor: 'var(--border)', background: 'var(--bg)', color: 'var(--fg)' }}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full border" style={{ borderColor: 'var(--fg)', background: 'var(--bg)' }} />
+                  style={{ borderColor: 'color-mix(in srgb, var(--fg) 25%, var(--bg))', background: 'var(--bg)', color: 'var(--fg)' }}>
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--fg)', opacity: 0.4 }} />
                   <span className="truncate max-w-[140px]">{n.label}</span>
                   <button onClick={() => onRemoveContext(n.id)} className="ml-1 opacity-40 hover:opacity-100 transition-opacity">×</button>
                 </div>
               ))}
             </div>
             {contextNodes.length >= 3 && (
-              <button
-                onClick={onClearAllContext}
-                className="mt-2 text-xs font-mono transition-colors hover:text-[var(--fg)]"
-                style={{ color: 'var(--muted)' }}
-              >
+              <button onClick={onClearAllContext}
+                className="mt-2 text-xs font-mono hover:text-[var(--fg)] transition-colors"
+                style={{ color: 'var(--muted)' }}>
                 Clear all
               </button>
             )}
@@ -217,7 +350,7 @@ export function WorkbenchPanel({ graph, contextNodeIds, onRemoveContext, onClear
 
       <Divider />
 
-      {/* Prompt */}
+      {/* ── PROMPT ─────────────────────────────────────────── */}
       <SectionHeader title="Prompt" />
       <div className="px-4 py-3 flex flex-col gap-2">
         <textarea
@@ -227,46 +360,36 @@ export function WorkbenchPanel({ graph, contextNodeIds, onRemoveContext, onClear
           rows={4}
           placeholder="Ask a question about this graph…"
           className="w-full px-3 py-2 text-xs font-mono border resize-none focus:outline-none"
-          style={{ background: 'var(--bg)', color: 'var(--fg)', borderColor: 'var(--border)' }}
+          style={{ background: 'var(--bg)', color: 'var(--fg)', borderColor: 'color-mix(in srgb, var(--fg) 25%, var(--bg))' }}
         />
-        <button
-          onClick={runQuery}
-          disabled={!canRun}
-          className="self-start px-4 py-2 text-xs font-mono transition-colors disabled:opacity-40"
-          style={{ background: 'var(--stripe)', color: 'var(--stripe-text)' }}
-        >
-          {streaming ? 'Running…' : 'Run query → ⌘↵'}
-        </button>
-        {/* Inline explanation for why button is disabled */}
-        {!apiKey && (
-          <p className="text-xs font-mono" style={{ color: 'var(--muted)' }}>
-            Set API key above to run
-          </p>
-        )}
-        {!graph && (
-          <p className="text-xs font-mono" style={{ color: 'var(--muted)' }}>
-            Load a graph to run queries
-          </p>
-        )}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={runQuery}
+            disabled={!canRun}
+            className="px-4 py-2 text-xs font-mono transition-colors disabled:opacity-40"
+            style={{ background: 'var(--stripe)', color: 'var(--stripe-text)' }}
+          >
+            {embedStatus || (streaming ? 'Running…' : 'Run query → ⌘↵')}
+          </button>
+          {!apiKey && <p className="text-xs font-mono" style={{ color: 'var(--muted)' }}>Set API key above to run</p>}
+          {!graph && <p className="text-xs font-mono" style={{ color: 'var(--muted)' }}>Load a graph first</p>}
+        </div>
+        {error && <p className="text-xs font-mono" style={{ color: 'var(--red-bright)' }}>{error}</p>}
       </div>
 
       <Divider />
 
-      {/* Response */}
+      {/* ── RESPONSE ───────────────────────────────────────── */}
       <SectionHeader title="Response" />
       <div className="px-4 py-3 font-mono text-xs leading-relaxed min-h-[80px]">
-        {error ? (
-          <p style={{ color: 'var(--red-bright)' }}>{error}</p>
-        ) : response ? (
+        {response ? (
           <div className="space-y-2">
             <p style={{ color: 'var(--fg)' }}>{renderWithCitations(response, onCitationClick)}</p>
-            <div className="flex gap-2 mt-3">
-              <button onClick={() => navigator.clipboard.writeText(response)}
-                className="px-2 py-1 border text-xs font-mono hover:bg-[var(--surface)]"
-                style={{ borderColor: 'var(--border)' }}>
-                ⟲ Copy
-              </button>
-            </div>
+            <button onClick={() => navigator.clipboard.writeText(response)}
+              className="px-2 py-1 border text-xs font-mono hover:bg-[var(--surface)] mt-2"
+              style={{ borderColor: 'color-mix(in srgb, var(--fg) 25%, var(--bg))' }}>
+              ⟲ Copy
+            </button>
           </div>
         ) : (
           <p style={{ color: 'var(--muted)' }}>
@@ -277,7 +400,7 @@ export function WorkbenchPanel({ graph, contextNodeIds, onRemoveContext, onClear
 
       <Divider />
 
-      {/* History */}
+      {/* ── HISTORY ────────────────────────────────────────── */}
       <SectionHeader title="History" count={history.length} />
       <div className="px-4 py-3 space-y-1 font-mono text-xs">
         {history.length === 0 ? (
@@ -285,7 +408,7 @@ export function WorkbenchPanel({ graph, contextNodeIds, onRemoveContext, onClear
         ) : (
           <>
             {history.map(item => (
-              <button key={item.id} onClick={() => loadHistoryItem(item)}
+              <button key={item.id} onClick={() => { setPrompt(item.prompt); setResponse(item.response); onCitedNodesChange(item.citedNodeIds); }}
                 className="w-full text-left py-1.5 flex items-start gap-2 hover:bg-[var(--surface)] px-2 -mx-2 transition-colors">
                 <span style={{ color: 'var(--muted)' }}>·</span>
                 <span className="flex-1 truncate" style={{ color: 'var(--fg)' }}>{item.prompt}</span>
@@ -294,14 +417,22 @@ export function WorkbenchPanel({ graph, contextNodeIds, onRemoveContext, onClear
                 </span>
               </button>
             ))}
-            <button onClick={() => setHistory([])}
-              className="mt-2 text-xs font-mono hover:text-[var(--fg)] transition-colors"
-              style={{ color: 'var(--muted)' }}>
+            <button onClick={() => setHistory([])} className="mt-2 text-xs font-mono hover:text-[var(--fg)] transition-colors" style={{ color: 'var(--muted)' }}>
               Clear history
             </button>
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+// Small layout helper to keep label+control rows DRY
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span style={{ color: 'var(--muted)', minWidth: 72 }}>{label}</span>
+      <div className="flex-1 flex items-center">{children}</div>
     </div>
   );
 }

@@ -35,6 +35,8 @@ export interface ParsedGraph {
   };
 }
 
+export type RetrievalMode = 'local' | 'global' | 'mix';
+
 export interface QueryRun {
   id: string;
   timestamp: number;
@@ -42,6 +44,9 @@ export interface QueryRun {
   contextNodeIds: string[];
   response: string;
   citedNodeIds: string[];
+  /** Maps numeric citation refs ("1", "2", …) back to node ids for this run */
+  refToNodeId: Record<string, string>;
+  mode: RetrievalMode;
   provider: 'openai' | 'cohere';
   model: string;
 }

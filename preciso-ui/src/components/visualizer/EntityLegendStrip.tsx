@@ -1,19 +1,25 @@
 'use client';
 
-const TYPE_PALETTE = ['#8B1A1A', '#00A896', '#1D4ED8', '#D97706', '#7C3AED', '#059669', '#DB2777', '#EA580C'];
+const TYPE_PALETTE = ['#00C2A8', '#F59E0B', '#60A5FA', '#A78BFA', '#4ADE80', '#FB923C', '#F472B6', '#34D399'];
 const TYPE_NAMED: Record<string, string> = {
-  ORGANIZATION: '#8B1A1A', ORG: '#8B1A1A',
-  PERSON: '#00A896', PEOPLE: '#00A896',
-  LOCATION: '#1D4ED8', PLACE: '#1D4ED8', GEO: '#1D4ED8',
-  PRODUCT: '#D97706', BRAND: '#D97706',
-  EVENT: '#7C3AED',
-  CONCEPT: '#059669', CATEGORY: '#059669',
-  METRIC: '#DB2777', NUMBER: '#DB2777',
-  DATE: '#EA580C', TIME: '#EA580C',
+  COMPANY: '#00C2A8', CORPORATION: '#00C2A8', ORG: '#00C2A8', ORGANIZATION: '#00C2A8',
+  PERSON: '#F59E0B', PEOPLE: '#F59E0B', INDIVIDUAL: '#F59E0B', EXECUTIVE: '#F59E0B',
+  FINANCIAL: '#60A5FA', FINANCE: '#60A5FA', METRIC: '#60A5FA', NUMBER: '#60A5FA',
+  SEGMENT: '#A78BFA', DIVISION: '#A78BFA', UNIT: '#A78BFA',
+  GEO: '#4ADE80', GEOGRAPHY: '#4ADE80', LOCATION: '#4ADE80', REGION: '#4ADE80', PLACE: '#4ADE80', COUNTRY: '#4ADE80',
+  RISK: '#FB923C', CHALLENGE: '#FB923C',
+  EVENT: '#F472B6', DATE: '#F472B6',
+  PRODUCT: '#34D399', BRAND: '#34D399', CONCEPT: '#34D399', CATEGORY: '#34D399',
 };
 
-function getTypeColor(type: string, idx: number): string {
-  return TYPE_NAMED[type.toUpperCase()] ?? TYPE_PALETTE[idx % TYPE_PALETTE.length];
+function typeHash(type: string): number {
+  let h = 0;
+  for (let i = 0; i < type.length; i++) h = (h * 31 + type.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+function getTypeColor(type: string): string {
+  return TYPE_NAMED[type.toUpperCase()] ?? TYPE_PALETTE[typeHash(type) % TYPE_PALETTE.length];
 }
 
 interface Props {
@@ -38,9 +44,9 @@ export function EntityLegendStrip({ entityTypes, hiddenTypes, onToggle, open, on
           >
             ▾ Legend
           </button>
-          {entries.map(([type, count], i) => {
+          {entries.map(([type, count]) => {
             const hidden = hiddenTypes.has(type);
-            const color = getTypeColor(type, i);
+            const color = getTypeColor(type);
             return (
               <button
                 key={type}

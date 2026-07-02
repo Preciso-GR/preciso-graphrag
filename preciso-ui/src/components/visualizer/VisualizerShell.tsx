@@ -96,7 +96,7 @@ export function VisualizerShell() {
               contextNodeIds={contextNodeIds}
               onRemoveContext={(id) => setContextNodeIds(prev => prev.filter(x => x !== id))}
               onClearAllContext={() => setContextNodeIds([])}
-              onAddContext={(ids) => setContextNodeIds(prev => [...new Set([...prev, ...ids])])}
+              onSetContext={(ids) => setContextNodeIds([...new Set(ids)])}
               onCitationClick={(id) => { setSelectedNodeId(id); }}
               onCitedNodesChange={setCitedNodeIds}
             />

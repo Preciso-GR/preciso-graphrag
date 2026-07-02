@@ -1,5 +1,3 @@
-import type { ParsedGraph, GraphNode } from './graph-types';
-
 export async function* streamOpenAI(opts: {
   apiKey: string; model: string; system: string; user: string;
 }): AsyncGenerator<string> {
@@ -109,32 +107,4 @@ export function cosineSimilarity(a: number[], b: number[]): number {
   return denom === 0 ? 0 : dot / denom;
 }
 
-export const SYSTEM_PROMPT = `You are a knowledge graph reasoning assistant for Preciso. Answer using ONLY the provided graph context. Cite entity IDs inline using [n1] [n2] format matching the IDs in the context. Be concise. If the graph doesn't contain the answer, say so — do not speculate.`;
-
-export function buildContextString(graph: ParsedGraph, contextNodeIds: string[]): string {
-  const focal = contextNodeIds.length
-    ? graph.nodes.filter((n) => contextNodeIds.includes(n.id))
-    : [...graph.nodes].sort((a, b) => b.degree - a.degree).slice(0, 30);
-  const focalIds = new Set(focal.map((n) => n.id));
-  const neighborIds = new Set<string>();
-  for (const e of graph.edges) {
-    const s = typeof e.source === 'string' ? e.source : (e.source as GraphNode).id;
-    const t = typeof e.target === 'string' ? e.target : (e.target as GraphNode).id;
-    if (focalIds.has(s)) neighborIds.add(t);
-    if (focalIds.has(t)) neighborIds.add(s);
-  }
-  const nodeMap = new Map(graph.nodes.map((n) => [n.id, n]));
-  const allNodes = [...new Set([...focalIds, ...neighborIds])].map((id) => nodeMap.get(id)!).filter(Boolean);
-  const allEdges = graph.edges.filter((e) => {
-    const s = typeof e.source === 'string' ? e.source : (e.source as GraphNode).id;
-    const t = typeof e.target === 'string' ? e.target : (e.target as GraphNode).id;
-    return focalIds.has(s) || focalIds.has(t);
-  });
-  const entityLines = allNodes.map((n) => `[${n.id}] ${n.label} (${n.type}): ${n.description || '—'}`);
-  const edgeLines = allEdges.map((e) => {
-    const s = typeof e.source === 'string' ? e.source : (e.source as GraphNode).id;
-    const t = typeof e.target === 'string' ? e.target : (e.target as GraphNode).id;
-    return `[${s}] --[${e.label || 'related'}]--> [${t}]`;
-  });
-  return `ENTITIES:\n${entityLines.join('\n')}\n\nRELATIONSHIPS:\n${edgeLines.join('\n')}`;
-}
+export const SYSTEM_PROMPT = `You are a knowledge graph reasoning assistant for Preciso. Answer using ONLY the provided graph context. Cite supporting entities inline with their bracketed reference numbers exactly as they appear in the context, e.g. [1] or [3]. Be concise. If the graph doesn't contain the answer, say so — do not speculate.`;

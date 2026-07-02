@@ -42,6 +42,36 @@ function drawRoughCircle(ctx: CanvasRenderingContext2D, x: number, y: number, r:
   ctx.closePath();
 }
 
+// ── Color palette (synced with EntityLegendStrip) ────────────────────────────
+const TYPE_PALETTE = ['#00C2A8', '#F59E0B', '#60A5FA', '#A78BFA', '#4ADE80', '#FB923C', '#F472B6', '#34D399'];
+const TYPE_NAMED: Record<string, string> = {
+  COMPANY: '#00C2A8', CORPORATION: '#00C2A8', ORG: '#00C2A8', ORGANIZATION: '#00C2A8',
+  PERSON: '#F59E0B', PEOPLE: '#F59E0B', INDIVIDUAL: '#F59E0B', EXECUTIVE: '#F59E0B',
+  FINANCIAL: '#60A5FA', FINANCE: '#60A5FA', METRIC: '#60A5FA', NUMBER: '#60A5FA',
+  SEGMENT: '#A78BFA', DIVISION: '#A78BFA', UNIT: '#A78BFA',
+  GEO: '#4ADE80', GEOGRAPHY: '#4ADE80', LOCATION: '#4ADE80', REGION: '#4ADE80', PLACE: '#4ADE80', COUNTRY: '#4ADE80',
+  RISK: '#FB923C', CHALLENGE: '#FB923C',
+  EVENT: '#F472B6', DATE: '#F472B6',
+  PRODUCT: '#34D399', BRAND: '#34D399', CONCEPT: '#34D399', CATEGORY: '#34D399',
+};
+
+function typeHash(type: string): number {
+  let h = 0;
+  for (let i = 0; i < type.length; i++) h = (h * 31 + type.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+function getTypeColor(type: string): string {
+  return TYPE_NAMED[type.toUpperCase()] ?? TYPE_PALETTE[typeHash(type) % TYPE_PALETTE.length];
+}
+
+function hexAlpha(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 type SimNode = GraphNode & SimulationNodeDatum;
 
 export function GraphCanvas({ graph, selectedNodeId, hiddenTypes, citedNodeIds, onNodeClick, onDeselect }: Props) {
@@ -165,7 +195,7 @@ export function GraphCanvas({ graph, selectedNodeId, hiddenTypes, citedNodeIds, 
 
     ctx.globalAlpha = 1;
 
-    // Draw nodes — fully monochrome
+    // Draw nodes — type-colored
     const now = Date.now();
     s.nodes.forEach((n) => {
       if (s.hiddenTypes.has(n.type)) return;
@@ -174,8 +204,9 @@ export function GraphCanvas({ graph, selectedNodeId, hiddenTypes, citedNodeIds, 
       const ny = n.y ?? 0;
       const isSelected = n.id === selectedId;
       const isAdjacent = adjacentIds.has(n.id);
-      const nodeAlpha = hasSelection ? (isSelected || isAdjacent ? 1 : 0.2) : 1;
+      const nodeAlpha = hasSelection ? (isSelected || isAdjacent ? 1 : 0.18) : 1;
       const isHovered = s.hoverNode?.id === n.id;
+      const typeColor = getTypeColor(n.type);
 
       const isCited = s.citedNodeIds.includes(n.id);
       const citedAt = s.citedTimestamps[n.id];
@@ -183,13 +214,13 @@ export function GraphCanvas({ graph, selectedNodeId, hiddenTypes, citedNodeIds, 
 
       ctx.globalAlpha = nodeAlpha;
 
-      // Cited ring — dashed fg ring, no color
+      // Cited ring — dashed type-color ring
       if (citedFade > 0) {
         ctx.save();
         ctx.beginPath();
         ctx.arc(nx, ny, r + 7, 0, Math.PI * 2);
-        ctx.strokeStyle = fgColor;
-        ctx.globalAlpha = nodeAlpha * citedFade * 0.5;
+        ctx.strokeStyle = typeColor;
+        ctx.globalAlpha = nodeAlpha * citedFade * 0.6;
         ctx.lineWidth = 1.5;
         ctx.setLineDash([4, 4]);
         ctx.stroke();
@@ -198,23 +229,38 @@ export function GraphCanvas({ graph, selectedNodeId, hiddenTypes, citedNodeIds, 
         ctx.globalAlpha = nodeAlpha;
       }
 
-      // Node fill — always bg
+      // Selected outer glow ring
+      if (isSelected) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(nx, ny, r + 6, 0, Math.PI * 2);
+        ctx.strokeStyle = stripeColor;
+        ctx.globalAlpha = nodeAlpha * 0.25;
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        ctx.restore();
+        ctx.globalAlpha = nodeAlpha;
+      }
+
+      // Node fill — type color tint
       drawRoughCircle(ctx, nx, ny, r, n._jitterSeed ?? 0);
-      ctx.fillStyle = bgColor;
+      ctx.fillStyle = isSelected
+        ? hexAlpha(stripeColor, 0.18)
+        : hexAlpha(typeColor, 0.14);
       ctx.fill();
 
-      // Node stroke — fg normally, stripe (red) only when selected
+      // Node stroke — type color normally, stripe red when selected
       drawRoughCircle(ctx, nx, ny, r, n._jitterSeed ?? 0);
-      ctx.strokeStyle = isSelected ? stripeColor : fgColor;
-      ctx.lineWidth = isSelected ? 2.5 : isHovered ? 2.0 : 1.5;
+      ctx.strokeStyle = isSelected ? stripeColor : typeColor;
+      ctx.lineWidth = isSelected ? 2.5 : isHovered ? 2.2 : 1.8;
       ctx.stroke();
 
-      // Type initial — fg, muted opacity
+      // Type initial — type color, prominent
       const initial = (n.type[0] ?? '?').toUpperCase();
       const fontSize = Math.max(11, Math.round(r * 0.45));
-      ctx.font = `500 ${fontSize}px monospace`;
-      ctx.fillStyle = isSelected ? stripeColor : fgColor;
-      ctx.globalAlpha = nodeAlpha * (isSelected ? 0.75 : 0.35);
+      ctx.font = `600 ${fontSize}px monospace`;
+      ctx.fillStyle = isSelected ? stripeColor : typeColor;
+      ctx.globalAlpha = nodeAlpha * (isSelected ? 0.9 : 0.7);
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(initial, nx, ny);

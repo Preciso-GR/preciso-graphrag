@@ -223,34 +223,39 @@ async def _ollama_embed(texts: list[str], **kwargs) -> list[list[float]]:
     model = kwargs.get("model") or kwargs.get("model_name") or DEFAULT_EMBEDDING_MODEL
     if not isinstance(texts, list):
         texts = [texts]
+    host = os.getenv("OLLAMA_BASE_URL") or os.getenv("OLLAMA_HOST")
+    client = ollama.AsyncClient(**({"host": host} if host else {}))
     try:
-        response = ollama.embeddings(model=model, input=texts)
-        return response["embeddings"]
-    except TypeError:
-        # Older ollama client expects prompt=... per request.
+        if hasattr(client, "embed"):
+            response = await client.embed(model=model, input=texts)
+            return response["embeddings"]
+        # Older clients expose only the single-text endpoint.
         embeddings: list[list[float]] = []
         for text in texts:
-            response = ollama.embeddings(model=model, prompt=text)
-            if "embedding" in response:
-                embeddings.append(response["embedding"])
-            else:
-                embeddings.append(response.get("embeddings", [])[0])
+            response = await client.embeddings(model=model, prompt=text)
+            embeddings.append(response["embedding"])
         return embeddings
+    finally:
+        if hasattr(client, "close"):
+            await client.close()
 
 
 async def _openai_embed(texts: list[str], **kwargs) -> list[list[float]]:
     try:
-        from openai import OpenAI
+        from openai import AsyncOpenAI
     except Exception as exc:
         raise ImportError("OpenAI SDK not installed. Run: pip install openai") from exc
     api_key = os.getenv("GRAPHRAG_OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise ValueError("OpenAI API key missing. Set GRAPHRAG_OPENAI_API_KEY or OPENAI_API_KEY.")
-    client = OpenAI(api_key=api_key)
     model = kwargs.get("model") or kwargs.get("model_name") or DEFAULT_OPENAI_EMBEDDING_MODEL
     if not isinstance(texts, list):
         texts = [texts]
-    response = client.embeddings.create(model=model, input=texts)
+    request = {"model": model, "input": texts}
+    if model.startswith("text-embedding-3"):
+        request["dimensions"] = DEFAULT_EMBEDDING_DIM
+    async with AsyncOpenAI(api_key=api_key) as client:
+        response = await client.embeddings.create(**request)
     return [item.embedding for item in response.data]
 
 
@@ -262,12 +267,13 @@ async def _cohere_embed(texts: list[str], **kwargs) -> list[list[float]]:
     api_key = os.getenv("GRAPHRAG_COHERE_API_KEY") or os.getenv("COHERE_API_KEY")
     if not api_key:
         raise ValueError("Cohere API key missing. Set GRAPHRAG_COHERE_API_KEY or COHERE_API_KEY.")
-    client = cohere.Client(api_key)
     model = kwargs.get("model") or kwargs.get("model_name") or DEFAULT_COHERE_EMBEDDING_MODEL
     if not isinstance(texts, list):
         texts = [texts]
-    response = client.embed(texts=texts, model=model, input_type="search_document")
-    embeddings = getattr(response, "embeddings", None) or response.get("embeddings")
+    input_type = "search_query" if kwargs.get("context") == "query" else "search_document"
+    async with cohere.AsyncClient(api_key) as client:
+        response = await client.embed(texts=texts, model=model, input_type=input_type)
+    embeddings = response.get("embeddings") if isinstance(response, dict) else response.embeddings
     return list(embeddings or [])
 
 
@@ -309,21 +315,14 @@ def build_default_embedding_func() -> Any:
                 first = embeddings[0]
                 detected_dim = len(first)
             else:
-                logger.warning(
-                    "Ollama embedding-dimension probe returned no embeddings for model %s; "
-                    "using default embedding_dim=%d — if the model's real dimension differs, "
-                    "vector indexes will be built wrong and reset on the next mismatch",
-                    DEFAULT_EMBEDDING_MODEL,
-                    DEFAULT_EMBEDDING_DIM,
-                )
+                raise ValueError("Ollama embedding probe returned no vectors")
         except Exception as exc:
             initialization_error = (
                 f"Ollama embedding probe failed for model {DEFAULT_EMBEDDING_MODEL}: {exc}"
             )
             logger.exception(
                 "Ollama embedding-dimension probe failed for model %s (is Ollama running?); "
-                "using default embedding_dim=%d — if the model's real dimension differs, "
-                "vector indexes will be built wrong and reset on the next mismatch",
+                "using configured embedding_dim=%d; existing indexes must match this dimension",
                 DEFAULT_EMBEDDING_MODEL,
                 DEFAULT_EMBEDDING_DIM,
             )

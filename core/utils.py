@@ -9,9 +9,11 @@ import re
 import sys
 import time
 from dataclasses import dataclass
+from functools import partial
 from hashlib import md5
 from pathlib import Path
 from typing import Any, Callable, Iterable, Optional, Sequence
+from uuid import uuid4
 
 import numpy as np
 
@@ -23,6 +25,9 @@ from config import (
     SUMMARY_MARKER,
     VALID_SOURCE_IDS_LIMIT_METHODS,
 )
+
+# Unknown custom callables cannot safely share persisted results across processes.
+_MODEL_CACHE_SESSION = uuid4().hex
 
 logger = logging.getLogger("graphrag_mcp")
 if not logger.handlers:
@@ -261,7 +266,7 @@ async def use_llm_func_with_cache(
     if llm_response_cache:
         prompt_parts = [part for part in [safe_user_prompt, safe_system_prompt, history] if part]
         full_prompt = "\n".join(prompt_parts)
-        arg_hash = compute_args_hash(full_prompt)
+        arg_hash = compute_args_hash(full_prompt, model_cache_identity(use_llm_func), max_tokens)
         cache_key = generate_cache_key("default", cache_type, arg_hash)
         cached_result = await handle_cache(
             llm_response_cache, arg_hash, full_prompt, "default", cache_type
@@ -302,6 +307,23 @@ async def use_llm_func_with_cache(
         safe_user_prompt, system_prompt=safe_system_prompt, **kwargs
     )
     return remove_think_tags(response), int(time.time())
+
+
+def model_cache_identity(model_func: Callable) -> str:
+    """Key a model and bound settings, without conflating different callables.
+
+    Adapters may supply a stable ``cache_identity`` containing provider, model
+    version and generation settings to reuse cached answers across processes.
+    Otherwise caching is deliberately scoped to this process and callable.
+    """
+    if isinstance(model_func, partial):
+        return compute_args_hash(
+            model_cache_identity(model_func.func),
+            json.dumps(model_func.args, sort_keys=True, default=repr),
+            json.dumps(model_func.keywords, sort_keys=True, default=repr),
+        )
+    identity = getattr(model_func, "cache_identity", None)
+    return str(identity) if identity is not None else f"{_MODEL_CACHE_SESSION}:{model_func!r}"
 
 
 def cosine_similarity(v1: Sequence[float], v2: Sequence[float]) -> float:

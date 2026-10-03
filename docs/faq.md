@@ -362,10 +362,12 @@ In `evals/`, ensure the gold answer is *exactly* what's in the retrived chunks. 
 
 ### Symptom
 ```
-Error: vdb_chunks.json.dim-mismatch-TIMESTAMP.bak
+Error: Vector index `chunks` is incompatible with the configured embedding dimension
 ```
 
 This happens if you change embedding models (e.g., switch from 768-dim to 1024-dim) without clearing the old vectors.
+
+Preciso stops initialization and preserves the existing files. Restore the original embedding configuration to keep using that graph, or perform a full rebuild in a fresh working directory.
 
 ### Fix
 

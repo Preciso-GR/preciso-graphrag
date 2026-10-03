@@ -6,7 +6,6 @@ import os
 import time
 import zlib
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any, final
 
 import numpy as np
@@ -48,24 +47,12 @@ class NanoVectorDBStorage(BaseVectorStorage):
                 storage_file=self._client_file_name,
             )
         except AssertionError as exc:
-            backup_path = (
-                f"{self._client_file_name}.dim-mismatch-{int(time.time())}.bak"
-            )
-            try:
-                if os.path.exists(self._client_file_name):
-                    Path(self._client_file_name).rename(backup_path)
-            except OSError:
-                backup_path = self._client_file_name
-            warning = (
-                f"Vector index for `{self.namespace}` had an embedding dimension mismatch and was reset. "
-                f"Previous file saved to `{backup_path}`. Reingest data to rebuild vector search."
-            )
-            self.global_config.setdefault("runtime_warnings", []).append(warning)
-            logger.warning("%s Original error: %s", warning, exc)
-            self._client = NanoVectorDB(
-                self.embedding_func.embedding_dim,
-                storage_file=self._client_file_name,
-            )
+            raise ValueError(
+                f"Vector index `{self.namespace}` is incompatible with the configured "
+                f"embedding dimension {self.embedding_func.embedding_dim}. "
+                "Existing artifacts were preserved; restore the original embedding "
+                "configuration or rebuild the complete graph in a fresh working directory."
+            ) from exc
 
     async def initialize(self):
         self.storage_updated = await get_update_flag(
@@ -173,7 +160,7 @@ class NanoVectorDBStorage(BaseVectorStorage):
                 return True
             except Exception as exc:
                 logger.error("[%s] Error saving data for %s: %s", self.workspace, self.namespace, exc)
-                return False
+                raise RuntimeError(f"Failed to persist vector index `{self.namespace}`: {exc}") from exc
 
     async def get_by_id(self, id: str) -> dict[str, Any] | None:
         client = await self._get_client()

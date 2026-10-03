@@ -6,6 +6,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, AsyncIterator, Callable, Dict, List, Literal, Optional, TypedDict
 
+import numpy as np
+
 from config import (
     DEFAULT_CHUNK_TOP_K,
     DEFAULT_HISTORY_TURNS,
@@ -91,6 +93,16 @@ class EmbeddingFunc:
     async def __call__(self, *args: Any, **kwargs: Any) -> Any:
         try:
             result = await self.func(*args, **kwargs)
+            vectors = np.asarray(result, dtype=float)
+            texts = args[0] if args else kwargs.get("texts")
+            expected_count = len(texts) if isinstance(texts, list) else 1
+            if vectors.shape != (expected_count, self.embedding_dim):
+                raise ValueError(
+                    f"Invalid embedding shape {vectors.shape}; expected "
+                    f"({expected_count}, {self.embedding_dim})"
+                )
+            if not np.isfinite(vectors).all():
+                raise ValueError("Invalid embedding response: vectors must contain only finite values")
         except Exception as exc:
             model = self.model_name or "unknown"
             self.runtime_error = f"Embedding request failed for model {model}: {exc}"

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import copy
 import logging
+import pytest
 
 from config import GRAPH_FIELD_SEP
 from core.query import _find_related_text_unit_from_entities, _find_related_text_unit_from_relations
@@ -64,6 +65,20 @@ def make_payload() -> dict:
             }
         ],
     }
+
+
+@pytest.mark.parametrize("store_name", ["chunks_vdb", "entities_vdb", "relationships_vdb"])
+async def test_ingestion_does_not_report_success_after_vector_save_failure(
+    storage_stack, monkeypatch, store_name,
+):
+    stores, config, working_dir = storage_stack
+    def fail_save():
+        raise OSError("disk full")
+    monkeypatch.setattr(stores[store_name]._client, "save", fail_save)
+    result = await ingest_extracted_json(make_payload(), stores, config)
+    assert result["status"] == "error", result
+    assert "persist" in result["message"] and store_name.removesuffix("_vdb") in result["message"]
+    assert not (working_dir / "artifact_manifest.json").exists()
 
 
 async def test_ingest_batches_entity_and_relationship_vector_writes(storage_stack):

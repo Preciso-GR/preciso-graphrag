@@ -7,6 +7,8 @@ from dataclasses import replace
 from functools import partial
 from typing import Any
 
+import numpy as np
+
 from config import (
     DEFAULT_KG_EVIDENCE_MIN_SIMILARITY,
     DEFAULT_KG_EVIDENCE_TOP_K,
@@ -29,7 +31,6 @@ from core.utils import (
     compute_args_hash,
     compute_mdhash_id,
     convert_to_user_format,
-    cosine_similarity,
     generate_reference_list_from_chunks,
     handle_cache,
     logger,
@@ -102,9 +103,15 @@ async def select_evidence_chunks_by_vector(
         query_embedding = (await embedding_func([query], context="query", _priority=5))[0]
 
     scored_candidates: list[tuple[float, int, dict]] = []
+    # The query is constant across every candidate; convert and normalize its
+    # length once rather than allocating the same array for each comparison.
+    query_vector = np.asarray(query_embedding)
+    query_norm = np.linalg.norm(query_vector)
     for index, candidate in enumerate(unique_candidates):
         vector_id = vector_id_by_chunk_id[candidate["chunk_id"]]
-        similarity = cosine_similarity(query_embedding, vectors[vector_id])
+        vector = np.asarray(vectors[vector_id])
+        denominator = query_norm * np.linalg.norm(vector)
+        similarity = float(np.dot(query_vector, vector) / denominator) if denominator else 0.0
         if similarity < min_similarity:
             continue
         ranked = candidate.copy()

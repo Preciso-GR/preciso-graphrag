@@ -89,6 +89,18 @@ async def test_dimension_mismatch_preserves_existing_vector_artifact(tmp_path):
     assert not list(tmp_path.glob("*.bak"))
 
 
+async def test_bulk_vector_lookup_preserves_order_duplicates_and_missing_ids(tmp_path):
+    stores = await _storage_stack(str(tmp_path))
+    vectors = stores["entities_vdb"]
+    await vectors.upsert({key: {"content": key} for key in ("first", "second", "third")})
+    rows = await vectors.get_by_ids(["third", "missing", "first", "third"])
+    assert [row["id"] if row else None for row in rows] == ["third", None, "first", "third"]
+    assert await vectors.get_by_ids([]) == []
+    retrieved = await vectors.get_vectors_by_ids(["third", "missing", "first", "third"])
+    assert set(retrieved) == {"first", "third"}
+    assert await vectors.get_vectors_by_ids([]) == {}
+
+
 async def test_parallel_ingestions_preserve_both_documents(tmp_path):
     """Two sessions must not overwrite each other's graph snapshot on save."""
     left = await _storage_stack(str(tmp_path))

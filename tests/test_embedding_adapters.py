@@ -1,9 +1,66 @@
 from types import SimpleNamespace
+import asyncio
 
 import pytest
 
 import config
 from core.storage.base import EmbeddingFunc
+
+
+async def test_embedding_requests_share_a_limit_of_four_across_vector_stores(storage_stack):
+    stores, global_config, _ = storage_stack
+    embedding = global_config["embedding_func"]
+    active = 0
+    peak = 0
+    started = asyncio.Event()
+    release = asyncio.Event()
+    async def embed(texts, **kwargs):
+        nonlocal active, peak
+        active += 1
+        peak = max(peak, active)
+        if active == 4:
+            started.set()
+        try:
+            await release.wait()
+            return [[1.0] * 8 for _ in texts]
+        finally:
+            active -= 1
+    embedding.func = embed
+    payload = {str(i): {"content": f"text {i}"} for i in range(40)}
+    writes = asyncio.gather(
+        stores["entities_vdb"].upsert(payload),
+        stores["chunks_vdb"].upsert(payload),
+    )
+    try:
+        await asyncio.wait_for(started.wait(), timeout=2)
+        assert active == 4
+    finally:
+        release.set()
+        await asyncio.wait_for(writes, timeout=2)
+    assert peak == 4
+    assert all(await stores["entities_vdb"].get_by_ids(list(payload)))
+    assert all(await stores["chunks_vdb"].get_by_ids(list(payload)))
+
+
+async def test_embedding_failure_releases_concurrency_slot():
+    async def embed(texts, **kwargs):
+        if texts == ["fail"]:
+            raise ConnectionError("provider unavailable")
+        return [[1.0, 0.0]]
+    embedding = EmbeddingFunc(2, 128, embed, max_concurrent_requests=1)
+    with pytest.raises(ConnectionError):
+        await embedding(["fail"])
+    assert await asyncio.wait_for(embedding(["success"]), timeout=2) == [[1.0, 0.0]]
+
+
+def test_embedding_concurrency_is_configurable_and_validated(monkeypatch):
+    async def embed(texts, **kwargs):
+        return []
+    monkeypatch.setenv("GRAPHRAG_EMBEDDING_CONCURRENCY", "2")
+    assert EmbeddingFunc(2, 128, embed).max_concurrent_requests == 2
+    monkeypatch.setenv("GRAPHRAG_EMBEDDING_CONCURRENCY", "0")
+    with pytest.raises(ValueError, match="concurrency"):
+        EmbeddingFunc(2, 128, embed)
 
 
 async def test_ollama_uses_async_batch_endpoint_and_configured_host(monkeypatch):

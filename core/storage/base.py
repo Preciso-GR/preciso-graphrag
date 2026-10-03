@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import asyncio
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -89,10 +90,22 @@ class EmbeddingFunc:
     initialization_error: str | None = None
     runtime_error: str | None = None
     last_runtime_failure_at: int | None = None
+    max_concurrent_requests: int = field(
+        default_factory=lambda: int(os.getenv("GRAPHRAG_EMBEDDING_CONCURRENCY", "4"))
+    )
+    _request_semaphore: asyncio.Semaphore = field(init=False, repr=False)
+
+    def __post_init__(self):
+        if self.max_concurrent_requests <= 0:
+            raise ValueError("embedding concurrency must be greater than zero")
+        # All vector stores share this embedder, so the limit covers requests
+        # across namespaces and query/document embedding calls in this runtime.
+        self._request_semaphore = asyncio.Semaphore(self.max_concurrent_requests)
 
     async def __call__(self, *args: Any, **kwargs: Any) -> Any:
         try:
-            result = await self.func(*args, **kwargs)
+            async with self._request_semaphore:
+                result = await self.func(*args, **kwargs)
             vectors = np.asarray(result, dtype=float)
             texts = args[0] if args else kwargs.get("texts")
             expected_count = len(texts) if isinstance(texts, list) else 1

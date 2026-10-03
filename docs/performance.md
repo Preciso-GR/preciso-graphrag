@@ -42,6 +42,15 @@ embedding latency, answer generation, disk I/O, dimensions, candidate counts,
 and machine load change the overall result. No dependencies or graph formats
 were added or changed.
 
+## Embedding concurrency
+
+Embedding requests now share a semaphore with a default limit of four per
+server runtime, across entity, relationship, chunk, and query embeddings.
+Batch size remains eight texts. Set `GRAPHRAG_EMBEDDING_CONCURRENCY` in the
+server environment to override the limit; it must be positive. This bounds
+in-flight requests, not the total ingestion payload or accumulated vectors.
+Four is a default selected by the user, not a benchmarked throughput optimum.
+
 ## Remaining optimization candidates
 
 - Vector lookup still scans the stored records once. A maintained ID index may

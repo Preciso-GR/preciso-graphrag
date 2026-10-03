@@ -68,3 +68,12 @@ MEMORY.md
 RESEARCH_PLAN.md
 # setuptools editable-install metadata
 *.egg-info/
+# Local runtime graph stores (default and provider-specific runs)
+/graphrag_mcp_data*/
+# Developer tool caches and coverage output
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/

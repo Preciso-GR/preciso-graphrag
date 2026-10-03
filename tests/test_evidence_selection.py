@@ -8,6 +8,25 @@ from core.utils import compute_mdhash_id
 from ingest.pipeline import ingest_extracted_json
 
 
+async def test_identical_query_and_keywords_are_embedded_once(storage_stack):
+    from core.query import _perform_kg_search
+    stores, config, _ = storage_stack
+    embedder = config["embedding_func"]
+    original = embedder.func
+    requests = []
+    async def record(texts, **kwargs):
+        requests.append(list(texts))
+        return await original(texts, **kwargs)
+    embedder.func = record
+    result = await _perform_kg_search(
+        "same text", "same text", "same text", stores["graph"],
+        stores["entities_vdb"], stores["relationships_vdb"], stores["text_chunks"],
+        QueryParam(mode="mix"), stores["chunks_vdb"],
+    )
+    assert requests == [["same text"]]
+    assert result["query_embedding"] == (await original(["same text"]))[0]
+
+
 class StubChunkVectors:
     def __init__(self, vectors: dict[str, list[float]]):
         self.vectors = vectors

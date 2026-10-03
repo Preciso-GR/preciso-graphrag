@@ -28,6 +28,17 @@ async def test_status_is_degraded_after_embedding_probe_failure(monkeypatch, tmp
     assert any("embedding probe failed" in warning for warning in status["warnings"])
 
 
+async def test_empty_embedding_probe_is_reported_as_unavailable(monkeypatch, tmp_path):
+    async def empty_embedder(*args, **kwargs):
+        return []
+    monkeypatch.setattr(config, "DEFAULT_EMBEDDING_PROVIDER", "ollama")
+    monkeypatch.setattr(config, "_ollama_embed", empty_embedder)
+    status = await build_runtime_status(
+        {}, {"working_dir": str(tmp_path), "embedding_func": config.build_default_embedding_func()},
+    )
+    assert status["embedding"]["mode"] == "unavailable"
+
+
 @pytest.mark.asyncio
 async def test_status_tracks_runtime_embedding_failure_and_recovery(monkeypatch, tmp_path):
     provider_available = False

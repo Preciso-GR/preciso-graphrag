@@ -33,6 +33,7 @@ from core.utils import (
     generate_reference_list_from_chunks,
     handle_cache,
     logger,
+    model_cache_identity,
     process_chunks_unified,
     remove_think_tags,
     save_to_cache,
@@ -252,6 +253,7 @@ async def kg_query(
     if use_model_func is None:
         return QueryResult(content=context_result.context, raw_data=context_result.raw_data)
     args_hash = compute_args_hash(
+        model_cache_identity(use_model_func),
         query_param.mode,
         query,
         query_param.response_type,
@@ -274,7 +276,7 @@ async def kg_query(
         sys_prompt,
         json.dumps(query_param.conversation_history, ensure_ascii=False, sort_keys=True),
     )
-    cached_result = await handle_cache(
+    cached_result = None if query_param.stream else await handle_cache(
         hashing_kv, args_hash, query, query_param.mode, cache_type="query"
     )
     if cached_result is not None:
@@ -287,7 +289,7 @@ async def kg_query(
             enable_cot=True,
             stream=query_param.stream,
         )
-        if hashing_kv and hashing_kv.global_config.get("enable_llm_cache"):
+        if not query_param.stream and hashing_kv and hashing_kv.global_config.get("enable_llm_cache"):
             await save_to_cache(
                 hashing_kv,
                 CacheData(
@@ -303,16 +305,6 @@ async def kg_query(
                 ),
             )
     if isinstance(response, str):
-        if len(response) > len(sys_prompt):
-            response = (
-                response.replace(sys_prompt, "")
-                .replace("user", "")
-                .replace("model", "")
-                .replace(query, "")
-                .replace("<system>", "")
-                .replace("</system>", "")
-                .strip()
-            )
         return QueryResult(content=response, raw_data=context_result.raw_data)
     return QueryResult(
         response_iterator=response,
@@ -348,29 +340,23 @@ async def _perform_kg_search(
     need_ll = mode in ("local", "hybrid", "mix") and bool(ll_keywords)
     need_hl = mode in ("global", "hybrid", "mix") and bool(hl_keywords)
     if actual_embedding_func:
-        texts_to_embed = []
-        text_purposes = []
+        texts_by_purpose = {}
         if query and chunks_vdb:
-            texts_to_embed.append(query)
-            text_purposes.append("query")
+            texts_by_purpose["query"] = query
         if need_ll:
-            texts_to_embed.append(ll_keywords)
-            text_purposes.append("ll")
+            texts_by_purpose["ll"] = ll_keywords
         if need_hl:
-            texts_to_embed.append(hl_keywords)
-            text_purposes.append("hl")
+            texts_by_purpose["hl"] = hl_keywords
+        texts_to_embed = list(dict.fromkeys(texts_by_purpose.values()))
         if texts_to_embed:
             try:
                 all_embeddings = await actual_embedding_func(
                     texts_to_embed, context="query", _priority=5
                 )
-                for i, purpose in enumerate(text_purposes):
-                    if purpose == "query":
-                        query_embedding = all_embeddings[i]
-                    elif purpose == "ll":
-                        ll_embedding = all_embeddings[i]
-                    elif purpose == "hl":
-                        hl_embedding = all_embeddings[i]
+                embeddings_by_text = dict(zip(texts_to_embed, all_embeddings, strict=True))
+                query_embedding = embeddings_by_text.get(texts_by_purpose.get("query"))
+                ll_embedding = embeddings_by_text.get(texts_by_purpose.get("ll"))
+                hl_embedding = embeddings_by_text.get(texts_by_purpose.get("hl"))
             except Exception as exc:
                 logger.warning("Failed to batch pre-compute embeddings: %s", exc)
     if query_param.mode == "local" and len(ll_keywords) > 0:

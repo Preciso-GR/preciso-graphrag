@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import pytest
 
 from config import _fallback_embed, build_global_config
 from core.bootstrap import build_storage_instances, initialize_storage_instances
@@ -70,6 +71,22 @@ async def test_vector_updates_are_seen_by_every_sibling_reader(tmp_path):
 
     assert await first_reader["entities_vdb"].get_by_id(record_id) is not None
     assert await second_reader["entities_vdb"].get_by_id(record_id) is not None
+
+
+async def test_dimension_mismatch_preserves_existing_vector_artifact(tmp_path):
+    writer = await _storage_stack(str(tmp_path))
+    await writer["entities_vdb"].upsert({"record": {"content": "evidence"}})
+    await writer["entities_vdb"].index_done_callback()
+    vector_path = tmp_path / "vdb_entities.json"
+    original = vector_path.read_bytes()
+    cfg = build_global_config(
+        working_dir=str(tmp_path),
+        embedding_func=EmbeddingFunc(embedding_dim=3, max_token_size=128, func=_fallback_embed),
+    )
+    with pytest.raises(ValueError, match="dimension.*rebuild"):
+        build_storage_instances(cfg)
+    assert vector_path.read_bytes() == original
+    assert not list(tmp_path.glob("*.bak"))
 
 
 async def test_parallel_ingestions_preserve_both_documents(tmp_path):

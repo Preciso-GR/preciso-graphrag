@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import pytest
+import numpy as np
 
 from core.query import EvidenceVectorIntegrityError, kg_query, select_evidence_chunks_by_vector
 from core.storage.base import QueryParam
-from core.utils import compute_mdhash_id
+from core.utils import compute_mdhash_id, cosine_similarity
 from ingest.pipeline import ingest_extracted_json
 
 
@@ -37,6 +38,26 @@ class StubChunkVectors:
 
 def vector_id(chunk_id: str) -> str:
     return compute_mdhash_id(chunk_id, prefix="vchunk-")
+
+
+@pytest.mark.parametrize("zero_query", [False, True])
+async def test_evidence_scores_match_scalar_cosine_and_preserve_ties(zero_query):
+    rng = np.random.default_rng(42)
+    query = [0.0] * 16 if zero_query else rng.standard_normal(16).tolist()
+    vectors = rng.standard_normal((25, 16)).tolist()
+    vectors.extend([vectors[0], [0.0] * 16])
+    candidates = [{"chunk_id": f"chunk-{i}"} for i in range(len(vectors))]
+    storage = StubChunkVectors({vector_id(c["chunk_id"]): v for c, v in zip(candidates, vectors)})
+    expected = sorted(
+        [(cosine_similarity(query, v), i) for i, v in enumerate(vectors)],
+        key=lambda item: (-item[0], item[1]),
+    )
+    result = await select_evidence_chunks_by_vector(
+        "query", candidates, storage, top_k=len(candidates),
+        min_similarity=-1.0, query_embedding=query,
+    )
+    assert [row["chunk_id"] for row in result] == [f"chunk-{i}" for score, i in expected]
+    assert [row["similarity_score"] for row in result] == pytest.approx([score for score, i in expected])
 
 
 @pytest.mark.asyncio

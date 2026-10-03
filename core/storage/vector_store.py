@@ -178,7 +178,10 @@ class NanoVectorDBStorage(BaseVectorStorage):
         if not ids:
             return []
         client = await self._get_client()
-        results = client.get(ids)
+        # NanoVectorDB scans records and uses `id in ids`. A set avoids a
+        # linear requested-ID search for every stored record. Restore caller
+        # order (including duplicates/missing IDs) through result_map below.
+        results = client.get(set(ids))
         result_map = {}
         for item in results:
             if not item:
@@ -194,7 +197,7 @@ class NanoVectorDBStorage(BaseVectorStorage):
         if not ids:
             return {}
         client = await self._get_client()
-        results = client.get(ids)
+        results = client.get(set(ids))
         vectors: dict[str, list[float]] = {}
         for item in results:
             if not item:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import asyncio
 import importlib
 import logging
 import math
@@ -277,7 +278,7 @@ async def _cohere_embed(texts: list[str], **kwargs) -> list[list[float]]:
     return list(embeddings or [])
 
 
-def build_default_embedding_func() -> Any:
+def build_default_embedding_func(*, probe: bool = True) -> Any:
     """Build the EmbeddingFunc for the configured provider.
 
     For the ollama provider this performs a NETWORK round-trip to probe the
@@ -290,51 +291,24 @@ def build_default_embedding_func() -> Any:
     if provider == "ollama":
         # Try to auto-detect embedding dimension from the Ollama model.
         # If detection fails, fall back to the configured default.
-        detected_dim = DEFAULT_EMBEDDING_DIM
-        initialization_error = None
-        try:
-            import asyncio
-
-            # Call the async embedder to get a real embedding shape. This probe
-            # may run during server startup, which can already be inside an
-            # event loop (e.g. `asyncio.run(startup())`) — asyncio.run() cannot
-            # nest, so run the probe on a dedicated thread with its own loop
-            # whenever one is already running.
-            try:
-                asyncio.get_running_loop()
-            except RuntimeError:
-                embeddings = asyncio.run(_ollama_embed(["test"], model=DEFAULT_EMBEDDING_MODEL))
-            else:
-                import concurrent.futures
-
-                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                    embeddings = pool.submit(
-                        lambda: asyncio.run(_ollama_embed(["test"], model=DEFAULT_EMBEDDING_MODEL))
-                    ).result()
-            if embeddings and isinstance(embeddings, list) and len(embeddings) > 0:
-                first = embeddings[0]
-                detected_dim = len(first)
-            else:
-                raise ValueError("Ollama embedding probe returned no vectors")
-        except Exception as exc:
-            initialization_error = (
-                f"Ollama embedding probe failed for model {DEFAULT_EMBEDDING_MODEL}: {exc}"
-            )
-            logger.exception(
-                "Ollama embedding-dimension probe failed for model %s (is Ollama running?); "
-                "using configured embedding_dim=%d; existing indexes must match this dimension",
-                DEFAULT_EMBEDDING_MODEL,
-                DEFAULT_EMBEDDING_DIM,
-            )
-            detected_dim = DEFAULT_EMBEDDING_DIM
-
-        return EmbeddingFunc(
-            embedding_dim=detected_dim,
+        embedding = EmbeddingFunc(
+            embedding_dim=DEFAULT_EMBEDDING_DIM,
             max_token_size=DEFAULT_EMBEDDING_MAX_TOKENS,
             func=_ollama_embed,
             model_name=DEFAULT_EMBEDDING_MODEL,
-            initialization_error=initialization_error,
         )
+        if probe:
+            try:
+                asyncio.get_running_loop()
+            except RuntimeError:
+                asyncio.run(probe_ollama_embedding(embedding))
+            else:
+                # Compatibility for synchronous scripts called inside a loop.
+                # The server uses the async probe directly, without a thread.
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    pool.submit(lambda: asyncio.run(probe_ollama_embedding(embedding))).result()
+        return embedding
     if provider == "openai":
         return EmbeddingFunc(
             embedding_dim=DEFAULT_EMBEDDING_DIM,
@@ -359,6 +333,24 @@ def build_default_embedding_func() -> Any:
             model_name="fallback",
         )
     raise ValueError(f"Unsupported embedding provider: {DEFAULT_EMBEDDING_PROVIDER}")
+
+
+async def probe_ollama_embedding(embedding: Any) -> None:
+    timeout = float(os.getenv("GRAPHRAG_EMBEDDING_PROBE_TIMEOUT", "15"))
+    if not math.isfinite(timeout) or timeout <= 0:
+        raise ValueError("embedding probe timeout must be finite and greater than zero")
+    try:
+        async with asyncio.timeout(timeout):
+            vectors = await _ollama_embed(["test"], model=embedding.model_name)
+        if not isinstance(vectors, list) or len(vectors) != 1 or not vectors[0]:
+            raise ValueError("Ollama embedding probe returned no vectors")
+        if not all(math.isfinite(float(value)) for value in vectors[0]):
+            raise ValueError("Ollama embedding probe returned non-finite vectors")
+        embedding.embedding_dim = len(vectors[0])
+        embedding.initialization_error = None
+    except Exception as exc:
+        embedding.initialization_error = f"Ollama embedding probe failed for model {embedding.model_name}: {type(exc).__name__}: {exc}"
+        logger.warning("%s; using configured dimension %d", embedding.initialization_error, embedding.embedding_dim)
 
 
 

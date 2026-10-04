@@ -9,7 +9,7 @@ import os
 # can no longer shadow each other.
 from mcp.server.fastmcp import FastMCP
 
-from config import build_default_embedding_func, build_global_config
+from config import DEFAULT_EMBEDDING_PROVIDER, build_default_embedding_func, build_global_config, probe_ollama_embedding
 from core.bootstrap import build_storage_instances, initialize_storage_instances
 from core.query import kg_query
 from core.runtime_status import update_artifact_manifest
@@ -36,7 +36,7 @@ storage_instances: dict = {}
 mcp = FastMCP("graphrag-mcp")
 
 
-def initialize_runtime() -> None:
+async def initialize_runtime() -> None:
     """Build the embedding function and storage instances.
 
     Kept out of module import: build_default_embedding_func() may hit the
@@ -46,7 +46,10 @@ def initialize_runtime() -> None:
     """
     if storage_instances:
         return
-    global_config["embedding_func"] = build_default_embedding_func()
+    embedding = build_default_embedding_func(probe=False)
+    if DEFAULT_EMBEDDING_PROVIDER.lower() == "ollama":
+        await probe_ollama_embedding(embedding)
+    global_config["embedding_func"] = embedding
     storage_instances.update(build_storage_instances(global_config))
 
 
@@ -506,7 +509,7 @@ async def submit_summary_tool(
 
 
 async def startup() -> None:
-    initialize_runtime()
+    await initialize_runtime()
     await initialize_storage_instances(storage_instances)
     await update_artifact_manifest(storage_instances, global_config)
 

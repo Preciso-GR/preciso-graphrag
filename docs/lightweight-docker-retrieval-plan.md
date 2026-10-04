@@ -4,6 +4,9 @@ Date: 2026-10-04. Baseline: `core-graphrag` at `b0a32b4`.
 Status: proposed implementation sequence; Docker and retrieval changes below
 have not been implemented or benchmarked.
 
+Production release also requires the data-safety, recovery, security, and
+operational gates in [production-readiness.md](production-readiness.md).
+
 ## Objective and decision
 
 Keep PRECISO a small, local-first MCP application with reproducible container
@@ -14,9 +17,11 @@ Assume the initial deployment is one local user and one active MCP process per
 graph. A shared, always-on service would need a separate transport, access-control,
 and concurrent-storage design; it is not necessary for the first container.
 
-Use one Python application container. Make Qdrant, Neo4j, and Ollama separate,
-optional Compose services. Keep local storage as the default until measurements
-justify a backend migration. Docker packaging alone does not improve retrieval.
+Use one Python application container with persistent local storage. Skip the
+Qdrant, Neo4j, and Ollama service-container phase. Connect to an existing embedding
+provider through configuration. Keep local storage as the default until
+measurements justify a backend migration. Docker packaging alone does not
+improve retrieval.
 
 ## What the repository establishes
 
@@ -97,57 +102,18 @@ Runtime requirements:
 - Retain one process per graph initially. Do not infer safe replicated writers
   from the existing file lock; cross-process cache freshness needs separate work.
 
+Include the MCP launcher and persistent volume instructions in this phase.
+Launch the container with stdin attached and no TTY (`docker run -i`), and
+verify stdout contains only protocol messages. Do not leave a second MCP writer
+running on the same graph. For an existing host Ollama on macOS, document
+`host.docker.internal` instead of `localhost` inside the container. Keep provider
+credentials in runtime configuration.
+
 Acceptance: record image size, layer contents, cold start, and RSS; verify no
 secrets/model files entered the image; complete handshake, ingest/query, restart,
 backup/restore, and interrupted-ingestion checks against mounted data.
 
-## Phase 3 — optional service containers and MCP launch
-
-Use one `compose.yaml` with named persistent volumes and optional profiles.
-[Compose profiles](https://docs.docker.com/compose/how-tos/profiles/) allow users
-to activate selected services instead of starting the entire stack.
-
-| Service | Default | Role | Application address inside Compose |
-|---|---|---|---|
-| `preciso` | Client-launched | Core MCP runtime and local graph | Attached stdio |
-| `qdrant` | Off; profile `qdrant` | Existing vector export target initially | `http://qdrant:6333` |
-| `neo4j` | Off; profile `neo4j` | Existing graph export target initially | `bolt://neo4j:7687` |
-| `ollama` | Off; profile `ollama` | Optional embedding service | `http://ollama:11434` |
-
-Pin service versions, add readiness checks, and persist each service's data.
-Do not require optional databases in the application's unconditional dependency
-list. Keep host ports unpublished unless needed; bind local debugging ports to
-loopback. Configure credentials at runtime and never bake them into images.
-
-The following are intended commands after implementation, not commands that
-work in the current checkout:
-
-```bash
-docker compose build preciso
-docker compose run --rm --no-deps -T preciso
-docker compose --profile qdrant up -d qdrant
-docker compose --profile neo4j up -d neo4j
-docker compose --profile ollama up -d ollama
-```
-
-Wire the MCP client launcher to the attached `run` command and confirm stdin
-stays open, no TTY is allocated, and Compose emits no non-protocol stdout.
-[`docker compose run`](https://docs.docker.com/reference/cli/docker/compose/run/)
-provides `--no-deps`, `--rm`, and `-T`. Start optional services separately before
-using them; do not leave a second detached MCP writer running on the same graph.
-
-For an existing host Ollama on macOS, document `host.docker.internal` instead of
-`localhost` inside the container. Measure host and container model serving
-separately; do not assume equal acceleration or memory use.
-
-Neo4j remains optional because its heap and page cache need their own budget;
-the application image size does not describe whole-stack memory use. Configure
-these settings using the
-[Neo4j container documentation](https://neo4j.com/docs/operations-manual/current/docker/configuration/).
-Follow [Qdrant's quickstart](https://qdrant.tech/documentation/quickstart/) for
-its persistent storage setup, then test export/query inspection after restart.
-
-## Phase 4 — reduce resource use where profiling proves value
+## Phase 3 — reduce resource use where profiling proves value
 
 Prioritize these experiments, retaining only measured improvements:
 
@@ -169,7 +135,7 @@ Set resource limits after representative measurements. Report core-container
 and complete-stack budgets separately, including model memory and persistent
 data. No image-size or RAM target is yet established by a built container.
 
-## Phase 5 — improve retrieval with an evidence benchmark
+## Phase 4 — improve retrieval with an evidence benchmark
 
 First create a reproducible benchmark of evidence retrieval, separate from
 answer generation. Start with 20–30 reviewed questions and a small committed,
@@ -216,7 +182,7 @@ without new citation/integrity failures; latency, memory, and token tradeoffs ar
 reported. Set numeric gates after the pilot, before examining held-out results.
 Review existing README evaluation claims against reproducible runs.
 
-## Phase 6 — decide whether live Qdrant retrieval earns its complexity
+## Phase 5 — decide whether live Qdrant retrieval earns its complexity
 
 Only proceed if local vector storage misses the measured RAM/latency/corpus-size
 requirements. Compare local storage and Qdrant using the same vectors, filters,
@@ -236,11 +202,11 @@ resource regressions harder to isolate.
 ## Delivery order
 
 1. Configuration and clean-package checks; capture baseline.
-2. Locked multi-stage build and core MCP container smoke tests.
-3. Optional database/model profiles, persistent volumes, and launcher documentation.
-4. One measured ingestion/export memory improvement at a time.
-5. Retrieval benchmark, then individual candidate/evidence experiments.
-6. Optional live Qdrant adapter only after the comparison supports it.
+2. Locked multi-stage build, persistent volume, MCP launcher, and smoke tests.
+3. One measured ingestion/export memory improvement at a time.
+4. Retrieval benchmark, then individual candidate/evidence experiments.
+5. Optional live Qdrant adapter only after the comparison supports it; service
+   containerization remains outside this plan.
 
 Keep each step in a focused commit with verification results. Build/container
 work and retrieval quality work have separate acceptance gates. No production

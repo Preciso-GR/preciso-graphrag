@@ -212,6 +212,27 @@ async def kg_query(
     system_prompt: str | None = None,
     chunks_vdb: BaseVectorStorage = None,
 ) -> QueryResult | None:
+    from core.session_lock import graph_read_session
+
+    workspace = getattr(knowledge_graph_inst, "workspace", "")
+    async with graph_read_session(global_config, workspace):
+        return await _kg_query(query, knowledge_graph_inst, entities_vdb, relationships_vdb,
+                               text_chunks_db, query_param, global_config, hashing_kv,
+                               system_prompt, chunks_vdb)
+
+
+async def _kg_query(
+    query: str,
+    knowledge_graph_inst: BaseGraphStorage,
+    entities_vdb: BaseVectorStorage,
+    relationships_vdb: BaseVectorStorage,
+    text_chunks_db: BaseKVStorage,
+    query_param: QueryParam,
+    global_config: dict[str, Any],
+    hashing_kv: BaseKVStorage | None = None,
+    system_prompt: str | None = None,
+    chunks_vdb: BaseVectorStorage = None,
+) -> QueryResult | None:
     if not query:
         return QueryResult(content=PROMPTS["fail_response"])
     if query_param.mode == "hybrid" and _detect_comparison_query(

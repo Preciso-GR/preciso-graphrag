@@ -15,6 +15,8 @@ from core.query import kg_query
 from core.runtime_status import update_artifact_manifest
 from core.storage.base import QueryParam
 from core.utils import BasicTokenizer, logger
+from core.session_lock import graph_directory_owner
+from preciso_mcp.tools.checkpoint_tool import ingest_checkpoint
 from ingest.pipeline import ingest_extracted_json
 from ingest.validator import validate_extraction_structure
 from preciso_mcp.tools.export_tool import export_to_neo4j, export_to_qdrant
@@ -351,15 +353,7 @@ async def ingest_checkpoint_tool(payload: dict) -> dict:
         
         # If interrupted at batch 50, can resume from there
     """
-    try:
-        checkpoints = storage_instances["checkpoints"]
-        checkpoint_id = str(payload.get("checkpoint_id") or "checkpoint")
-        await checkpoints.upsert({checkpoint_id: {"payload": payload}})
-        await checkpoints.index_done_callback()
-        return {"status": "success", "checkpoint_id": checkpoint_id}
-    except Exception as exc:
-        logger.exception("ingest_checkpoint_tool failed")
-        return {"status": "error", "message": str(exc)}
+    return await ingest_checkpoint(payload, storage_instances, global_config)
 
 
 @mcp.tool()
@@ -517,5 +511,6 @@ async def startup() -> None:
 if __name__ == "__main__":
     import asyncio
 
-    asyncio.run(startup())
-    mcp.run()
+    with graph_directory_owner(global_config["working_dir"]):
+        asyncio.run(startup())
+        mcp.run()

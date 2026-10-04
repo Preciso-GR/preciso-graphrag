@@ -73,6 +73,17 @@ class JsonKVStorage(BaseKVStorage):
                     self.namespace, workspace=self.workspace, working_dir=self._working_dir
                 )
 
+    async def reload_from_disk(self) -> None:
+        loaded = load_json(self._file_name)
+        if loaded is None:
+            loaded = {}
+        if any(not isinstance(value, dict) for value in loaded.values()):
+            raise RuntimeError(f"Invalid records in restored store `{self._file_name}`")
+        async with self._storage_lock:
+            self._data.clear()
+            self._data.update(loaded)
+            await clear_all_update_flags(self.namespace, workspace=self.workspace, working_dir=self._working_dir)
+
     async def get_by_id(self, id: str) -> dict[str, Any] | None:
         async with self._storage_lock:
             result = self._data.get(id)

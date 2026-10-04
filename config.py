@@ -385,6 +385,7 @@ def build_global_config(
         "working_dir": str(base_dir),                    # Where to store graph/vector DB data
         "input_dir": os.getenv("GRAPHRAG_INPUT_DIR", "extractions"),
         "reconciliation_dir": os.getenv("GRAPHRAG_RECONCILIATION_DIR", str(base_dir / "reconciled")),
+        "allow_partial_ingest": os.getenv("GRAPHRAG_ALLOW_PARTIAL_INGEST", "false").lower() == "true",
         "llm_model_func": llm_model_func,                # LLM to use (defaults to None = no LLM)
         "embedding_func": embedding_func,                # Embedding model (converts text→vectors)
         "tokenizer": tokenizer,                          # Token counter (GPT-4o-mini or fallback)

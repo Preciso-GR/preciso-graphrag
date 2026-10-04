@@ -8,7 +8,7 @@ from typing import Any
 from config import GRAPH_FIELD_SEP
 from core.merge import _merge_edges_then_upsert, _merge_nodes_then_upsert
 from core.runtime_status import update_artifact_manifest
-from core.session_lock import ingestion_session_lock
+from core.transactions import run_artifact_mutation
 from core.storage.shared_storage import get_storage_keyed_lock
 from core.storage.vector_write_batch import VectorWriteBatch
 from core.utils import (
@@ -110,9 +110,10 @@ async def ingest_extracted_json(payload, storage_instances, global_config) -> di
     errors = validate_extraction_structure(payload)
     if errors:
         return {"status": "validation_failed", "errors": errors}
-    workspace = getattr(storage_instances.get("graph"), "workspace", "")
-    async with ingestion_session_lock(global_config["working_dir"], workspace):
-        return await _ingest_extracted_json(payload, storage_instances, global_config)
+    return await run_artifact_mutation(
+        lambda: _ingest_extracted_json(payload, storage_instances, global_config),
+        storage_instances, global_config,
+    )
 
 
 async def _ingest_extracted_json(payload, storage_instances, global_config) -> dict:

@@ -214,6 +214,12 @@ class NetworkXStorage(BaseGraphStorage):
             # instances observe the new revision and reload on their next read.
             self._last_seen_revision = self.storage_updated.revision
 
+    async def reload_from_disk(self) -> None:
+        async with self._storage_lock:
+            self._graph = self.load_nx_graph(self._graphml_xml_file) or nx.Graph()
+            await set_all_update_flags(self.namespace, workspace=self.workspace, working_dir=self._working_dir)
+            self._last_seen_revision = self.storage_updated.revision
+
     async def drop(self) -> dict[str, str]:
         try:
             graph = await self._get_graph()

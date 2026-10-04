@@ -296,6 +296,8 @@ def build_default_embedding_func(*, probe: bool = True) -> Any:
             max_token_size=DEFAULT_EMBEDDING_MAX_TOKENS,
             func=_ollama_embed,
             model_name=DEFAULT_EMBEDDING_MODEL,
+            provider="ollama",
+            model_revision=os.getenv("GRAPHRAG_EMBEDDING_REVISION") or None,
         )
         if probe:
             try:
@@ -315,6 +317,8 @@ def build_default_embedding_func(*, probe: bool = True) -> Any:
             max_token_size=DEFAULT_EMBEDDING_MAX_TOKENS,
             func=_openai_embed,
             model_name=DEFAULT_OPENAI_EMBEDDING_MODEL,
+            provider="openai",
+            model_revision=os.getenv("GRAPHRAG_EMBEDDING_REVISION") or None,
         )
     if provider == "cohere":
         return EmbeddingFunc(
@@ -322,6 +326,9 @@ def build_default_embedding_func(*, probe: bool = True) -> Any:
             max_token_size=DEFAULT_EMBEDDING_MAX_TOKENS,
             func=_cohere_embed,
             model_name=DEFAULT_COHERE_EMBEDDING_MODEL,
+            provider="cohere",
+            supports_asymmetric=True,
+            model_revision=os.getenv("GRAPHRAG_EMBEDDING_REVISION") or None,
         )
     if provider == "anthropic":
         raise ValueError("Anthropic does not provide embeddings. Use openai, cohere, or ollama.")
@@ -331,6 +338,8 @@ def build_default_embedding_func(*, probe: bool = True) -> Any:
             max_token_size=DEFAULT_EMBEDDING_MAX_TOKENS,
             func=_fallback_embed,
             model_name="fallback",
+            provider="fallback",
+            model_revision="lexical-v1",
         )
     raise ValueError(f"Unsupported embedding provider: {DEFAULT_EMBEDDING_PROVIDER}")
 

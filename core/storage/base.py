@@ -97,6 +97,8 @@ class EmbeddingFunc:
     request_timeout: float = field(
         default_factory=lambda: float(os.getenv("GRAPHRAG_EMBEDDING_TIMEOUT", "60"))
     )
+    provider: str | None = None
+    model_revision: str | None = None
     _request_semaphore: asyncio.Semaphore = field(init=False, repr=False)
 
     def __post_init__(self):
@@ -107,6 +109,17 @@ class EmbeddingFunc:
         # All vector stores share this embedder, so the limit covers requests
         # across namespaces and query/document embedding calls in this runtime.
         self._request_semaphore = asyncio.Semaphore(self.max_concurrent_requests)
+
+    def index_identity(self) -> dict[str, Any]:
+        """Describe the vector space, not request concurrency or timeout policy."""
+        return {
+            "provider": self.provider or "custom",
+            "model": self.model_name or f"{getattr(self.func, '__module__', '')}.{getattr(self.func, '__qualname__', type(self.func).__name__)}",
+            "revision": self.model_revision,
+            "dimension": self.embedding_dim,
+            "asymmetric": self.supports_asymmetric,
+            "format_version": 1,
+        }
 
     async def __call__(self, *args: Any, **kwargs: Any) -> Any:
         try:

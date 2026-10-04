@@ -7,6 +7,7 @@ import time
 import zlib
 from dataclasses import dataclass
 from typing import Any, final
+from pathlib import Path
 
 import numpy as np
 from nano_vectordb import NanoVectorDB
@@ -19,7 +20,7 @@ from core.storage.shared_storage import (
     get_update_flag,
     set_all_update_flags,
 )
-from core.utils import compute_mdhash_id, logger
+from core.utils import compute_mdhash_id, load_json, logger
 
 
 @final
@@ -57,6 +58,30 @@ class NanoVectorDBStorage(BaseVectorStorage):
                 "Existing artifacts were preserved; restore the original embedding "
                 "configuration or rebuild the complete graph in a fresh working directory."
             ) from exc
+        self._validate_index_identity(self._client)
+
+    def _validate_index_identity(self, client: NanoVectorDB) -> None:
+        expected = self.embedding_func.index_identity()
+        metadata = client.get_additional_data()
+        recorded = metadata.get("preciso_embedding")
+        if len(client) and recorded is None:
+            # Older releases recorded only provider/model/dimension in the
+            # manifest. Preserve them only when those fields establish a match.
+            manifest = load_json(str(Path(self._client_file_name).parent / "artifact_manifest.json"))
+            legacy = (manifest or {}).get("embedding", {})
+            matches = all(legacy.get(key) == expected[key] for key in ("provider", "model", "dimension"))
+            if not matches or expected["revision"] is not None:
+                raise ValueError(
+                    f"Vector index `{self.namespace}` has no verified embedding identity. "
+                    "Existing artifacts were preserved; rebuild the complete graph in a fresh working directory."
+                )
+            logger.warning("Using matching legacy embedding manifest for index %s; model revision is unknown", self.namespace)
+        elif len(client) and recorded != expected:
+            raise ValueError(
+                f"Vector index `{self.namespace}` is incompatible with the configured embedding model/dimension/revision. "
+                "Existing artifacts were preserved; restore the original configuration or rebuild the complete graph in a fresh working directory."
+            )
+        client.store_additional_data(**{**metadata, "preciso_embedding": expected})
 
     async def initialize(self):
         self.storage_updated = await get_update_flag(
@@ -74,6 +99,7 @@ class NanoVectorDBStorage(BaseVectorStorage):
                     self.embedding_func.embedding_dim,
                     storage_file=self._client_file_name,
                 )
+                self._validate_index_identity(self._client)
                 self._last_seen_revision = self.storage_updated.revision
             return self._client
 

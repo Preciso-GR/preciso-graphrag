@@ -3,9 +3,14 @@ from __future__ import annotations
 import time
 
 from core.utils import compute_mdhash_id, logger
+from core.transactions import run_artifact_mutation
 
 
 async def ingest_checkpoint(payload: dict, storage_instances: dict, global_config: dict) -> dict:
+    return await run_artifact_mutation(lambda: _ingest_checkpoint(payload, storage_instances, global_config), storage_instances, global_config)
+
+
+async def _ingest_checkpoint(payload: dict, storage_instances: dict, global_config: dict) -> dict:
     try:
         checkpoints = storage_instances["checkpoints"]
         checkpoint_id = str(

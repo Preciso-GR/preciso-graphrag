@@ -187,6 +187,7 @@ async def test_identical_recovery_replay_is_idempotent(storage_stack):
 
 async def test_invalid_entity_reported_as_partial_success(storage_stack):
     storage_instances, global_config, _ = storage_stack
+    global_config["allow_partial_ingest"] = True
     payload = make_payload()
     payload["entities"].append({"entity_name": "NO_DESCRIPTION", "entity_type": "ORG", "source_id": "chunk-1"})
     result = await ingest_extracted_json(payload, storage_instances, global_config)
@@ -199,6 +200,7 @@ async def test_invalid_entity_reported_as_partial_success(storage_stack):
 
 async def test_relationship_to_unknown_entity_is_rejected(storage_stack):
     storage_instances, global_config, _ = storage_stack
+    global_config["allow_partial_ingest"] = True
     payload = make_payload()
     payload["relationships"].append(
         {
@@ -372,6 +374,7 @@ async def test_source_ids_expand_split_chunks_and_report_danglers(storage_stack,
 
 async def test_strict_source_ids_reject_dangling_citations(storage_stack, monkeypatch):
     storage_instances, global_config, _ = storage_stack
+    global_config["allow_partial_ingest"] = True
     monkeypatch.setenv("GRAPHRAG_STRICT_SOURCE_IDS", "true")
     payload = {
         "document_id": "doc_strict_source_ids",
@@ -473,6 +476,7 @@ async def test_source_id_expands_mixed_split_and_unsplit_citations(storage_stack
 
 async def test_strict_source_ids_rejects_dangling_relationship_only(storage_stack, monkeypatch):
     storage_instances, global_config, _ = storage_stack
+    global_config["allow_partial_ingest"] = True
     monkeypatch.setenv("GRAPHRAG_STRICT_SOURCE_IDS", " TRUE ")
     result = await ingest_extracted_json(
         {

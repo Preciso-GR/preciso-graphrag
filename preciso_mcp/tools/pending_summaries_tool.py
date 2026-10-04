@@ -57,6 +57,14 @@ async def _fetch_pending_description(graph, record: dict) -> str:
 
 
 async def list_pending_summaries(storage_instances: dict, global_config: dict, limit: int = 50) -> dict:
+    from core.session_lock import graph_read_session
+
+    workspace = getattr(storage_instances.get("graph"), "workspace", "")
+    async with graph_read_session(global_config, workspace):
+        return await _list_pending_summaries(storage_instances, global_config, limit)
+
+
+async def _list_pending_summaries(storage_instances: dict, global_config: dict, limit: int = 50) -> dict:
     """List entities/relations whose descriptions have outgrown their bounds and
     need agent compression, with the live content to summarize. Recomputed from
     the current graph node/edge on every call — the pending record is a work
@@ -106,6 +114,20 @@ async def list_pending_summaries(storage_instances: dict, global_config: dict, l
 
 
 async def submit_summary(
+    storage_instances: dict, global_config: dict, name: str, kind: str,
+    summary_text: str, expected_description_count: int,
+    src: str | None = None, tgt: str | None = None,
+) -> dict:
+    from core.transactions import run_artifact_mutation
+
+    return await run_artifact_mutation(
+        lambda: _submit_summary(storage_instances, global_config, name, kind, summary_text,
+                                expected_description_count, src, tgt),
+        storage_instances, global_config,
+    )
+
+
+async def _submit_summary(
     storage_instances: dict,
     global_config: dict,
     name: str,

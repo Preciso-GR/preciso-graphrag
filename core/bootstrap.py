@@ -3,9 +3,11 @@ from __future__ import annotations
 from core.storage.graph_store import NetworkXStorage
 from core.storage.kv_store import JsonKVStorage
 from core.storage.vector_store import NanoVectorDBStorage
+from core.transactions import recover_artifacts
 
 
 def build_storage_instances(global_config: dict, workspace: str = "") -> dict:
+    recover_artifacts(global_config, workspace)
     embedding_func = global_config["embedding_func"]
     shared_kwargs = {"workspace": workspace, "global_config": global_config}
     return {

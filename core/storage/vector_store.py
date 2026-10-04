@@ -225,6 +225,13 @@ class NanoVectorDBStorage(BaseVectorStorage):
             "created_at": item.get("__created_at__"),
         }
 
+    async def reload_from_disk(self) -> None:
+        async with self._storage_lock:
+            self._client = NanoVectorDB(self.embedding_func.embedding_dim, storage_file=self._client_file_name)
+            self._validate_index_identity(self._client)
+            await set_all_update_flags(self.namespace, workspace=self.workspace, working_dir=self._working_dir)
+            self._last_seen_revision = self.storage_updated.revision
+
     async def get_by_ids(self, ids: list[str]) -> list[dict[str, Any] | None]:
         if not ids:
             return []

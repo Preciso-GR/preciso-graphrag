@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from core.export_adapters import export_graph_to_neo4j, export_vectors_to_qdrant
+from core.session_lock import graph_read_session
 
 
 async def export_to_neo4j(
@@ -13,15 +14,12 @@ async def export_to_neo4j(
     workspace: str | None = None,
     clear_existing: bool = False,
 ) -> dict:
-    return await export_graph_to_neo4j(
-        storage_instances,
-        uri=uri,
-        username=username,
-        password=password,
-        database=database,
-        workspace=workspace,
-        clear_existing=clear_existing,
-    )
+    graph = storage_instances["graph"]
+    async with graph_read_session(getattr(graph, "global_config", {}), getattr(graph, "workspace", "")):
+        return await export_graph_to_neo4j(
+            storage_instances, uri=uri, username=username, password=password,
+            database=database, workspace=workspace, clear_existing=clear_existing,
+        )
 
 
 async def export_to_qdrant(
@@ -34,12 +32,10 @@ async def export_to_qdrant(
     workspace: str | None = None,
     clear_existing: bool = False,
 ) -> dict:
-    return await export_vectors_to_qdrant(
-        storage_instances,
-        global_config,
-        url=url,
-        api_key=api_key,
-        collection_prefix=collection_prefix,
-        workspace=workspace,
-        clear_existing=clear_existing,
-    )
+    graph = storage_instances["graph"]
+    async with graph_read_session(global_config, getattr(graph, "workspace", "")):
+        return await export_vectors_to_qdrant(
+            storage_instances, global_config, url=url, api_key=api_key,
+            collection_prefix=collection_prefix, workspace=workspace,
+            clear_existing=clear_existing,
+        )

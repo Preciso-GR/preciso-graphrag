@@ -15,6 +15,10 @@ import time
 from pathlib import Path
 
 from core.utils import logger
+from core.utils import write_json
+from ingest.file_access import read_extraction_text, resolve_input_file
+from ingest.validator import _positive_limit
+from uuid import uuid4
 from ingest.reconciler import reconcile_extractions
 from ingest.pipeline import ingest_extracted_json
 
@@ -67,26 +71,24 @@ async def ingest_with_reconciliation(
         }
     """
 
-    # Step 1: Validate all files exist before starting
-    missing = []
-    for fp in extraction_files:
-        if not Path(fp).exists():
-            missing.append(fp)
-    if missing:
-        return {
-            "status": "error",
-            "message": f"Files not found: {missing}",
-            "files_reconciled": 0,
-        }
+    if not extraction_files or len(extraction_files) > 100:
+        return {"status": "validation_failed", "message": "provide between 1 and 100 extraction files"}
 
     # Step 2: Read all extraction files
     extraction_list = []
     patch_list = []
     read_errors = []
+    total_bytes = 0
     for fp in extraction_files:
         try:
-            with open(fp, "r", encoding="utf-8") as f:
-                data = json.load(f)
+            path = resolve_input_file(fp, global_config)
+            if path.suffix.lower() != ".json":
+                raise ValueError("reconciliation requires JSON files")
+            content = read_extraction_text(path)
+            total_bytes += len(content.encode("utf-8"))
+            if total_bytes > _positive_limit("GRAPHRAG_MAX_INGEST_BYTES", 25 * 1024 * 1024):
+                raise ValueError("combined extraction files exceed the byte limit")
+            data = json.loads(content)
             if _is_full_extraction(data):
                 extraction_list.append(data)
             elif _is_patch_file(data):
@@ -159,12 +161,13 @@ async def ingest_with_reconciliation(
 
     # Step 5: Write unified file to disk
     timestamp = int(time.time())
-    unified_path = f"extractions/reconciled_{document_id}_{timestamp}.json"
-    Path("extractions").mkdir(exist_ok=True)
+    output_root = Path(global_config.get("reconciliation_dir") or Path(global_config.get("working_dir", ".")) / "reconciled")
+    # A document ID is data, never a filesystem name. Random IDs also prevent
+    # concurrent requests from replacing each other's output in the same second.
+    unified_path = str(output_root / f"reconciled_{timestamp}_{uuid4().hex}.json")
 
     try:
-        with open(unified_path, "w", encoding="utf-8") as f:
-            json.dump(unified, f, indent=2, ensure_ascii=False)
+        write_json(unified, unified_path)
     except Exception as e:
         logger.exception("ingest_with_reconciliation: failed to write unified file %s", unified_path)
         return {

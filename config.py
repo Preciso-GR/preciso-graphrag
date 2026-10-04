@@ -382,6 +382,8 @@ def build_global_config(
         # CORE PLUGGABLE FUNCTIONS (can be None or custom implementations)
         # ====================================================================
         "working_dir": str(base_dir),                    # Where to store graph/vector DB data
+        "input_dir": os.getenv("GRAPHRAG_INPUT_DIR", "extractions"),
+        "reconciliation_dir": os.getenv("GRAPHRAG_RECONCILIATION_DIR", str(base_dir / "reconciled")),
         "llm_model_func": llm_model_func,                # LLM to use (defaults to None = no LLM)
         "embedding_func": embedding_func,                # Embedding model (converts text→vectors)
         "tokenizer": tokenizer,                          # Token counter (GPT-4o-mini or fallback)

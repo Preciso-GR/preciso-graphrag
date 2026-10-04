@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import pytest
 
-from ingest.validator import validate_entity, validate_relationship
+from ingest.validator import validate_entity, validate_extraction_structure, validate_relationship
 
 VALID_ENTITY = {
     "entity_name": "APPLE",
@@ -94,3 +94,38 @@ def test_relationship_weight_must_be_numeric():
     # numeric strings are fine
     ok, _ = validate_relationship({**VALID_REL, "weight": "2.5"}, KNOWN)
     assert ok
+
+
+@pytest.mark.parametrize("value", [None, 1, [], {}, False, " "])
+def test_document_id_requires_actual_nonempty_string(value):
+    assert validate_extraction_structure({"document_id": value, "entities": [], "relationships": [], "chunks": []})
+
+
+@pytest.mark.parametrize("field", list(VALID_ENTITY))
+@pytest.mark.parametrize("value", [None, 123, []])
+def test_entity_fields_do_not_coerce_invalid_types(field, value):
+    assert not validate_entity({**VALID_ENTITY, field: value})[0]
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf"), "NaN", True])
+def test_relationship_rejects_nonfinite_or_boolean_weight(value):
+    assert not validate_relationship({**VALID_REL, "weight": value}, KNOWN)[0]
+
+
+async def test_invalid_input_is_rejected_before_any_mutation(storage_stack):
+    from ingest.pipeline import ingest_extracted_json
+    stores, cfg, working_dir = storage_stack
+    payload = {"document_id": "doc", "entities": [], "relationships": [{**VALID_REL, "weight": "NaN"}], "chunks": [{"content": "must not be written"}]}
+    result = await ingest_extracted_json(payload, stores, cfg)
+    assert result["status"] == "validation_failed"
+    assert await stores["text_chunks"].get_all_items() == {}
+    assert not list(working_dir.glob("*.json"))
+
+
+def test_ingestion_record_and_byte_limits(monkeypatch):
+    payload = {"document_id": "doc", "entities": [], "relationships": [], "chunks": [{"content": "first"}, {"content": "second"}]}
+    monkeypatch.setenv("GRAPHRAG_MAX_INGEST_RECORDS", "1")
+    assert "record limit" in validate_extraction_structure(payload)[0]
+    monkeypatch.setenv("GRAPHRAG_MAX_INGEST_RECORDS", "10")
+    monkeypatch.setenv("GRAPHRAG_MAX_INGEST_BYTES", "1")
+    assert "byte limit" in validate_extraction_structure(payload)[0]

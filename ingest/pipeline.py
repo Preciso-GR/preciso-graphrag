@@ -23,7 +23,7 @@ from ingest.transformer import (
     agent_json_to_nodes_data,
     namespace_source_id,
 )
-from ingest.validator import validate_entity, validate_relationship
+from ingest.validator import validate_entity, validate_extraction_structure, validate_relationship
 
 
 def _new_source_ids(records: list[dict[str, Any]]) -> set[str]:
@@ -107,6 +107,9 @@ def _classify_chunk_inputs(
 async def ingest_extracted_json(payload, storage_instances, global_config) -> dict:
     if not isinstance(payload, dict):
         return {"status": "error", "message": "payload must be an object"}
+    errors = validate_extraction_structure(payload)
+    if errors:
+        return {"status": "validation_failed", "errors": errors}
     workspace = getattr(storage_instances.get("graph"), "workspace", "")
     async with ingestion_session_lock(global_config["working_dir"], workspace):
         return await _ingest_extracted_json(payload, storage_instances, global_config)

@@ -43,6 +43,8 @@ class NanoVectorDBStorage(BaseVectorStorage):
         os.makedirs(workspace_dir, exist_ok=True)
         self._client_file_name = os.path.join(workspace_dir, f"vdb_{self.namespace}.json")
         self._max_batch_size = self.global_config["embedding_batch_num"]
+        if self._max_batch_size <= 0:
+            raise ValueError("embedding batch size must be greater than zero")
         try:
             self._client = NanoVectorDB(
                 self.embedding_func.embedding_dim,
@@ -88,22 +90,35 @@ class NanoVectorDBStorage(BaseVectorStorage):
             for key, value in data.items()
         ]
         contents = [value["content"] for value in data.values()]
-        batches = [
-            contents[i : i + self._max_batch_size]
-            for i in range(0, len(contents), self._max_batch_size)
-        ]
-        embeddings_list = await asyncio.gather(
-            *(self.embedding_func(batch, context="document") for batch in batches)
-        )
-        embeddings = np.concatenate(embeddings_list) if embeddings_list else np.array([])
-        if len(embeddings) != len(list_data):
-            raise ValueError("embedding count mismatch during upsert")
-        for i, record in enumerate(list_data):
-            vector_f16 = embeddings[i].astype(np.float16)
-            compressed = zlib.compress(vector_f16.tobytes())
-            encoded = base64.b64encode(compressed).decode("utf-8")
-            record["vector"] = encoded
-            record["__vector__"] = embeddings[i]
+        offsets = iter(range(0, len(contents), self._max_batch_size))
+
+        async def embed_batches():
+            # Taking the next offset has no await, so each worker receives a
+            # distinct slice. Results use that offset to preserve input order.
+            for start in offsets:
+                batch = contents[start : start + self._max_batch_size]
+                embeddings = np.asarray(await self.embedding_func(batch, context="document"))
+                if len(embeddings) != len(batch):
+                    raise ValueError("embedding count mismatch during upsert")
+                for offset, vector in enumerate(embeddings):
+                    record = list_data[start + offset]
+                    compressed = zlib.compress(vector.astype(np.float16).tobytes())
+                    record["vector"] = base64.b64encode(compressed).decode("utf-8")
+                    record["__vector__"] = vector
+
+        batch_count = (len(contents) + self._max_batch_size - 1) // self._max_batch_size
+        workers = [asyncio.create_task(embed_batches()) for _ in range(min(
+            batch_count, self.embedding_func.max_concurrent_requests,
+        ))]
+        try:
+            await asyncio.gather(*workers)
+        except BaseException:
+            # gather() alone does not stop siblings after a failure. Drain them
+            # before returning so retries cannot overlap abandoned requests.
+            for worker in workers:
+                worker.cancel()
+            await asyncio.gather(*workers, return_exceptions=True)
+            raise
         client = await self._get_client()
         client.upsert(datas=list_data)
 

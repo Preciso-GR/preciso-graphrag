@@ -141,3 +141,119 @@ async def test_invalid_embedding_response_is_rejected_and_marks_runtime_unavaila
     with pytest.raises(ValueError, match="embedding"):
         await embedding(["text"])
     assert embedding.runtime_error is not None
+
+
+async def test_hanging_embedding_times_out_and_releases_slot():
+    cancelled = asyncio.Event()
+
+    async def embed(texts, **kwargs):
+        if texts == ["hang"]:
+            try:
+                await asyncio.Event().wait()
+            finally:
+                cancelled.set()
+        return [[1.0, 0.0]]
+
+    embedding = EmbeddingFunc(2, 128, embed, max_concurrent_requests=1, request_timeout=0.02)
+    with pytest.raises(TimeoutError):
+        await embedding(["hang"])
+    assert cancelled.is_set()
+    assert embedding.runtime_error is not None
+    assert await embedding(["success"]) == [[1.0, 0.0]]
+
+
+async def test_waiting_for_embedding_slot_has_a_deadline():
+    started, release = asyncio.Event(), asyncio.Event()
+
+    async def embed(texts, **kwargs):
+        started.set()
+        await release.wait()
+        return [[1.0, 0.0]]
+
+    embedding = EmbeddingFunc(2, 128, embed, max_concurrent_requests=1, request_timeout=2)
+    active = asyncio.create_task(embedding(["active"]))
+    try:
+        await started.wait()
+        embedding.request_timeout = 0.02
+        with pytest.raises(TimeoutError):
+            await embedding(["queued"])
+    finally:
+        release.set()
+        await active
+
+
+@pytest.mark.parametrize("timeout", [0, -1, float("nan"), float("inf")])
+def test_embedding_timeout_must_be_positive_and_finite(timeout):
+    with pytest.raises(ValueError, match="timeout"):
+        EmbeddingFunc(2, 128, lambda: None, request_timeout=timeout)
+
+
+async def test_startup_probe_times_out_without_blocking_event_loop(monkeypatch):
+    cancelled = False
+
+    async def hang(*args, **kwargs):
+        nonlocal cancelled
+        try:
+            await asyncio.Event().wait()
+        finally:
+            cancelled = True
+
+    monkeypatch.setenv("GRAPHRAG_EMBEDDING_PROBE_TIMEOUT", "0.02")
+    monkeypatch.setattr(config, "_ollama_embed", hang)
+    embedding = EmbeddingFunc(2, 128, hang, model_name="test")
+    await config.probe_ollama_embedding(embedding)
+    assert cancelled
+    assert "TimeoutError" in embedding.initialization_error
+    assert embedding.embedding_dim == 2
+
+
+async def test_bounded_workers_preserve_order_and_do_not_create_batch_backlog(storage_stack):
+    stores, cfg, _ = storage_stack
+    embedding = cfg["embedding_func"]
+    started, release = asyncio.Event(), asyncio.Event()
+    calls = 0
+
+    async def embed(texts, **kwargs):
+        nonlocal calls
+        calls += 1
+        if calls == 4:
+            started.set()
+        await release.wait()
+        return [[float(text), *([1.0] * 7)] for text in texts]
+
+    embedding.func = embed
+    before = len(asyncio.all_tasks())
+    write = asyncio.create_task(stores["chunks_vdb"].upsert({str(i): {"content": str(i)} for i in range(800)}))
+    try:
+        await started.wait()
+        assert len(asyncio.all_tasks()) - before == 5
+    finally:
+        release.set()
+        await write
+    vectors = await stores["chunks_vdb"].get_vectors_by_ids(["0", "100", "799"])
+    assert {key: value[0] for key, value in vectors.items()} == {"0": 0.0, "100": 100.0, "799": 799.0}
+
+
+async def test_worker_failure_cancels_siblings_before_retry(storage_stack):
+    stores, cfg, _ = storage_stack
+    active = 0
+    all_started = asyncio.Event()
+
+    async def embed(texts, **kwargs):
+        nonlocal active
+        active += 1
+        if active == 4:
+            all_started.set()
+        try:
+            await all_started.wait()
+            if texts[0] == "0":
+                raise ConnectionError("provider failed")
+            await asyncio.Event().wait()
+        finally:
+            active -= 1
+
+    cfg["embedding_func"].func = embed
+    with pytest.raises(ConnectionError):
+        await stores["chunks_vdb"].upsert({str(i): {"content": str(i)} for i in range(40)})
+    assert active == 0
+    assert await stores["chunks_vdb"].get_by_id("0") is None

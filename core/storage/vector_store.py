@@ -11,6 +11,8 @@ from typing import Any, final
 import numpy as np
 from nano_vectordb import NanoVectorDB
 
+from core.file_io import atomic_artifact_path
+
 from core.storage.base import BaseVectorStorage
 from core.storage.shared_storage import (
     get_namespace_lock,
@@ -150,7 +152,15 @@ class NanoVectorDBStorage(BaseVectorStorage):
     async def index_done_callback(self) -> bool:
         async with self._storage_lock:
             try:
-                self._client.save()
+                with atomic_artifact_path(self._client_file_name) as temporary:
+                    # Keep the dependency's serialization format and save()
+                    # contract, but redirect its destructive write to staging.
+                    original_path = self._client.storage_file
+                    self._client.storage_file = str(temporary)
+                    try:
+                        self._client.save()
+                    finally:
+                        self._client.storage_file = original_path
                 await set_all_update_flags(
                     self.namespace, workspace=self.workspace, working_dir=self._working_dir
                 )

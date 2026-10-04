@@ -7,6 +7,8 @@ from typing import Any, final
 
 import networkx as nx
 
+from core.file_io import atomic_artifact_path
+
 from core.storage.base import BaseGraphStorage
 from core.storage.shared_storage import (
     get_namespace_lock,
@@ -33,7 +35,8 @@ class NetworkXStorage(BaseGraphStorage):
             graph.number_of_nodes(),
             graph.number_of_edges(),
         )
-        nx.write_graphml(graph, file_name)
+        with atomic_artifact_path(file_name) as temporary:
+            nx.write_graphml(graph, temporary)
 
     def __post_init__(self):
         working_dir = self.global_config["working_dir"]

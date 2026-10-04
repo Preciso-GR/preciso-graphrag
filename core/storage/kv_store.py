@@ -12,8 +12,9 @@ from core.storage.shared_storage import (
     get_namespace_data,
     get_namespace_lock,
     get_update_flag,
+    is_namespace_initialized,
+    mark_namespace_initialized,
     set_all_update_flags,
-    try_initialize_namespace,
 )
 from core.utils import _cooperative_yield, load_json, logger, write_json
 
@@ -40,16 +41,29 @@ class JsonKVStorage(BaseKVStorage):
             self.namespace, workspace=self.workspace, working_dir=self._working_dir
         )
         async with get_data_init_lock():
-            need_init = await try_initialize_namespace(
+            initialized = await is_namespace_initialized(
                 self.namespace, workspace=self.workspace, working_dir=self._working_dir
             )
+            if not initialized:
+                loaded_data = load_json(self._file_name)
+                if loaded_data is None:
+                    loaded_data = {}
+                if any(not isinstance(value, dict) for value in loaded_data.values()):
+                    raise RuntimeError(
+                        f"Invalid JSON store `{self._file_name}`: records must be objects; "
+                        "restore a valid file before retrying."
+                    )
+                data = await get_namespace_data(
+                    self.namespace, workspace=self.workspace, working_dir=self._working_dir
+                )
+                async with self._storage_lock:
+                    data.update(loaded_data)
+                await mark_namespace_initialized(
+                    self.namespace, workspace=self.workspace, working_dir=self._working_dir
+                )
             self._data = await get_namespace_data(
                 self.namespace, workspace=self.workspace, working_dir=self._working_dir
             )
-            if need_init:
-                loaded_data = load_json(self._file_name) or {}
-                async with self._storage_lock:
-                    self._data.update(loaded_data)
 
     async def index_done_callback(self) -> None:
         async with self._storage_lock:

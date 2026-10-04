@@ -178,7 +178,7 @@ async def test_file_ingest_forwards_pipeline_warnings(tmp_path, monkeypatch):
         }
 
     monkeypatch.setattr(ingest_from_file_tool, "ingest_extracted_json", fake_ingest)
-    result = await ingest_from_file_tool.ingest_from_file(str(extraction_path), {}, {})
+    result = await ingest_from_file_tool.ingest_from_file(str(extraction_path), {}, {"input_dir": str(tmp_path)})
 
     assert result["warnings"] == ["entity `GHOST` has unresolvable source_id(s): doc::chunk-99"]
 
@@ -205,7 +205,7 @@ async def test_file_ingest_reports_added_merged_and_duplicate_counts(tmp_path, m
         }
 
     monkeypatch.setattr(ingest_from_file_tool, "ingest_extracted_json", fake_ingest)
-    result = await ingest_from_file_tool.ingest_from_file(str(extraction_path), {}, {})
+    result = await ingest_from_file_tool.ingest_from_file(str(extraction_path), {}, {"input_dir": str(tmp_path)})
 
     assert result["entities_added"] == 1
     assert result["relationships_added"] == 4
@@ -234,7 +234,7 @@ async def test_reconciliation_forwards_pipeline_warnings(tmp_path, monkeypatch):
         }
 
     monkeypatch.setattr(reconcile_tool, "ingest_extracted_json", fake_ingest)
-    result = await reconcile_tool.ingest_with_reconciliation([str(extraction_path)], {}, {})
+    result = await reconcile_tool.ingest_with_reconciliation([str(extraction_path)], {}, {"input_dir": str(tmp_path), "working_dir": str(tmp_path)})
 
     assert result["warnings"] == ["relationship `A->B` has unresolvable source_id(s): doc::chunk-99"]
     assert captured_payloads[0]["document_id"] == "doc"

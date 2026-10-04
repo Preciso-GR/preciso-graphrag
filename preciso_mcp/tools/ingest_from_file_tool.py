@@ -6,10 +6,10 @@ from pathlib import Path
 from typing import Any
 
 from ingest.parser import parse_markdown_extraction
+from ingest.file_access import read_extraction_text, resolve_input_file
 from ingest.pipeline import ingest_extracted_json
 from ingest.validator import validate_extraction_structure
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SUPPORTED_MARKDOWN_SUFFIXES = {".md", ".txt"}
 SUPPORTED_JSON_SUFFIXES = {".json"}
 
@@ -46,24 +46,14 @@ async def reingest_from_file(file_path: str, storage_instances: dict, global_con
     the existing graph because ingestion is additive.
     """
 
-    return await _ingest_file(file_path, storage_instances, global_config)
+    return await _ingest_file(file_path, storage_instances, global_config, allow_reconciled=True)
 
 
-async def _ingest_file(file_path: str, storage_instances: dict, global_config: dict) -> dict:
-    resolved_path = _resolve_file_path(file_path)
-    if not resolved_path.exists() or not resolved_path.is_file():
-        return {
-            "status": "error",
-            "file_path": str(file_path),
-            "entities_added": 0,
-            "relationships_added": 0,
-            "chunks_stored": 0,
-            "message": "file not found",
-        }
-
+async def _ingest_file(file_path: str, storage_instances: dict, global_config: dict, *, allow_reconciled: bool = False) -> dict:
     try:
+        resolved_path = resolve_input_file(file_path, global_config, allow_reconciled=allow_reconciled)
         payload = _load_payload(resolved_path)
-    except ValueError as exc:
+    except (ValueError, OSError) as exc:
         return {
             "status": "error",
             "file_path": str(file_path),
@@ -123,16 +113,9 @@ async def _ingest_file(file_path: str, storage_instances: dict, global_config: d
     return response
 
 
-def _resolve_file_path(file_path: str) -> Path:
-    candidate = Path(file_path).expanduser()
-    if candidate.is_absolute():
-        return candidate
-    return PROJECT_ROOT / candidate
-
-
 def _load_payload(resolved_path: Path) -> dict[str, Any]:
     suffix = resolved_path.suffix.lower()
-    content = resolved_path.read_text(encoding="utf-8")
+    content = read_extraction_text(resolved_path)
 
     if suffix in SUPPORTED_JSON_SUFFIXES:
         try:

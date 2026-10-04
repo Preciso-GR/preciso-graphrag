@@ -76,16 +76,23 @@ async def clear_all_update_flags(
     flag.value = False
 
 
-async def try_initialize_namespace(
+async def is_namespace_initialized(
     namespace: str,
     workspace: str | None = None,
     working_dir: str | None = None,
 ) -> bool:
     final_namespace = get_final_namespace(namespace, workspace, working_dir)
-    if final_namespace not in _namespace_init_flags:
-        _namespace_init_flags[final_namespace] = True
-        return True
-    return False
+    return _namespace_init_flags.get(final_namespace, False)
+
+
+async def mark_namespace_initialized(
+    namespace: str,
+    workspace: str | None = None,
+    working_dir: str | None = None,
+) -> None:
+    """Publish readiness only after successful loading, under the init lock."""
+    final_namespace = get_final_namespace(namespace, workspace, working_dir)
+    _namespace_init_flags[final_namespace] = True
 
 
 async def get_namespace_data(

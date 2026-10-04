@@ -1,8 +1,18 @@
 # Production readiness assessment
 
 Date: 2026-10-04. Reviewed core-only branch `core-graphrag`.
-Scope: assessment and implementation gates; no production hardening is claimed
-as implemented by this document.
+Scope: assessment and implementation gates. The strict JSON loading fix below
+is implemented; the remaining production gates are still pending.
+
+Implemented follow-up: JSON loading now returns `None` only for missing files
+and raises on unreadable, malformed, or non-object content. KV records must be
+objects, and a shared namespace becomes ready only after successful validation
+and loading. Startup failure preserves the original file; same-process retries
+remain blocked until the file is repaired. Diagnostic manifest failures remain
+best-effort and preserve the invalid manifest. All KV namespaces, including
+caches, currently use strict loading; no cache is automatically discarded.
+Regression coverage lives in `tests/test_json_storage_loading.py`. Atomic writes
+and recovery across multiple artifacts remain separate, unfinished work.
 
 ## Recommended production scope
 
@@ -37,7 +47,7 @@ processes, live semantic quality, or a production container.
 | Priority | Verified repository gap | Required change | Release evidence |
 |---|---|---|---|
 | P0 | `write_json` and NetworkX graph writes overwrite destination files directly | Write temporary files on the same filesystem, flush/fsync, replace atomically, and sync the parent directory where supported; audit NanoVectorDB persistence too | Interruption at write boundaries preserves a readable prior or new file; disk-full/permission failures never report success |
-| P0 | `load_json` returns `None` on malformed existing JSON; KV initialization uses `or {}` | Distinguish missing files from corrupt/unreadable authoritative stores; fail closed and preserve the bad file for recovery | Corrupt KV input prevents normal writable startup without overwriting existing data |
+| Resolved | `load_json` previously returned `None` on malformed existing JSON; KV initialization used `or {}` | Strict loading and readiness publication after validation are implemented | Tests cover missing/valid/invalid/unreadable JSON, retries, recovery after repair, and server startup failure without overwriting data |
 | P0 | Ingestion saves chunk, graph, vector, and provenance stores separately | Introduce a recoverable commit across authoritative stores, not merely atomic individual files; ensure readers see a committed revision | Failure between any two saves restores the previous committed graph or completes the new one; references and vectors remain consistent |
 | P0 | Mutations change in-memory stores before all embedding/persistence work succeeds | Stage changes or reliably restore state after failure; protect queries from partial mutation; define exact replay/idempotency behavior | Failure, cancellation, and identical replay do not duplicate descriptions or expose incomplete evidence |
 | P0 | Vector compatibility checks dimensions; the manifest records but does not enforce model compatibility | Validate a persisted embedding fingerprint before opening indexes: provider/model revision, dimension, preprocessing, and query/document mode | Different models with the same dimension are rejected; upgrades require explicit rebuild into a fresh directory |

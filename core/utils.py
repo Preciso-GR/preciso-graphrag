@@ -79,14 +79,30 @@ class BasicTokenizer:
 
 
 def load_json(file_name: str) -> dict[str, Any] | None:
+    """Load a JSON object; only a missing file represents an empty store.
+
+    Existing unreadable or invalid files must never masquerade as missing data.
+    Callers may handle this error for rebuildable diagnostics, but authoritative
+    storage initialization must propagate it without overwriting the artifact.
+    """
     path = Path(file_name)
-    if not path.exists():
-        return None
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except Exception as exc:
-        logger.error("Failed to load json %s: %s", file_name, exc)
+        content = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
         return None
+    except (OSError, UnicodeError) as exc:
+        raise RuntimeError(
+            f"Failed to read JSON store `{path}`; fix access or restore the file before retrying."
+        ) from exc
+    try:
+        data = json.loads(content)
+        if not isinstance(data, dict):
+            raise ValueError("expected a JSON object")
+    except ValueError as exc:
+        raise RuntimeError(
+            f"Invalid JSON store `{path}`; restore a valid file before retrying."
+        ) from exc
+    return data
 
 
 def write_json(data: dict[str, Any], file_name: str) -> bool:

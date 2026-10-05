@@ -11,6 +11,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test locked Linux dependencies
+        run: docker build --target test -t preciso-graphrag:test .
+      - name: Build runtime wheel image
+        run: docker build --target runtime -t preciso-graphrag:ci .
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install MCP smoke client
+        run: python -m pip install --require-hashes --only-binary=:all: -r requirements.lock
+      - name: Verify MCP and persistent volume
+        run: >-
+          python -m scripts.smoke_mcp -- docker run --rm -i
+          --read-only --tmpfs /tmp:rw,noexec,nosuid,size=64m
+          --cap-drop ALL --security-opt no-new-privileges
+          --mount type=volume,source=preciso-ci-smoke,target=/data
+          -e GRAPHRAG_EMBEDDING_PROVIDER=fallback preciso-graphrag:ci
   test:
     runs-on: ubuntu-latest
     strategy:

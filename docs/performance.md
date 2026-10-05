@@ -61,3 +61,23 @@ Four is a default selected by the user, not a benchmarked throughput optimum.
   before changing error handling and storage-access ordering.
 - Ingestion persists complete graph/vector files. Profile realistic additive
   ingestions before changing storage formats or adding incremental persistence.
+
+## Bounded embedding scheduling
+
+A fixed worker pool replaces one task per batch. With 8,000 texts, batch size
+eight, and concurrency four, the paused-provider probe changed additional
+pending tasks from 1,001 to 5. The five tasks are four workers and the upsert task.
+
+Reproduce the current count:
+
+```sh
+.venv/bin/python -m scripts.benchmark_embedding_scheduler
+```
+
+The request deadline includes semaphore waiting and provider execution. Failed
+workers cancel and drain their peers before ingestion returns. Tests verify
+result ordering and recovery after timeout.
+
+Task count is the measured result. Peak memory and throughput remain unmeasured.
+Stored records, completed vectors, and complete-file persistence still grow with
+corpus size. Four workers are a default, not a proven throughput optimum.

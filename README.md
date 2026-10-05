@@ -410,6 +410,9 @@ python3 test/reconcile_manual.py
 | [docs/skills-guide.md](docs/skills-guide.md) | How to use and write extraction skills |
 | [docs/eval-guide.md](docs/eval-guide.md) | How to run evaluation and read results |
 | [docs/architecture.md](docs/architecture.md) | How the system works internally |
+| [docs/container-guide.md](docs/container-guide.md) | Build and operate the core MCP container |
+| [docs/engineering-log.md](docs/engineering-log.md) | Decisions, verification, and documentation method |
+| [docs/production-readiness.md](docs/production-readiness.md) | Implemented controls and open release gates |
 | [docs/faq.md](docs/faq.md) | Common problems and fixes |
 
 ---

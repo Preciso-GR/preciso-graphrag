@@ -30,6 +30,10 @@ py-modules = ["config"]
 # never shadow the MCP SDK's `mcp` package again.
 include = ["core*", "ingest*", "preciso_mcp*"]
 
+[tool.ruff.lint]
+# Keep the established correctness checks stable across lint-tool upgrades.
+select = ["E4", "E7", "E9", "F"]
+
 [tool.ruff.lint.per-file-ignores]
 # These entry-point files deliberately adjust sys.path before importing the
 # project so they also work from a source checkout without an editable install.

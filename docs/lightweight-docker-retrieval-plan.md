@@ -1,8 +1,11 @@
 # Lightweight Docker deployment and retrieval improvement plan
 
 Date: 2026-10-04. Baseline: `core-graphrag` at `b0a32b4`.
-Status: proposed implementation sequence; Docker and retrieval changes below
-have not been implemented or benchmarked.
+Status update, 2026-10-05: configuration, input boundaries, recovery, embedding
+identity, bounded workers, and the locked three-stage Docker build are implemented.
+The remaining sections describe experiments and acceptance criteria. Retrieval
+quality changes remain pending a reviewed baseline. See [engineering decisions](engineering-log.md)
+and [container operation](container-guide.md) for implemented behavior.
 
 Production release also requires the data-safety, recovery, security, and
 operational gates in [production-readiness.md](production-readiness.md).
@@ -29,13 +32,13 @@ improve retrieval.
 |---|---|---|
 | Runtime | Python MCP server; `mcp.run()` defaults to stdio | Client must attach stdin/stdout to the container |
 | Storage | NetworkX graph, JSON stores, NanoVectorDB | The graph directory must survive container replacement |
-| Data location | `preciso_mcp/server.py` hardcodes `GRAPH_IS_HERE` | Add an environment override before defining volume mounts |
+| Data location | `GRAPHRAG_MCP_WORKDIR` overrides `GRAPH_IS_HERE` | The container sets `/data/graph` |
 | Qdrant / Neo4j | Optional export adapters | Starting their containers does not route queries through them |
-| Dependencies | Core requirements plus cloud/export extras; no lockfile | Lock supported builds and install only selected extras |
-| Embeddings | Four concurrent requests; batches of eight texts | Requests are bounded, but queued tasks/results can still consume memory |
+| Dependencies | Hash-locked core, build, and development dependencies | Optional SDKs remain outside the runtime image |
+| Embeddings | Four concurrent requests; batches of eight texts | A fixed worker pool bounds scheduled embedding batches |
 | Retrieval | Entity, relationship, and direct-chunk candidates; final cosine selection | Evaluate whether final selection loses necessary bridge evidence |
 | Reranking | Existing optional hook, not enabled by the MCP default | Reuse the hook only if measured gains justify its cost |
-| Containers | No Dockerfile or Compose configuration | Establish a measured first image rather than promise a size |
+| Containers | Builder, test, and runtime Docker stages; no Compose | Verify the image and persistent MCP operation |
 
 The previous optimizations measured local metadata lookup at 31.050 → 0.491 ms
 and evidence selection at 45.213 → 6.427 ms on the synthetic benchmark. These
@@ -79,7 +82,7 @@ Use one Dockerfile with named stages:
 | `builder` | Build the project wheel and resolve locked dependency wheels | Only required artifacts |
 | `test` | Install development checks and run relevant tests | No |
 | `runtime` | Install core wheels and packaged resources | Yes |
-| `runtime-exports` | Optional variant with export SDKs | Only when exports are requested |
+| Future export variant | Not implemented; requires a demonstrated need | No |
 
 Match builder/runtime Python and platform. Prefer binary dependency wheels;
 if a compiler is necessary, keep it in the builder. Order dependency layers

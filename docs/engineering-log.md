@@ -102,3 +102,12 @@ files. The local and Linux arm64 container suites passed 198 tests.
 5. Establish bounded request admission and lock waiting for the selected workload.
 
 Keep each change reversible. Record its baseline, result, and limitations here.
+
+## Local Ollama integration result
+
+On 2026-10-06, the one-document MCP test passed with `mxbai-embed-large`.
+Ollama returned active status and 1,024-dimensional embeddings. The test verified
+handshake, ingestion, restart persistence, and retrieval. It made four successful
+embedding requests: two startup probes, one document request, and one query request.
+Application embedding concurrency was set to one. The temporary graph was removed
+after completion. This host test does not verify Docker connectivity or ranking quality.

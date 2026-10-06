@@ -133,7 +133,7 @@ async def test_ollama_legacy_client_fallback_remains_async(monkeypatch):
     assert calls == ["first", "second"]
 
 
-@pytest.mark.parametrize("vectors", [[[1.0]], [[1.0, float("nan")]], []])
+@pytest.mark.parametrize("vectors", [[[1.0]], [[1.0, float("nan")]], [[0.0, 0.0]], []])
 async def test_invalid_embedding_response_is_rejected_and_marks_runtime_unavailable(vectors):
     async def embed(*args, **kwargs):
         return vectors
@@ -141,6 +141,28 @@ async def test_invalid_embedding_response_is_rejected_and_marks_runtime_unavaila
     with pytest.raises(ValueError, match="embedding"):
         await embedding(["text"])
     assert embedding.runtime_error is not None
+
+
+async def test_zero_embedding_does_not_mutate_index_and_valid_retry_succeeds(storage_stack):
+    stores, global_config, _ = storage_stack
+    embedding = global_config["embedding_func"]
+
+    async def zero(texts, **kwargs):
+        return [[0.0] * 8 for _ in texts]
+
+    embedding.func = zero
+    store = stores["chunks_vdb"]
+    with pytest.raises(ValueError, match="nonzero"):
+        await store.upsert({"one": {"content": "evidence"}})
+    assert await store.get_by_id("one") is None
+
+    async def valid(texts, **kwargs):
+        return [[1.0] * 8 for _ in texts]
+
+    embedding.func = valid
+    await store.upsert({"one": {"content": "evidence"}})
+    assert await store.get_by_id("one") is not None
+    assert embedding.runtime_error is None
 
 
 async def test_hanging_embedding_times_out_and_releases_slot():

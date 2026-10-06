@@ -29,7 +29,11 @@ def test_valid_json_object_loads(tmp_path, content):
     assert isinstance(load_json(str(path)), dict)
 
 
-@pytest.mark.parametrize("content", [b'{broken', b'', b'null', b'[]', b'false', b'0', b'""', b'\xff'])
+@pytest.mark.parametrize("content", [
+    b'{broken', b'', b'null', b'[]', b'false', b'0', b'""', b'\xff',
+    b'{"weight": NaN}', b'{"weight": Infinity}', b'{"weight": -Infinity}',
+    b'{"weight": 1e400}', b'{"weight": -1e400}',
+])
 def test_invalid_json_is_not_treated_as_missing(tmp_path, content):
     path = tmp_path / "store.json"
     path.write_bytes(content)

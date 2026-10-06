@@ -104,3 +104,29 @@ The image uses UID and GID 10001. Runtime inspection found no pip, pytest, ruff,
 OpenAI, Cohere, Qdrant, or Neo4j package. This is a packaging baseline. It does not
 measure startup latency, peak memory, or semantic quality. Local amd64 verification
 remains pending. CI defines an amd64 verification gate.
+
+## Prepare the local Ollama test
+
+The host test uses the installed `mxbai-embed-large` model. No API key is required.
+It creates a temporary graph and removes it after the test. Existing indexes remain
+outside the test. This procedure does not download or install models.
+
+1. Inspect the test configuration without starting the server.
+
+   ```sh
+   .venv/bin/python -m scripts.smoke_ollama --dry-run
+   ```
+
+2. When the host is available for model inference, run the test.
+
+   ```sh
+   .venv/bin/python -m scripts.smoke_ollama
+   ```
+
+The test checks active Ollama status, the selected model, ingestion, restart
+persistence, and retrieval. It permits 120 seconds for cold model loading and each
+embedding request. It reports the detected embedding dimension after success.
+An unavailable model fails the test; fallback embeddings cannot satisfy it.
+
+This is a real-provider integration test. A single-document query does not measure
+ranking quality. A reviewed multi-document evaluation remains a separate task.

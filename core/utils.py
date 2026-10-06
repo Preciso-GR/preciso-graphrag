@@ -4,6 +4,7 @@ import asyncio
 import html
 import json
 import logging
+import math
 import os
 import re
 import sys
@@ -97,7 +98,16 @@ def load_json(file_name: str) -> dict[str, Any] | None:
             f"Failed to read JSON store `{path}`; fix access or restore the file before retrying."
         ) from exc
     try:
-        data = json.loads(content)
+        def reject_constant(value):
+            raise ValueError(f"non-finite JSON constant: {value}")
+
+        def finite_float(value):
+            number = float(value)
+            if not math.isfinite(number):
+                raise ValueError(f"JSON number exceeds finite range: {value}")
+            return number
+
+        data = json.loads(content, parse_constant=reject_constant, parse_float=finite_float)
         if not isinstance(data, dict):
             raise ValueError("expected a JSON object")
     except ValueError as exc:

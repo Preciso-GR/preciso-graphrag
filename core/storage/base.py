@@ -138,6 +138,10 @@ class EmbeddingFunc:
                 )
             if not np.isfinite(vectors).all():
                 raise ValueError("Invalid embedding response: vectors must contain only finite values")
+            if np.any(np.all(vectors == 0, axis=1)):
+                # Cosine normalization divides by vector length. A zero vector
+                # would introduce NaNs into the index despite being finite.
+                raise ValueError("Invalid embedding response: vectors must be nonzero")
         except Exception as exc:
             model = self.model_name or "unknown"
             self.runtime_error = f"Embedding request failed for model {model}: {exc}"

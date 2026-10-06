@@ -82,6 +82,17 @@ Core dependencies have hash-locked versions. Optional cloud and export SDKs are
 excluded from this image. Build an explicit variant if those features are required.
 Never add all optional dependencies to the default image without a demonstrated need.
 
+## Numeric input follow-up
+
+The review reproduced two additional failures. A zero embedding passed validation
+and became `NaN` during cosine normalization. JSON loading accepted non-finite
+constants and numbers that exceeded the finite floating-point range.
+
+Embedding validation now rejects zero vectors before index mutation. JSON loading
+rejects `NaN`, infinity constants, and numeric overflow. Tests verify unchanged
+index data, successful retry, runtime error recovery, and preservation of invalid
+files. The local and Linux arm64 container suites passed 198 tests.
+
 ## Remaining work
 
 1. Verify a coherent backup and restore procedure.

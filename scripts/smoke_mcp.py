@@ -23,11 +23,23 @@ def result_dict(result):
     return json.loads(next(item.text for item in result.content if item.type == "text"))
 
 
-async def smoke(command):
-    params = StdioServerParameters(command=command[0], args=command[1:], env=dict(os.environ))
+def check_embedding(status, expected_provider, expected_model):
+    embedding = status["embedding"]
+    if expected_provider is not None:
+        assert embedding["provider"] == expected_provider, embedding
+        assert embedding["status"] == "active", embedding
+    if expected_model is not None:
+        assert embedding["model"] == expected_model, embedding
+    return embedding
+
+
+async def smoke(command, *, timeout=30, expected_provider=None, expected_model=None, env=None):
+    params = StdioServerParameters(command=command[0], args=command[1:], env=dict(os.environ) if env is None else env)
     async with stdio_client(params) as (read, write):
-        async with ClientSession(read, write, read_timeout_seconds=timedelta(seconds=30)) as session:
+        async with ClientSession(read, write, read_timeout_seconds=timedelta(seconds=timeout)) as session:
             await session.initialize()
+            status = result_dict(await session.call_tool("get_server_status"))
+            check_embedding(status, expected_provider, expected_model)
             tools = await session.list_tools()
             assert "get_server_status" in {tool.name for tool in tools.tools}
             payload = {
@@ -38,22 +50,27 @@ async def smoke(command):
             assert result["status"] == "success", result
     # Starting a second session proves that volume data survives process exit.
     async with stdio_client(params) as (read, write):
-        async with ClientSession(read, write, read_timeout_seconds=timedelta(seconds=30)) as session:
+        async with ClientSession(read, write, read_timeout_seconds=timedelta(seconds=timeout)) as session:
             await session.initialize()
             status = result_dict(await session.call_tool("get_server_status"))
+            embedding = check_embedding(status, expected_provider, expected_model)
             assert status["graph"]["documents_ingested"] == 1, status
             assert status["graph"]["chunks"] == 1, status
             result = result_dict(await session.call_tool("query_graph_tool", {"query": "Alice maintains the local document index.", "mode": "mix"}))
             assert result["status"] == "success", result
             assert result["raw_data"]["data"]["chunks"], result
     print("MCP handshake, ingestion, restart persistence, and query passed.")
+    return embedding
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--timeout", type=float, default=30)
+    parser.add_argument("--expected-provider")
+    parser.add_argument("--expected-model")
     parser.add_argument("command", nargs=argparse.REMAINDER)
     args = parser.parse_args()
     command = args.command[1:] if args.command[:1] == ["--"] else args.command
     if not command:
         parser.error("provide a server command after --")
-    asyncio.run(smoke(command))
+    asyncio.run(smoke(command, timeout=args.timeout, expected_provider=args.expected_provider, expected_model=args.expected_model))

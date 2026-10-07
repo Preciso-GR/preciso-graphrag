@@ -1,5 +1,9 @@
 # Evaluation Guide
 
+For the reproducible core retrieval pilot, see [retrieval-pilot.md](retrieval-pilot.md).
+It measures required source evidence directly. It does not use the heuristic
+answer scores below as proof of retrieval quality.
+
 ## What the eval does
 
 The evaluation harness tests whether your knowledge graph returns correct answers to domain-specific questions. It runs a suite of test cases against the graph, retrieves context and entities, and scores the result using heuristics: Does the answer contain the gold answer? Are there hallucinations? Is the context relevant? The final score is an aggregate across all metrics.

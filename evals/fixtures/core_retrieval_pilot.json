@@ -1,0 +1,20 @@
+{
+  "scope": "Synthetic direct-chunk retrieval pilot; no graph expansion or answer generation",
+  "document_id": "retrieval-pilot",
+  "chunks": [
+    {"chunk_id": "archive", "content": "The archive service keeps encrypted daily snapshots for 14 days. Mira owns the archive service."},
+    {"chunk_id": "alerts", "content": "The alert service sends incident notifications to Omar. Its escalation code is ALRT-42."},
+    {"chunk_id": "restore", "content": "To restore the archive, copy the latest verified snapshot into a new directory. Check its checksum before opening the index."},
+    {"chunk_id": "access", "content": "Only the operations group can read archive snapshots. Access requires a hardware security key."},
+    {"chunk_id": "weather", "content": "The weather station measures temperature every five minutes. Its sensor identifier is WX-17."},
+    {"chunk_id": "garden", "content": "The campus garden uses rainwater for irrigation. The gardener waters seedlings each morning."}
+  ],
+  "questions": [
+    {"id": "retention", "query": "How long are the daily archive backups retained?", "required": ["archive"]},
+    {"id": "identifier", "query": "Which incident service uses ALRT-42?", "required": ["alerts"]},
+    {"id": "paraphrase", "query": "What must be verified before loading recovered archive data?", "required": ["restore"]},
+    {"id": "access", "query": "What authentication device is needed to read archive backups?", "required": ["access"]},
+    {"id": "combined", "query": "Who owns the archive service and what check is required before opening its restored index?", "required": ["archive", "restore"]},
+    {"id": "unsupported", "query": "What is the annual license price of the archive service?", "required": []}
+  ]
+}

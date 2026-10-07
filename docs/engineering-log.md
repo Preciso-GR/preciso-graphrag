@@ -111,3 +111,12 @@ handshake, ingestion, restart persistence, and retrieval. It made four successfu
 embedding requests: two startup probes, one document request, and one query request.
 Application embedding concurrency was set to one. The temporary graph was removed
 after completion. This host test does not verify Docker connectivity or ranking quality.
+
+## Retrieval pilot result
+
+On 2026-10-07, a six-question synthetic pilot compared lexical fallback and local
+Ollama with concurrency one. Complete required evidence appeared in three of five
+answerable cases with fallback and five of five with `mxbai-embed-large`.
+Both providers returned related evidence for an unsupported question. No retrieval
+setting was changed from this small sample. See [retrieval pilot](retrieval-pilot.md)
+for the fixture, measurements, and limitations.

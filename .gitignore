@@ -45,6 +45,7 @@ extractions/*
 !extractions/README.md
 # Eval artifacts: ignore generated results and generated testcases
 evals/results/*.jsonl
+evals/results/*.json
 !evals/results/README.md
 !evals/results/.gitkeep
 evals/test_cases/*.json

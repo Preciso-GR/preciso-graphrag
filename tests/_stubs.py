@@ -1,7 +1,7 @@
 """Deterministic offline stubs shared by the pytest suite.
 
-Mirrors the stubs used by test/summary_merge_manual.py and
-test/marker_leak_manual.py so no Ollama/network is ever required.
+Mirrors the stubs used by tests/manual/summary_merge_manual.py and
+tests/manual/marker_leak_manual.py so no Ollama/network is ever required.
 """
 
 from __future__ import annotations

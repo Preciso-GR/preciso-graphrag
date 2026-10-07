@@ -16,4 +16,4 @@ What NOT to push
 Quick start (run sample questions):
 
 1. Ensure the MCP server is running (see repo `scripts/mcp_launcher.sh`).
-2. Run the evaluation harness that accepts a questions file (or adapt `test/query_manual.py` to iterate the questions array).
+2. Run the evaluation harness that accepts a questions file (or adapt `tests/manual/query_manual.py` to iterate the questions array).

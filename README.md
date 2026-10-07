@@ -173,6 +173,9 @@ Six steps, always in this order:
 ### Folder Contract
 
 ```
+src/                ← installed Python application packages
+tests/              ← automated tests and manual integrity checks
+scripts/            ← launchers, evaluations, and benchmarks
 to_be_extracted/    ← drop your source files here (.md, .txt)
 skills/             ← agent reads these to know how to extract
 extractions/        ← agent writes extraction JSON here
@@ -390,13 +393,13 @@ For users who want to drive ingestion and querying directly without an agent:
 
 ```bash
 # Ingest an extraction file
-python3 test/ingest_manual.py extractions/your_file_extracted.json
+python3 tests/manual/ingest_manual.py extractions/your_file_extracted.json
 
 # Query the graph
-python3 test/query_manual.py "What is Tim Cook's role?" mix
+python3 tests/manual/query_manual.py "What is Tim Cook's role?" mix
 
 # Run reconciliation demo
-python3 test/reconcile_manual.py
+python3 tests/manual/reconcile_manual.py
 ```
 
 ---
@@ -405,11 +408,14 @@ python3 test/reconcile_manual.py
 
 | Guide | What it covers |
 |-------|----------------|
-| [CONTEXT.md](CONTEXT.md) | Canonical document-lifecycle terminology |
+| [docs/domain-model.md](docs/domain-model.md) | Canonical document-lifecycle terminology |
 | [docs/getting-started.md](docs/getting-started.md) | Full setup including embeddings and exports |
 | [docs/skills-guide.md](docs/skills-guide.md) | How to use and write extraction skills |
 | [docs/eval-guide.md](docs/eval-guide.md) | How to run evaluation and read results |
 | [docs/architecture.md](docs/architecture.md) | How the system works internally |
+| [docs/mcp-server.md](docs/mcp-server.md) | MCP startup, configuration, tools, and recovery |
+| [docs/README.md](docs/README.md) | Documentation index |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Development, verification, review, and release workflow |
 | [docs/container-guide.md](docs/container-guide.md) | Build and operate the core MCP container |
 | [docs/engineering-log.md](docs/engineering-log.md) | Decisions, verification, and documentation method |
 | [docs/production-readiness.md](docs/production-readiness.md) | Implemented controls and open release gates |

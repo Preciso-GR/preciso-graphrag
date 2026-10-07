@@ -20,7 +20,7 @@ marker:
 Uses a deterministic tokenizer — no Ollama/network required.
 
 Usage:
-    python test/marker_leak_manual.py
+    python tests/manual/marker_leak_manual.py
 """
 
 from __future__ import annotations
@@ -30,9 +30,9 @@ import json
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT / "src") not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from config import GRAPH_FIELD_SEP, SOURCE_IDS_LIMIT_METHOD_KEEP, SUMMARY_MARKER
 from core.export_adapters import _edge_properties, _node_properties, _vector_payload

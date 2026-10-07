@@ -86,7 +86,7 @@ The agent will:
 Once ingestion is done, test a query. Open a terminal and run:
 
 ```bash
-python3 test/query_manual.py "What are the company's risk factors?" mix
+python3 tests/manual/query_manual.py "What are the company's risk factors?" mix
 ```
 
 Expected output: A structured response with entities, relationships, and evidence chunks from your document.

@@ -1,5 +1,5 @@
 """SUMMARY_MARKER exit-surface invariant (pytest port of
-test/marker_leak_manual.py, which stays as the runnable manual script):
+tests/manual/marker_leak_manual.py, which stays as the runnable manual script):
 
     storage keeps the marker, every exit strips it.
 

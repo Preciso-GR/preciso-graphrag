@@ -1,5 +1,5 @@
 """core/summary.py two-zone description merge — pytest port of
-test/summary_merge_manual.py (which stays as the runnable manual script).
+tests/manual/summary_merge_manual.py (which stays as the runnable manual script).
 
 Preciso never compresses descriptions itself: when the field grows past bounds
 it stays fully verbatim and is flagged PENDING_SUMMARY_REASON for the

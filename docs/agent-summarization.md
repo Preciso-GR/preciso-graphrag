@@ -3,7 +3,7 @@
 ## Why this exists
 
 Entity and relationship descriptions are stored as a **two-zone field**
-(`core/summary.py`): at most one `<<SUM>>`-tagged rolling summary of older
+(`src/core/summary.py`): at most one `<<SUM>>`-tagged rolling summary of older
 mentions, plus a verbatim tail of the most recent `raw_tail_size`
 descriptions. When the tail grows past `raw_tail_size` or the whole field
 exceeds `summary_context_size`, the field needs compressing.
@@ -65,7 +65,7 @@ Notes:
 ## The `<<SUM>>` marker contract still applies
 
 The marker is internal, storage-only bookkeeping (see `SUMMARY_MARKER` in
-`config.py`). `content_to_summarize` from `list_pending_summaries` is built
+`src/config.py`). `content_to_summarize` from `list_pending_summaries` is built
 from `old_descriptions`/`keep_tail`, which are never marker-tagged by
 construction, and `submit_summary`'s tool response never echoes the stored
 description back. `submit_summary` re-embeds through the same

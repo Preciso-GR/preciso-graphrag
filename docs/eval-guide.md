@@ -160,7 +160,7 @@ To evaluate your own documents, manually create a test case file.
 ### How to run it
 
 ```bash
-python3 test/query_manual.py "What medications is patient PT_001 currently taking?" mix
+python3 tests/manual/query_manual.py "What medications is patient PT_001 currently taking?" mix
 ```
 
 Then manually check:

@@ -1,5 +1,13 @@
 # Architecture
 
+![PRECISO system structure](diagrams/system-structure.svg)
+
+Edit the diagram in [Excalidraw](diagrams/system-structure.excalidraw).
+This is a layer view. Each operation can access multiple local stores; the
+vertical arrows do not assign exclusive store ownership to a module.
+
+See [MCP server operation](mcp-server.md) for the tool and startup contracts.
+
 ## The flow in one diagram
 
 ```

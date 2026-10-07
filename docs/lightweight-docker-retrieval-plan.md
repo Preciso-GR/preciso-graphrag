@@ -61,7 +61,7 @@ exclude embedding and generation latency; see [performance.md](performance.md).
 5. Confirm MCP logs go to stderr and stdout contains protocol messages only.
    Confirm startup and shutdown release resources and preserve persisted data.
 
-Primary files: `config.py`, `preciso_mcp/server.py`, `pyproject.toml`,
+Primary files: `src/config.py`, `src/preciso_mcp/server.py`, `pyproject.toml`,
 `requirements.txt`, `.env.example`, and `scripts/mcp_launcher.sh`.
 
 Acceptance: clean installation and MCP handshake work; old default data paths
@@ -176,8 +176,8 @@ Implement experiments in this order:
    fallback, and measure added latency/cost. Keep large model dependencies outside
    the default image. Evaluate Jev separately if its model/API becomes specified.
 
-Primary files: `core/query.py`, `core/utils.py`, query configuration,
-`preciso_mcp/server.py`, `tests/test_evidence_selection.py`, and evaluation scripts.
+Primary files: `src/core/query.py`, `src/core/utils.py`, query configuration,
+`src/preciso_mcp/server.py`, `tests/test_evidence_selection.py`, and evaluation scripts.
 Retain query modes and source references while adding backward-compatible options.
 
 Acceptance: improvements beat the frozen baseline on held-out evidence metrics

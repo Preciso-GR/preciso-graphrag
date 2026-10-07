@@ -120,3 +120,29 @@ answerable cases with fallback and five of five with `mxbai-embed-large`.
 Both providers returned related evidence for an unsupported question. No retrieval
 setting was changed from this small sample. See [retrieval pilot](retrieval-pilot.md)
 for the fixture, measurements, and limitations.
+
+## Source layout and development lifecycle
+
+The application moved to `src/` without changing Python module names. Manual checks
+moved to `tests/manual/`. The domain glossary and summary design moved into `docs/`.
+Runtime data paths remain stable. Source launchers, package discovery, Docker, CI,
+and documented commands were updated together.
+
+The source layout separates installed code from repository files. A wheel must
+include the application explicitly. Tests must not succeed only because the
+working directory exposes uninstalled source. The runtime container provides
+that installed-wheel boundary; source tests also exercise the editable checkout.
+
+The obsolete divide-warning filter was removed. The 198-test local suite passes
+with runtime warnings treated as errors. Lint and both manual integrity guards
+also pass. The MCP guide uses ASD-STE100 writing conventions and matches all 11
+advertised tool names. Full controlled-dictionary conformance has not been audited.
+
+Folder cleanup is not production certification. Restoration, release rollback,
+resource budgets, provider revision pinning, and broader retrieval evaluation
+remain release gates. See [production readiness](production-readiness.md).
+
+The locked Linux arm64 test image passed 198 tests and both integrity guards
+after the source move. The source launcher passed ingestion, restart persistence,
+and retrieval with a disposable graph. The system layer diagram was created
+with MCP Excalidraw and saved as editable source and a standalone SVG.

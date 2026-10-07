@@ -4,7 +4,7 @@
 
 Entity and relationship descriptions are stored as one `<SEP>`-joined string and
 re-merged every time a document is ingested. The old policy in
-`core/summary.py::_handle_entity_relation_summary` was count-based: as soon as an
+`src/core/summary.py::_handle_entity_relation_summary` was count-based: as soon as an
 entity accumulated `force_llm_summary_on_merge` (default 3) descriptions, the LLM
 rewrote **all** of them into a single paraphrase — even when the combined text was
 tiny. This had four compounding consequences:
@@ -82,16 +82,16 @@ implementation stripped it at two exits; review found four more, now all closed:
 
 | Exit surface | Where stripped |
 |---|---|
-| Embedding content (entity + relationship) | `core/merge.py` |
-| Relationship VDB `description` payload | `core/merge.py` (stripped at write, so the marker never enters the derived store) |
-| LLM query context | `core/query.py::_apply_token_truncation` |
-| User-facing query results | `core/utils.py::convert_to_user_format` |
-| Neo4j export properties | `core/export_adapters.py::_node_properties` / `_edge_properties` |
-| Qdrant export payloads | `core/export_adapters.py::_vector_payload` (deep-strips every value, belt-and-suspenders against future upstream slips) |
+| Embedding content (entity + relationship) | `src/core/merge.py` |
+| Relationship VDB `description` payload | `src/core/merge.py` (stripped at write, so the marker never enters the derived store) |
+| LLM query context | `src/core/query.py::_apply_token_truncation` |
+| User-facing query results | `src/core/utils.py::convert_to_user_format` |
+| Neo4j export properties | `src/core/export_adapters.py::_node_properties` / `_edge_properties` |
+| Qdrant export payloads | `src/core/export_adapters.py::_vector_payload` (deep-strips every value, belt-and-suspenders against future upstream slips) |
 
 The canonical helper is `core.utils.strip_summary_marker` (it lives in `utils`
 rather than `summary` to avoid a circular import), and the full contract is
-documented in one place: the comment block above `SUMMARY_MARKER` in `config.py`.
+documented in one place: the comment block above `SUMMARY_MARKER` in `src/config.py`.
 
 ## Config additions
 
@@ -104,12 +104,12 @@ documented in one place: the comment block above `SUMMARY_MARKER` in `config.py`
 ## Validation (no pytest suite in this repo; manual per CONTRIBUTING.md)
 
 - `python3 -m compileall core ingest mcp` — clean.
-- `python3 test/summary_merge_manual.py` — 26 checks over the merge logic:
+- `python3 tests/manual/summary_merge_manual.py` — 26 checks over the merge logic:
   verbatim tail across N merges, single marker segment, bounded tokens, no LLM
   below thresholds, idempotent re-ingest, legacy migration, degraded no-LLM mode,
   giant single description, `raw_tail_size` 0/1, defensive multi-marker folding.
   Deterministic LLM/tokenizer stubs; no Ollama/network needed.
-- `python3 test/marker_leak_manual.py` — guards the *invariant*, not just the
+- `python3 tests/manual/marker_leak_manual.py` — guards the *invariant*, not just the
   merge: drives the real `_merge_nodes_then_upsert` / `_merge_edges_then_upsert`
   write path until a summary is forced, then asserts the marker IS in stored
   graph data but ABSENT from every VDB payload, every `convert_to_user_format`

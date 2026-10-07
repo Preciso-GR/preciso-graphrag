@@ -51,7 +51,10 @@ jobs:
           pip install -e . -r requirements.txt -r requirements-dev.txt
 
       - name: Compile check (required by CONTRIBUTING.md)
-        run: python -m compileall core ingest preciso_mcp
+        run: python -m compileall src
+
+      - name: Lint source and checks
+        run: python -m ruff check src tests scripts
 
       # Everything below runs fully offline: lazy embedding init, 8-dim
       # fallback embedder, deterministic LLM/tokenizer stubs. No Ollama,
@@ -60,7 +63,7 @@ jobs:
         run: python -m pytest -q
 
       - name: Guard script — two-zone summary merge
-        run: python test/summary_merge_manual.py
+        run: python tests/manual/summary_merge_manual.py
 
       - name: Guard script — SUMMARY_MARKER leak invariant
-        run: python test/marker_leak_manual.py
+        run: python tests/manual/marker_leak_manual.py

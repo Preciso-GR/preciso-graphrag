@@ -188,12 +188,12 @@ Ingestion completes with "success" but `GRAPH_IS_HERE/` files are empty or conta
 
 5. **Retry the identical extraction:**
    ```bash
-   python3 test/ingest_manual.py extractions/your_file.json
+   python3 tests/manual/ingest_manual.py extractions/your_file.json
    ```
 
 6. **Inspect the graph:**
    ```bash
-   python3 test/query_manual.py "test query" local
+   python3 tests/manual/query_manual.py "test query" local
    ```
 
 ---
@@ -209,7 +209,7 @@ By default, `hybrid` mode searches for entities matching the query keywords. If 
 ### Fix
 Use **global mode** instead:
 ```bash
-python3 test/query_manual.py "How did revenue change from 2022 to 2023?" global
+python3 tests/manual/query_manual.py "How did revenue change from 2022 to 2023?" global
 ```
 
 Or in an agent prompt:
@@ -253,7 +253,7 @@ If your extraction includes very long or generic chunks, try:
 **3. Embedding vector quality**
 Embeddings are only as good as the model. The default `mxbai-embed-large` is competent but not perfect. If you have higher quality embeddings:
 - Use a better embedding model (e.g., `paraphrase-multilingual-mpnet-base-v2` via Hugging Face).
-- Configure in `config.py`.
+- Configure in `src/config.py`.
 
 **4. Entities are poorly named**
 If you extracted entity `metric` instead of `walmart_total_revenue_2023`, the system can't distinguish it from other metrics. See [skills-guide.md](skills-guide.md) for the entity registry rule.
@@ -261,7 +261,7 @@ If you extracted entity `metric` instead of `walmart_total_revenue_2023`, the sy
 ### Try this
 ```bash
 # Lower top_k and use local mode (faster + more focused)
-python3 test/query_manual.py "your query" local --top_k 3
+python3 tests/manual/query_manual.py "your query" local --top_k 3
 ```
 
 ---
@@ -313,7 +313,7 @@ The entities and relationships retrieved don't match the query keywords, *and* n
 ### Fix
 1. **Try a simpler query:**
    ```bash
-   python3 test/query_manual.py "company name" local
+   python3 tests/manual/query_manual.py "company name" local
    ```
 
 2. **Check what entities exist:**
@@ -326,7 +326,7 @@ The entities and relationships retrieved don't match the query keywords, *and* n
 
 3. **Inspect a sample query:**
    ```bash
-   python3 test/query_manual.py "one of the extracted entity names here" local
+   python3 tests/manual/query_manual.py "one of the extracted entity names here" local
    ```
 
 4. **Verify the extraction quality:**

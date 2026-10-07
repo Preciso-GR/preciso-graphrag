@@ -93,7 +93,7 @@ DEFAULT_RAW_TAIL_SIZE = int(
 #                                   by construction; submit_summary re-embeds via
 #                                   the same entity_content/rel_content path above)
 # Adding a new export/output surface? Strip there too, and extend the guard test
-# in test/marker_leak_manual.py (and tests/test_marker_leak.py).
+# in tests/manual/marker_leak_manual.py (and tests/test_marker_leak.py).
 SUMMARY_MARKER = "<<SUM>>"
 
 # ============================================================================

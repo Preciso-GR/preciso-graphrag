@@ -1,97 +1,94 @@
-# Contributing to Preciso
+# Development workflow
 
-Thanks for your interest in contributing.
-Preciso is early-stage and moving fast —
-contributions of any size are genuinely useful.
+PRECISO turns reviewed document extractions into a local evidence graph. The MCP
+server exposes ingestion, retrieval, status, summaries, and optional export tools.
 
----
+## Repository layout
 
-## What We Need Most
+| Directory | Responsibility |
+|---|---|
+| `src/core/` | Retrieval, merging, local storage, and transactions |
+| `src/ingest/` | Extraction parsing, validation, and ingestion |
+| `src/preciso_mcp/` | MCP startup and tool interfaces |
+| `src/config.py` | Runtime settings, providers, and prompt defaults |
+| `tests/` | Automated offline regression tests |
+| `tests/manual/` | Runnable integrity guards and manual client examples |
+| `scripts/` | Launchers, benchmarks, smoke tests, and evaluation commands |
+| `docs/` | Architecture, operation, decisions, and release gates |
+| `evals/fixtures/` | Committed evaluation inputs and expected evidence |
+| `skills/` | Agent extraction instructions |
 
-### New Extraction Skills
-The highest-value contribution right now.
+`GRAPH_IS_HERE/`, `extractions/`, and `to_be_extracted/` are local data directories.
+They are not application source. Do not commit operational artifacts or private inputs.
+Build requirements and lock files remain at the root for standard build commands.
 
-A skill is a markdown file that tells agents how to extract
-entities and relationships from a specific document type.
+## Set up development
 
-Skills we want:
-  - Legal contracts (parties, obligations, dates, penalties)
-  - Medical/clinical documents (conditions, treatments, outcomes)
-  - ESG reports (metrics, commitments, targets)
-  - Patent filings (claims, prior art, inventors)
-  - News articles (events, entities, sentiment)
-  - Earnings call transcripts (guidance, tone, Q&A)
+1. Create a virtual environment.
 
-How to contribute a skill:
-  1. Fork the repo
-  2. Copy skills/General-graph-extraction-skill/SKILL.md
-  3. Rename to skills/Your-Domain-Skill/SKILL.md
-  4. Adapt the entity types and relationship types
-     for your domain
-  5. Add 2-3 extraction examples showing input text
-     and expected output JSON
-  6. Test it on a real document
-  7. Open a PR with your eval results
+   ```sh
+   python3 -m venv .venv
+   ```
 
-### Eval Results on New Documents
-Run the eval skill on any document type and
-open a PR with your results JSON.
-This builds the benchmark database.
+2. Install the editable project and development dependencies.
 
-### Bug Reports
-Open an issue with:
-  - What you ran
-  - What you expected
-  - What actually happened
-  - Python version and OS
+   ```sh
+   .venv/bin/python -m pip install -e . -r requirements-dev.txt
+   ```
 
-### Integration Adapters
-New export targets beyond Neo4j and Qdrant.
-Examples: Memgraph, TigerGraph, Weaviate, Pinecone.
+3. Create a branch for the change.
 
----
+   ```sh
+   git switch -c your-change
+   ```
 
-## How to Open a PR
+The editable install connects imports to `src/`. Repeat installation after a source
+layout change. Python module names remain `core`, `ingest`, and `preciso_mcp`.
 
-1. Fork the repo
-2. Create a branch: git checkout -b your-feature
-3. Make your change
-4. Run: python3 -m compileall core ingest preciso_mcp
-   Must pass with zero errors
-   (Set up once with `pip install -e .` from the repo root so the
-   `preciso_mcp`, `core`, and `ingest` packages resolve everywhere.)
-5. Open a PR with a clear description
+## Implement and verify
 
----
+1. Describe the expected behavior and reproduce the failure.
+2. Inspect the relevant source path and existing tests.
+3. Make the smallest sound change.
+4. Run the relevant regression tests.
+5. Run the required checks below.
+6. Inspect the diff for accidental data, credentials, and unrelated changes.
 
-## Skill Contribution Template
+```sh
+.venv/bin/python -m compileall -q src scripts
+.venv/bin/python -m ruff check src tests scripts
+.venv/bin/python -m pytest -q
+.venv/bin/python tests/manual/summary_merge_manual.py
+.venv/bin/python tests/manual/marker_leak_manual.py
+git diff --check
+```
 
-When contributing a new skill, your PR description
-should include:
+Run the [container gates](docs/container-guide.md) for packaging or runtime changes.
+Use the [retrieval pilot](docs/retrieval-pilot.md) for retrieval comparisons. Its small
+synthetic results do not replace a reviewed held-out evaluation.
 
-  Domain: [what document type]
-  Entity types added: [list]
-  Relationship types added: [list]
-  Test document used: [describe it, do not attach if confidential]
-  Eval result: [overall score if you ran it]
+For performance work, record the baseline and measure the result. Separate provider
+latency from local storage and ranking work. Do not claim gains from unmeasured changes.
 
----
+## Review and release
 
-## What We Will Not Merge
+The change description must state the problem, behavior, verification, and limitations.
+Explain intentional compatibility changes. Document operational changes with short
+instructions and consistent terms. See [engineering decisions](docs/engineering-log.md).
 
-  - Changes that break existing eval scores
-  - Skills without at least one extraction example
-  - Dependencies that require cloud services to function
-  - Anything that sends data outside the local machine
-    by default
+Before release, require passing source and container CI. Verify the installed wheel
+outside the checkout. Check data compatibility and model identity. Complete the open
+[production gates](docs/production-readiness.md), including restoration and rollback.
 
----
+The container job uses locked dependencies. The Python-version matrix checks source
+compatibility with its declared dependency ranges. Passing one does not replace the other.
+Real provider tests run manually and must use disposable graphs.
 
-## Community
+## Report a defect
 
-  GitHub Discussions for questions and ideas
-  Issues for bugs and feature requests
-  PRs for code and skill contributions
+Include the command or tool call, expected behavior, actual behavior, runtime version,
+and relevant redacted logs. Remove API keys, credentials, and private document content.
+Do not attach private graph artifacts to public issues.
 
-Named after Bruno Fernandes.
-Every contribution should land exactly where it needs to.
+Extraction skill changes must include a source example and expected extraction.
+Review generated evidence against that source before reporting an evaluation score.

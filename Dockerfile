@@ -11,10 +11,8 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     python -m pip install --require-hashes --only-binary=:all: -r requirements-build.lock && \
     python -m venv --without-pip /opt/venv && \
     python -m pip --python /opt/venv/bin/python install --require-hashes --only-binary=:all: -r requirements.lock
-COPY pyproject.toml requirements.txt config.py ./
-COPY core ./core
-COPY ingest ./ingest
-COPY preciso_mcp ./preciso_mcp
+COPY pyproject.toml requirements.txt ./
+COPY src ./src
 RUN python -m pip wheel --no-deps --no-build-isolation --wheel-dir /wheels . && \
     python -m pip --python /opt/venv/bin/python install --no-deps /wheels/*.whl && \
     /opt/venv/bin/python -c "import tiktoken; tiktoken.encoding_for_model('gpt-4o-mini')"
@@ -24,13 +22,12 @@ COPY requirements-dev.lock ./
 RUN --mount=type=cache,target=/root/.cache/pip \
     python -m pip --python /opt/venv/bin/python install --require-hashes --only-binary=:all: -r requirements-dev.lock
 COPY tests ./tests
-COPY test ./test
 COPY scripts ./scripts
 COPY pytest.ini ./
 RUN /opt/venv/bin/python -m pytest -q && \
-    /opt/venv/bin/python -m ruff check core ingest preciso_mcp tests scripts && \
-    /opt/venv/bin/python test/summary_merge_manual.py && \
-    /opt/venv/bin/python test/marker_leak_manual.py
+    /opt/venv/bin/python -m ruff check src tests scripts && \
+    /opt/venv/bin/python tests/manual/summary_merge_manual.py && \
+    /opt/venv/bin/python tests/manual/marker_leak_manual.py
 
 FROM ${PYTHON_IMAGE} AS runtime
 ENV PATH=/opt/venv/bin:$PATH \

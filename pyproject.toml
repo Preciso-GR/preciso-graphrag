@@ -9,6 +9,9 @@ description = "Local-first GraphRAG system exposed as an MCP server"
 requires-python = ">=3.11"
 dynamic = ["dependencies"]
 
+[project.scripts]
+preciso-backup = "preciso_mcp.backup_cli:main"
+
 [project.optional-dependencies]
 cloud-embeddings = ["openai>=1.0.0", "cohere>=4.0.0"]
 exports = ["neo4j>=5.0.0", "qdrant-client>=1.9.0"]

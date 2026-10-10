@@ -76,6 +76,7 @@ On startup, the server recovers an interrupted transaction before opening stores
 Do not delete `.preciso-transaction` or edit files while the server runs.
 If recovery fails, preserve the directory and investigate the reported storage error.
 
+Use the verified [offline backup procedure](backup-recovery.md).
 Stop the runtime before copying graph data for a backup. Preserve the entire graph
 directory and the reviewed inputs. A live file copy can mix revisions. The journal
 provides interruption recovery; it does not protect against volume loss.

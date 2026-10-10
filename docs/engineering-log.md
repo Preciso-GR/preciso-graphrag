@@ -146,3 +146,25 @@ The locked Linux arm64 test image passed 198 tests and both integrity guards
 after the source move. The source launcher passed ingestion, restart persistence,
 and retrieval with a disposable graph. The system layer diagram was created
 with MCP Excalidraw and saved as editable source and a standalone SVG.
+
+## Offline backup verification
+
+On 2026-10-10, offline backup and restoration were added without a database or
+provider call. The command acquires runtime and mutation ownership, rejects an
+unfinished journal, and copies only supported artifacts. A versioned manifest
+records byte counts and SHA-256 hashes. Restoration checks copied bytes and
+publishes a fresh directory. It never intentionally overwrites an existing target.
+
+The drill verifies exact artifact bytes, graph reopening, saved embedding identity,
+and retrieval of a known evidence chunk. Failure tests cover changed data, links,
+unsafe filenames, active writers, journals, existing targets, and interrupted copying.
+The CLI is packaged in the runtime wheel for Docker operation.
+
+Checksums detect changed bytes, not authenticity. Retention, separate storage,
+representative restore timing, and old-image rollback remain operational gates.
+See [backup and restoration](backup-recovery.md).
+
+Verification: 210 tests passed locally and in the locked Linux arm64 test image.
+Lint and both integrity guards passed. The installed runtime CLI completed backup,
+verification, and restoration with networking disabled and a read-only root.
+All drill data was temporary. No existing user graph or Ollama model was used.

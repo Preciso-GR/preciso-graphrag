@@ -1,6 +1,6 @@
 # Production readiness
 
-Review date: 2026-10-05. Scope: the core-only branch and private stdio MCP use.
+Review date: 2026-10-10. Scope: the core-only branch and private stdio MCP use.
 
 PRECISO has stronger data safety and a minimal container build. It is not yet
 verified for a production release. Backup restoration, representative resource
@@ -20,6 +20,7 @@ budgets, provider integration, and release rollback remain open gates.
 | Embedding identity | Reject incompatible populated indexes, including models with equal dimensions | Model and revision mismatch tests |
 | Provider deadlines | Bound embedding queue and provider time; probe Ollama asynchronously | Timeout, cancellation, and permit recovery tests |
 | Worker scheduling | Keep at most four default embedding workers, rather than one task per batch | Ordering tests and paused-provider task benchmark |
+| Offline backup | Copy a stopped artifact set, verify checksums, and restore into a fresh directory | Byte equality, reopen/query, corruption, locking, and failure tests |
 | Container packaging | Build a wheel; copy core dependencies and tokenizer cache into a non-root runtime | Locked container test stage and MCP smoke procedure |
 
 The defaults limit ingestion to 50,000 records and 26,214,400 bytes. Embedding
@@ -43,8 +44,9 @@ authorization, workspace isolation, quotas, and audit logging.
 
 ## Open release gates
 
-1. **Backup and restoration.** Test a coherent backup and restoration into a fresh
-   directory. Preserve reviewed inputs. Define retention and acceptable data loss.
+1. **Backup operations.** The offline backup and restore fixture is verified.
+   Repeat the drill with representative deployment data. Preserve reviewed inputs.
+   Define retention, separate storage, recovery time, and acceptable data loss.
    A transaction journal does not protect against volume loss.
 2. **Resource budgets.** Measure startup, peak memory, ingestion persistence, and
    query latency with representative corpora. Set CPU, memory, PID, and disk budgets.
@@ -67,6 +69,7 @@ authorization, workspace isolation, quotas, and audit logging.
 
 ## Verification paths
 
+- [Backup and restoration](backup-recovery.md) gives the offline operating procedure.
 - [Engineering decisions](engineering-log.md) records reasons and limitations.
 - [Container operation](container-guide.md) gives build and smoke procedures.
 - [Performance](performance.md) separates local measurements from system claims.

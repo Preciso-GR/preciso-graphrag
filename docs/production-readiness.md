@@ -1,6 +1,6 @@
 # Production readiness
 
-Review date: 2026-10-10. Scope: the core-only branch and private stdio MCP use.
+Review date: 2026-10-12. Scope: the core-only branch and private stdio MCP use.
 
 PRECISO has stronger data safety and a minimal container build. It is not yet
 verified for a production release. Backup restoration, representative resource
@@ -48,7 +48,8 @@ authorization, workspace isolation, quotas, and audit logging.
    Repeat the drill with representative deployment data. Preserve reviewed inputs.
    Define retention, separate storage, recovery time, and acceptable data loss.
    A transaction journal does not protect against volume loss.
-2. **Resource budgets.** Measure startup, peak memory, ingestion persistence, and
+2. **Resource budgets.** A small synthetic baseline is recorded in
+   [runtime measurements](runtime-baseline.md). Measure representative startup, peak memory, ingestion persistence, and
    query latency with representative corpora. Set CPU, memory, PID, and disk budgets.
    Bound request admission and lock waiting. Define cache retention.
 3. **Provider integration.** Test the selected real embedding model and revision.
@@ -62,7 +63,8 @@ authorization, workspace isolation, quotas, and audit logging.
 6. **Shutdown.** Verify client disconnect and SIGTERM behavior with mounted data.
    Forced-termination recovery tests already exercise selected commit boundaries.
 7. **Release compatibility.** Define artifact and package version compatibility.
-   Test image rollback against supported data. Review locked dependency updates
+   A disposable rollback test passed for `2116c76` to `b8a67ea`.
+   Test rollback against representative data and each supported artifact format. Review locked dependency updates
    and scan shipped packages before release.
 8. **Platform coverage.** Run the container gates on Linux amd64 and arm64. A base
    image that supports both platforms does not prove application compatibility.

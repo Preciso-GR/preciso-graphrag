@@ -168,3 +168,22 @@ Verification: 210 tests passed locally and in the locked Linux arm64 test image.
 Lint and both integrity guards passed. The installed runtime CLI completed backup,
 verification, and restoration with networking disabled and a read-only root.
 All drill data was temporary. No existing user graph or Ollama model was used.
+
+## Resource and rollback baseline
+
+The 2026-10-11/12 measurement used 100 and 1,000 short chunks with 1,024-dimensional
+synthetic vectors. The Docker 1,000-chunk case used about 143 MiB of resident memory
+after ingestion and reached about 186 MiB of process peak memory. Warm core query
+latency had a 0.531 ms 95th percentile across 20 measured queries.
+
+A separate actual MCP server run used lexical fallback. The server used about
+154 MiB after queries. Its warm query 95th percentile was 1.344 ms, including transport.
+The source run had an unexplained 66.899-second initialization outlier. The offline
+image run did not reproduce that outlier. No model inference was used.
+
+The runtime from `b8a67ea` reopened and queried disposable data produced by `2116c76`.
+An identical replay and restart also passed. The artifact format did not change
+between these releases. This is a limited compatibility check, not migration proof.
+
+See [runtime baseline](runtime-baseline.md) for methods, measurements, and limits.
+No performance optimization or production resource limit was selected from these runs.

@@ -81,3 +81,10 @@ result ordering and recovery after timeout.
 Task count is the measured result. Peak memory and throughput remain unmeasured.
 Stored records, completed vectors, and complete-file persistence still grow with
 corpus size. Four workers are a default, not a proven throughput optimum.
+
+## Runtime resource baseline
+
+The [runtime baseline](runtime-baseline.md) records core storage memory, query
+latency, actual MCP fallback memory, and a small release rollback check. It separates
+model inference from local application work. No runtime limit was selected from
+these small synthetic measurements.

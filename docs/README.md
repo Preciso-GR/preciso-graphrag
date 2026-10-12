@@ -14,6 +14,7 @@ Start with the guide that matches the task.
 | Verify a release | [Release checks](release-checklist.md) |
 | Check release readiness | [Production readiness](production-readiness.md) |
 | Understand technical decisions | [Engineering log](engineering-log.md) |
+| Inspect runtime measurements | [Runtime baseline](runtime-baseline.md) |
 | Measure local performance | [Performance](performance.md) |
 | Evaluate source evidence | [Retrieval pilot](retrieval-pilot.md) |
 | Use extraction skills | [Skills guide](skills-guide.md) |

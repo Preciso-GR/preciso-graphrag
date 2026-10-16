@@ -78,3 +78,5 @@ RESEARCH_PLAN.md
 .coverage
 .coverage.*
 htmlcov/
+# Local application mechanism map
+/PRECISO_MECHANISM_MAP.md

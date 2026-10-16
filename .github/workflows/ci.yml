@@ -62,6 +62,9 @@ jobs:
       - name: Pytest suite (offline)
         run: python -m pytest -q
 
+      - name: MCP document lifecycle (offline)
+        run: python -m scripts.smoke_lifecycle
+
       - name: Guard script — two-zone summary merge
         run: python tests/manual/summary_merge_manual.py
 

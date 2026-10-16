@@ -59,7 +59,7 @@ async def ingest_with_reconciliation(
 
     Returns:
         {
-          "status": "success" | "error" | "validation_failed",
+          "status": "success" | "error" | "validation_failed" | "partial_success",
           "unified_file": "extractions/reconciled_{timestamp}.json",
           "files_reconciled": int,
           "duplicate_entities_merged": int,
@@ -192,6 +192,7 @@ async def ingest_with_reconciliation(
         }
 
     return {
+        **ingest_result,
         "status": ingest_result.get("status", "unknown"),
         "unified_file": unified_path,
         "files_reconciled": len(extraction_files),

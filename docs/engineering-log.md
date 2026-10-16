@@ -2,6 +2,30 @@
 
 Scope: the core-only branch. Supply-chain features and service containers are excluded.
 
+## Ingestion result preservation — 2026-10-16
+
+File and reconciliation adapters reconstructed ingestion results and discarded
+revision, replay, document identity, and error information. The adapters now
+retain the core result and add their existing file details and counter fields.
+File ingestion keeps its extraction `file_path`; `source_file_path` preserves the
+core source path. Future result fields also pass through without an allowlist.
+
+Inline and file adapters also relabelled committed partial ingestion as validation
+failure. They now return the actual core status. Partial ingestion remains disabled
+by default. This is an intentional status correction for clients that explicitly
+enable legacy partial ingestion.
+
+Regression tests exercise all ingestion adapters with controlled core results.
+Temporary offline graphs also verify actual replay, revision conflicts, unchanged
+evidence after a rejected change, and truthful partial-commit results. No new
+dependency or module was required.
+
+Verification: 250 tests passed locally and in the locked Linux container,
+including 17 result-preservation cases.
+Lint, compilation, and both integrity guards passed. A real stdio MCP session
+verified file ingestion, replay, revision conflict, and source-path preservation
+with a temporary graph and offline embeddings.
+
 ## Document lifecycle series — 2026-10-16
 
 The five-stage series adds contribution tracking, document maintenance, graph

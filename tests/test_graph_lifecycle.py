@@ -451,4 +451,3 @@ async def test_rename_dry_run_and_stale_revision_guard(storage_stack):
     )
     assert stale["status"] == "error" and stale["error_code"] == "revision_conflict"
     assert (await stores["graph"].get_node("ACME"))["display_name"] == "Acme Corporation"
-

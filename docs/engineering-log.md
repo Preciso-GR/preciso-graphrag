@@ -2,6 +2,18 @@
 
 Scope: the core-only branch. Supply-chain features and service containers are excluded.
 
+## Merge verification: workflow syntax — 2026-10-16
+
+GitHub rejected the CI workflow at line 26 before creating jobs. Local YAML
+parsing reproduced the error: the unquoted pip option `--only-binary=:all:`
+contains a colon followed by a space. A folded block now preserves the command
+as a string. Both workflow jobs parse. Two extra trailing blank lines in lifecycle
+tests were removed so the complete branch passes `git diff --check`.
+
+Before this fix, 252 local tests, lint, compilation, both integrity guards, and
+the offline MCP document and summary workflows passed. Hosted CI must run on
+the corrected workflow before the main-branch merge is recommended.
+
 ## Summary maintenance — 2026-10-16
 
 Summary submission previously coordinated core policy and persistence inside the

@@ -225,6 +225,9 @@ class NanoVectorDBStorage(BaseVectorStorage):
             "created_at": item.get("__created_at__"),
         }
 
+    async def is_empty(self) -> bool:
+        return len(await self._get_client()) == 0
+
     async def reload_from_disk(self) -> None:
         async with self._storage_lock:
             self._client = NanoVectorDB(self.embedding_func.embedding_dim, storage_file=self._client_file_name)
@@ -272,7 +275,9 @@ class NanoVectorDBStorage(BaseVectorStorage):
         try:
             client = await self._get_client()
             storage = getattr(client, "_NanoVectorDB__storage")
-            storage["data"] = []
+            # delete() clears both metadata and the aligned embedding matrix.
+            # Clearing metadata alone leaves stale rows in later vector queries.
+            client.delete([record["__id__"] for record in storage["data"]])
             await self.index_done_callback()
             return {"status": "success", "message": "data dropped"}
         except Exception as exc:

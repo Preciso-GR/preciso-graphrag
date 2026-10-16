@@ -12,6 +12,7 @@ from core.session_lock import ingestion_session_lock
 from core.utils import load_json, logger, write_json
 
 ARTIFACTS = (
+    "kv_store_documents.json",
     "graph_graph.graphml", "vdb_entities.json", "vdb_relationships.json", "vdb_chunks.json",
     "kv_store_text_chunks.json", "kv_store_entity_chunks.json", "kv_store_relation_chunks.json",
     "kv_store_pending_summaries.json", "kv_store_llm_cache.json", "kv_store_checkpoints.json",

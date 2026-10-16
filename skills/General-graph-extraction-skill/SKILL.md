@@ -18,17 +18,20 @@ description: >
 
 ## Agent Runtime Contract
 
+Read [Document preparation](../../docs/document-preparation.md) before processing a source.
+Its evidence and authorization rules apply to this skill.
+
 Use this skill when the raw input file is in `to_be_extracted/` and the content is not primarily financial or academic literature.
 
 Execution contract:
-- Call `get_server_status()` before starting extraction.
-- If overall is `degraded`, explain what is degraded, what still works, and ask whether to proceed or fix first.
+- For extraction-only work, keep the MCP server stopped. If ingestion is in scope, check `get_server_status()` before ingestion.
+- If status is `degraded`, explain the problem. Respect existing authorization. Ask only when a decision is needed to proceed.
 - Read one raw source file from `to_be_extracted/` at a time unless the user explicitly asks for a combined extraction.
 - For the best graph quality, prefer `.md` and `.txt` source files. If the source is PDF or heavily formatted export text, assume there is no built-in repo parser or OCR layer and be conservative about layout noise.
 - Write exactly one extraction JSON for that source file to `extractions/{source_filename}_extracted.json`.
 - Validate entity, relationship, and chunk integrity before ingestion.
 - If the extraction has duplicates, orphaned relationships, or consistency issues, run reconciliation before ingestion.
-- After a clean extraction is written, call `ingest_from_file`.
+- After a clean extraction is written, show the review summary. Call `ingest_from_file` only within the authorized ingestion scope.
 
 ## What This Skill Does
 
@@ -116,11 +119,13 @@ Chunks are the evidence base. Every entity and relationship must point to a chun
   "chunk_order_index": 1,
   "file_path": "README.md"
 }
-
-**Chunk size limits (required):**
-- Target 400-800 characters per chunk (or ~200-300 tokens if you have a tokenizer).
-- Hard cap 1,000 characters per chunk. If a paragraph/table is longer, split it.
 ```
+
+**Chunk size guidance:**
+- Prefer one complete evidence passage per chunk.
+- Target 400–800 characters when the passage permits it.
+- Keep each extraction chunk within 1,000 characters. Split longer passages at meaningful boundaries.
+- Character counts and token counts are different measurements. Do not treat them as equivalent.
 
 ---
 
@@ -213,7 +218,7 @@ Relevant relationship keywords: `ASSIGNED_TO`, `BLOCKS`, `RELATES_TO`, `DECIDED_
 - `keywords` should include the relationship type (e.g., `CALLS`, `OWNS`, `DEPENDS_ON`)
 - Add `context=...` or `source_section=...` in `keywords` when useful
 - Directed relationships: source → target; for bidirectional add both directions
-- only create a relationship when the source text gives direct support for it or the implication is extremely clear from local context
+- Create a relationship only when the cited source passage supports it. Preserve negation and uncertainty.
 
 ---
 
@@ -241,14 +246,14 @@ Prefer signal over completeness. A smaller, cleaner graph is better than a bloat
 - Distinguish between implementation details and stable concepts; prefer stable concepts unless the user clearly wants code-level granularity
 
 ### For Documentation
-- Every named concept becomes an entity
+- Extract a named concept only when it supports a useful fact or relationship
 - Every "see also", "refer to", "documented in" becomes a `REFERENCES` relationship
 - Every "owned by", "maintained by" becomes an `OWNS` relationship
 - Procedural steps → sequence of `PROCESS` entities linked by `PRECEDES`
 - Collapse repeated explanations into one canonical entity with the clearest supporting chunk
 
 ### For Notes/Tickets
-- Every named person is an entity
+- Extract a named person when the source connects that person to a useful fact
 - Every task or action item is an entity
 - Capture blockers as explicit `BLOCKER` entities with `BLOCKS` relationships
 - Favor decisions, owners, due dates, and blockers over conversational filler
@@ -261,10 +266,11 @@ Prefer signal over completeness. A smaller, cleaner graph is better than a bloat
 |-----------|---------------------|--------------------|
 | Precision | Exact (numbers must match) | Semantic (meaning over literal match) |
 | Coverage | Deep in financial semantics | Broad across any domain |
-| Ambiguity | Resolve strictly (no inference) | Light inference OK if clearly implied |
-| Missing values | Leave blank, don't guess | Infer from context if confident |
+| Ambiguity | Preserve uncertainty; do not invent facts | Preserve uncertainty; do not invent facts |
+| Missing values | Omit unsupported facts; do not guess | Omit unsupported facts; do not guess |
 
-In general extraction, if a README says "the auth module handles login and token refresh", it's reasonable to extract a `CONCEPT` entity `token_refresh` and link it to the auth module via `IMPLEMENTS` even if not explicitly stated that way.
+You may normalize a supported concept name. For example, "token refresh" can become `token_refresh`.
+Name normalization must not introduce an unsupported action or relationship.
 
 But do not stretch this into speculation. If the text is ambiguous, prefer fewer entities and relationships.
 
@@ -299,7 +305,7 @@ If an extracted entity or relationship is unlikely to help answer one of those q
 ## Step-by-Step Agent Workflow
 
 ```
-1. CALL get_server_status() and surface degraded modes before continuing
+1. CHECK the requested scope. For extraction-only work, keep the MCP server stopped.
 2. READ the full document (or repo files in scope)
 3. IDENTIFY domain subtype (codebase, wiki, notes, etc.)
 4. CHUNK the text into evidence blocks (sections, paragraphs, or tables)
@@ -313,7 +319,7 @@ If an extracted entity or relationship is unlikely to help answer one of those q
    - Every entity/relationship source_id matches a chunk_id
    - Output path matches the current source file name
 9. WRITE to extractions/{filename}_extracted.json
-10. CALL ingest_from_file MCP tool
+10. SHOW the review summary; CALL ingest_from_file only within the authorized ingestion scope
 11. CALL list_pending_summaries() and resolve any flagged entities/relationships
     via submit_summary(...) before finishing — Preciso never compresses
     descriptions itself, so this step is the only way descriptions
@@ -422,6 +428,9 @@ If an extracted entity or relationship is unlikely to help answer one of those q
 ---
 
 ## After Extraction
+
+For extraction-only requests, return the extraction and review summary.
+The remaining actions require ingestion authorization.
 
 - Run `ingest_from_file("extractions/{filename}_extracted.json")` via MCP
 - If ingestion fails, use `reingest_from_file(...)` to replay without re-extracting

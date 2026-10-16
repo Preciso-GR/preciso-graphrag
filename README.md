@@ -96,6 +96,9 @@ Best inputs: `.md`, `.txt`, README files, wiki exports, notes.
 
 > For PDFs: convert to `.md` first, or use Claude Code / Codex which can read PDFs natively.
 
+See [document preparation](docs/document-preparation.md) for mechanism 0 and a worked example.
+For extraction-only work, keep the MCP server stopped.
+
 ### Important: verify your source documents before extraction
 
 Before you ask an agent to process anything in `to_be_extracted/`, check the source documents yourself. Make sure they are factually correct, current, complete, and the exact versions you want represented in the graph. Extraction validation can catch structural problems, but it cannot guarantee that the source document itself is true.

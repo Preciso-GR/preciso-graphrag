@@ -153,7 +153,7 @@ async def _submit_summary(
     """Store the agent's rolling summary and clear (or re-flag) the pending record.
 
     The whole read-check-write happens under the same per-entity/per-relation
-    lock `ingest/pipeline.py` takes for merges (`get_storage_keyed_lock`), so a
+    lock the extraction implementation takes for merges (`get_storage_keyed_lock`), so a
     concurrent ingest can't land between the concurrency check and the write.
 
     `expected_description_count` must be the `description_count` the agent last

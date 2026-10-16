@@ -318,10 +318,10 @@ async def test_graph_edit_rebuild_failure_restores_prior_graph_and_rules(storage
         await stores["text_chunks"].get_by_id("graph-edit-rollback::chunk-1")
     )
 
-    async def fail_rebuild(payload, storage_instances, global_config):
-        return {"status": "error", "message": "injected rebuild failure"}
+    async def fail_write(data):
+        raise OSError("injected evidence write failure")
 
-    monkeypatch.setattr("ingest.pipeline._ingest_extracted_json", fail_rebuild)
+    monkeypatch.setattr(stores["text_chunks"], "upsert", fail_write)
     listing = await graph_operation(stores, config, "inspect")
     result = await graph_operation(
         stores,

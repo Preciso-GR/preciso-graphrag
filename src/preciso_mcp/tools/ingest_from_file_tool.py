@@ -7,7 +7,7 @@ from typing import Any
 
 from ingest.parser import parse_markdown_extraction
 from ingest.file_access import read_extraction_text, resolve_input_file
-from ingest.pipeline import ingest_extracted_json
+from core.documents import ingest_extracted_json
 from ingest.validator import validate_extraction_structure
 
 SUPPORTED_MARKDOWN_SUFFIXES = {".md", ".txt"}

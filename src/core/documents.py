@@ -13,6 +13,7 @@ import time
 from config import GRAPH_FIELD_SEP
 from core.session_lock import graph_read_session
 from core.transactions import run_artifact_mutation
+from ingest._materialize import apply_extraction
 from ingest.validator import validate_entity, validate_extraction_structure, validate_relationship
 
 STATE = "__state__"
@@ -82,12 +83,27 @@ async def _records(stores: dict) -> dict:
             (await stores["documents"].get_all_items()).items() if key != STATE}
 
 
-async def tracked_ingest(payload: dict, stores: dict, config: dict) -> dict:
-    """Called inside the ingestion transaction; preserve custom adapter support."""
-    from ingest.pipeline import _ingest_extracted_json
+async def ingest_extracted_json(payload, storage_instances: dict, global_config: dict) -> dict:
+    """Validate and commit an extraction with its document contributions.
 
+    This is the public ingestion interface. Creates and Full Rebuilds share the
+    same extraction implementation without re-entering this transaction.
+    """
+    if not isinstance(payload, dict):
+        return {"status": "error", "message": "payload must be an object"}
+    errors = validate_extraction_structure(payload)
+    if errors:
+        return {"status": "validation_failed", "errors": errors}
+    return await run_artifact_mutation(
+        lambda: _ingest_document(payload, storage_instances, global_config),
+        storage_instances, global_config,
+    )
+
+
+async def _ingest_document(payload: dict, stores: dict, config: dict) -> dict:
+    """Called inside the ingestion transaction; preserve custom adapter support."""
     if "documents" not in stores:
-        return await _ingest_extracted_json(payload, stores, config)
+        return await apply_extraction(payload, stores, config)
     document_id = payload["document_id"]
     if document_id.startswith("__"):
         return failure("invalid_document_id", "Document IDs starting with __ are reserved")
@@ -116,7 +132,7 @@ async def tracked_ingest(payload: dict, stores: dict, config: dict) -> dict:
         result = {"status": "success", "document_id": document_id, "message": "Document added; graph edits retained"}
     else:
         record = _record(payload, digest)
-        result = await _ingest_extracted_json(copy.deepcopy(record["payload"]), stores, config)
+        result = await apply_extraction(copy.deepcopy(record["payload"]), stores, config)
     if result["status"] not in {"success", "partial_success"}:
         return result
     # Incomplete/uncited legacy extraction remains readable, but is not safe to rebuild.
@@ -140,8 +156,6 @@ def _record(payload: dict, digest: str) -> dict:
 
 async def _rebuild(records: dict, state: dict, stores: dict, config: dict) -> dict:
     """Simple correctness baseline: replay complete contributions, not merged text."""
-    from ingest.pipeline import _ingest_extracted_json
-
     for name in DERIVED:
         result = await stores[name].drop()
         if result.get("status") != "success":
@@ -150,7 +164,7 @@ async def _rebuild(records: dict, state: dict, stores: dict, config: dict) -> di
     blocked = _blocked_chunks(records, edits)
     for record in records.values():
         payload = _project(record["payload"], edits, blocked)
-        result = await _ingest_extracted_json(payload, stores, config)
+        result = await apply_extraction(payload, stores, config)
         if result["status"] != "success" or result.get("warnings"):
             return failure("rebuild_failed", "A document could not be rebuilt with complete evidence", details=result)
     for node_id, label in edits.get("labels", {}).items():
@@ -293,7 +307,7 @@ async def document_operation(stores: dict, config: dict, action: str,
                     "document_id": document_id,
                     "rebuild_documents": len(records) - (action == "delete") + (action == "create" and old is None)}
         if action == "create":
-            return await tracked_ingest(payload, stores, config)
+            return await _ingest_document(payload, stores, config)
         if expected_revision is None:
             return failure("revision_required", "Provide the revision returned by a preview")
         if action == "replace":

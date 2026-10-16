@@ -11,14 +11,13 @@ from mcp.server.fastmcp import FastMCP
 
 from config import DEFAULT_EMBEDDING_PROVIDER, build_default_embedding_func, build_global_config, probe_ollama_embedding
 from core.bootstrap import build_storage_instances, initialize_storage_instances
-from core.documents import document_operation, graph_operation, read_evidence
+from core.documents import document_operation, graph_operation, ingest_extracted_json, read_evidence
 from core.query import kg_query
 from core.runtime_status import update_artifact_manifest
 from core.storage.base import QueryParam
 from core.utils import BasicTokenizer, logger
 from core.session_lock import graph_directory_owner
 from preciso_mcp.tools.checkpoint_tool import ingest_checkpoint
-from ingest.pipeline import ingest_extracted_json
 from ingest.validator import validate_extraction_structure
 from preciso_mcp.tools.export_tool import export_to_neo4j, export_to_qdrant
 from preciso_mcp.tools.ingest_from_file_tool import ingest_from_file, reingest_from_file
@@ -208,7 +207,7 @@ async def ingest_graph_tool(payload: dict) -> dict:
     
     PROCESS:
         1. Validates payload structure
-        2. Calls ingest_extracted_json() → ingest/pipeline.py
+        2. Calls ingest_extracted_json() → core/documents.py
         3. Transforms entities → nodes, relationships → edges
         4. Merges with existing graph (if entities already exist)
         5. Stores in vector DB for semantic search
@@ -269,7 +268,7 @@ async def ingest_from_file_tool(file_path: str) -> dict:
            - .json → parsed as JSON directly
            - .md/.txt → parsed via parse_markdown_extraction()
         4. Validates payload structure
-        5. Calls ingest_extracted_json() → ingest/pipeline.py
+        5. Calls ingest_extracted_json() → core/documents.py
         6. Merges new data with existing graph
     
     OUTPUT:
@@ -295,7 +294,7 @@ async def ingest_from_file_tool(file_path: str) -> dict:
     
     RELATED:
         → Used after agent calls: ingest_from_file("extractions/document_extracted.json")
-        → Calls: ingest/pipeline.py → ingest_extracted_json()
+        → Calls: core/documents.py → ingest_extracted_json()
     """
     return await ingest_from_file(file_path, storage_instances, global_config)
 

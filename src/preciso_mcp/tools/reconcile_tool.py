@@ -20,7 +20,7 @@ from ingest.file_access import read_extraction_text, resolve_input_file
 from ingest.validator import _positive_limit
 from uuid import uuid4
 from ingest.reconciler import reconcile_extractions
-from ingest.pipeline import ingest_extracted_json
+from core.documents import ingest_extracted_json
 
 
 def _is_full_extraction(payload: dict) -> bool:

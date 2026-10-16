@@ -2,6 +2,37 @@
 
 Scope: the core-only branch. Supply-chain features and service containers are excluded.
 
+## Ingestion coordination — 2026-10-16
+
+The public ingestion path called Contribution Ledger code, which imported a
+private function back from ingestion. Full Rebuild had to skip public ingestion
+to avoid another transaction. This made mutation ordering depend on knowledge
+across both modules.
+
+The Contribution Ledger module now owns public ingestion validation and
+transaction coordination. `ingest/_materialize.py` holds the existing extraction
+writes as an internal implementation. Creates and Full Rebuild use those writes
+without re-entering public ingestion. MCP adapters import the coordinator directly.
+The old `ingest.pipeline.ingest_extracted_json` import points to the same public
+function for existing callers.
+
+The moved extraction functions passed a syntax-tree equivalence check after
+normalizing the function name and documentation. Existing lifecycle rollback
+tests now inject failure through the evidence store adapter after chunk vectors
+have been written. They verify actual partial-write recovery instead of patching
+a private ingestion function. The legacy-data test uses the public ingestion
+interface with an adapter set that has no ledger.
+
+The refactor adds no dependency or storage format. Full Rebuild cost and locking
+behavior are unchanged. It improves locality of coordination; no runtime speed or
+memory improvement is claimed.
+
+Verification: all 250 tests passed locally and in the locked Linux container.
+Compilation, lint, both integrity guards, and the MCP lifecycle smoke passed.
+The smoke used temporary data and offline embeddings. It checked 10 initial
+documents, three additions, replay, replacement, deletion, stale revision,
+isolation, restart, restoration, and corrected evidence retrieval.
+
 ## Ingestion result preservation — 2026-10-16
 
 File and reconciliation adapters reconstructed ingestion results and discarded

@@ -7,7 +7,7 @@ import copy
 from core.bootstrap import build_storage_instances, initialize_storage_instances
 from core.transactions import ARTIFACTS
 from core.utils import compute_mdhash_id
-from ingest.pipeline import _ingest_extracted_json, ingest_extracted_json
+from ingest.pipeline import ingest_extracted_json
 
 
 def document_payload(
@@ -218,8 +218,9 @@ async def test_legacy_untracked_store_rejects_destructive_edit_without_changes(s
     legacy = document_payload(
         "legacy-untracked", chunk_text="Legacy content.", entity_description="Legacy ACME fact."
     )
-    # Seed the graph through the pre-ledger pipeline to model a real legacy store.
-    assert (await _ingest_extracted_json(legacy, stores, config))["status"] == "success"
+    # Model a legacy adapter set that has no contribution ledger.
+    legacy_stores = {name: store for name, store in stores.items() if name != "documents"}
+    assert (await ingest_extracted_json(legacy, legacy_stores, config))["status"] == "success"
     before = copy.deepcopy(await stores["text_chunks"].get_all_items())
 
     result = await lifecycle(
@@ -295,10 +296,10 @@ async def test_failed_rebuild_rolls_back_ledger_and_derived_stores(storage_stack
         if (root / name).is_file()
     }
 
-    async def fail_rebuild(payload, storage_instances, global_config):
-        return {"status": "error", "message": "injected rebuild failure"}
+    async def fail_write(data):
+        raise OSError("injected evidence write failure")
 
-    monkeypatch.setattr("ingest.pipeline._ingest_extracted_json", fail_rebuild)
+    monkeypatch.setattr(stores["text_chunks"], "upsert", fail_write)
     revision = await workspace_revision(stores, config)
     result = await lifecycle(
         stores,

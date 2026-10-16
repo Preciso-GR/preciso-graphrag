@@ -31,6 +31,13 @@ This avoids subtracting facts from a merged description or an agent summary.
 The existing artifact transaction also protects the ledger. A failed rebuild
 restores the previous files and in-memory stores.
 
+The Contribution Ledger module also coordinates ingestion. It validates the
+input and starts the artifact transaction. Its internal extraction implementation
+writes chunks, graph records, vectors, and pending summaries. Full Rebuild uses
+that implementation within the current transaction. It does not call public
+ingestion again. See [architecture](architecture.md#document-identity-and-incremental-ingestion)
+for the code flow.
+
 An identical retry returns `replay: true` and leaves the workspace revision
 unchanged. A changed extraction under an existing document ID returns
 `revision_conflict`. Use `replace` for that change. An extraction fragment is

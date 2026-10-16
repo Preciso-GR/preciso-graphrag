@@ -179,6 +179,26 @@ The `ingest_from_file` tool:
 
 ### Document identity and incremental ingestion
 
+The Contribution Ledger module owns ingestion coordination. The dependency flow is:
+
+```text
+MCP ingestion adapters
+    -> core.documents.ingest_extracted_json
+        -> existing artifact transaction
+            -> document contribution checks
+            -> internal extraction writes in ingest/_materialize.py
+            -> contribution ledger persistence
+```
+
+Document Replacement and graph editing use the same internal extraction writes
+during a Full Rebuild. They do not call public ingestion again or start a nested
+transaction. The transaction module still owns recovery, commit, and rollback.
+
+`ingest.pipeline.ingest_extracted_json` remains a compatibility import of the
+same public function. The internal extraction implementation does not import
+the Contribution Ledger or the compatibility module. Chunking, merging, evidence
+selection, and persisted artifact formats are unchanged by this refactor.
+
 Preciso builds one graph from one or more extraction payloads. The supported ingestion semantics are:
 
 - **Initial graph build:** ingest each source document with a stable, unique `document_id`.

@@ -7,8 +7,8 @@ server exposes ingestion, retrieval, status, summaries, and optional export tool
 
 | Directory | Responsibility |
 |---|---|
-| `src/core/` | Retrieval, merging, local storage, and transactions |
-| `src/ingest/` | Extraction parsing, validation, and ingestion |
+| `src/core/` | Document lifecycle coordination, retrieval, merging, storage, and transactions |
+| `src/ingest/` | Extraction parsing, validation, and internal graph/vector writes |
 | `src/preciso_mcp/` | MCP startup and tool interfaces |
 | `src/config.py` | Runtime settings, providers, and prompt defaults |
 | `tests/` | Automated offline regression tests |

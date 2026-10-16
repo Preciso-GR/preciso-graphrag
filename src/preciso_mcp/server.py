@@ -21,7 +21,7 @@ from preciso_mcp.tools.checkpoint_tool import ingest_checkpoint
 from ingest.validator import validate_extraction_structure
 from preciso_mcp.tools.export_tool import export_to_neo4j, export_to_qdrant
 from preciso_mcp.tools.ingest_from_file_tool import ingest_from_file, reingest_from_file
-from preciso_mcp.tools.pending_summaries_tool import list_pending_summaries, submit_summary
+from core.summary_maintenance import list_pending_summaries, submit_summary
 from preciso_mcp.tools.reconcile_tool import ingest_with_reconciliation
 from preciso_mcp.tools.status_tool import get_server_status
 

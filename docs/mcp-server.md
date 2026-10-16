@@ -141,6 +141,8 @@ part of the name only when no explicit MCP name overrides it.
 `kind` accepts `entity` or `relation`. For a relation summary, provide `src` and
 `tgt`. Echo the pending item's `content_token` as `expected_content_token`.
 Read pending work again if a stale count or token causes rejection.
+Summary policy and coordinated writes belong to the core summary module. The
+MCP tools forward requests and results. See [summary maintenance](summary-design.md).
 
 For the preview and commit procedure, see [document lifecycle](document-lifecycle.md).
 The new tools use application-level `status` and `error_code` fields. Inspect them

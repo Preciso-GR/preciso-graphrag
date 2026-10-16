@@ -2,6 +2,37 @@
 
 Scope: the core-only branch. Supply-chain features and service containers are excluded.
 
+## Summary maintenance — 2026-10-16
+
+Summary submission previously coordinated core policy and persistence inside the
+MCP adapter. It also imported private ledger state. The core workflow now owns
+listing, freshness checks, summary application, vector publication, and queue
+updates. The MCP adapter keeps compatibility imports of the public functions.
+
+Description partitioning and pending-work policy live in `core.summary`. Merge
+and submit use that same policy. `core.summary_maintenance` coordinates the
+workflow with the existing transaction. It reads rebuild generation through a
+public ledger accessor instead of importing private state. No new dependency,
+model call, or persisted format was introduced.
+
+Two new tests inject a pending-queue publication failure after graph and vector
+writes. Entity and relationship cases restore the prior artifact bytes, graph,
+and pending work, then permit a successful retry. The new offline MCP smoke checks
+both summary kinds, restart, replacement, stale-token rejection, and fresh work.
+CI now runs that smoke. Its shared tool-call helper accepts tool fields named
+`name` without conflicting with the positional tool-name argument.
+
+The summary guide now describes the current agent-written workflow. It removes
+outdated claims of automatic language-model compression and unconditional field
+size bounds. Summary freshness, budgets, recent-description retention, and MCP
+result shapes remain unchanged by this refactor.
+
+Verification: 252 tests passed locally and in the locked Linux container.
+Compilation, lint, both integrity guards, the document lifecycle MCP smoke, and
+the new summary MCP smoke passed. Shared policy logic also passed a syntax-tree
+equivalence check after normalizing moved names and documentation. Test data was
+temporary, with deterministic offline embeddings.
+
 ## Ingestion coordination — 2026-10-16
 
 The public ingestion path called Contribution Ledger code, which imported a

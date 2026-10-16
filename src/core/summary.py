@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import time
+
 from config import SUMMARY_MARKER
+from core.storage.base import BaseKVStorage
 
 
 # Reason surfaced on the merge return tuple (and mirrored into the pending-summary
 # queue record) when compression is needed. Preciso never compresses descriptions
-# itself — see preciso_mcp/tools/pending_summaries_tool.py, which is the only path
+# itself — see core/summary_maintenance.py, which is the only path
 # that ever writes a SUMMARY_MARKER segment.
 PENDING_SUMMARY_REASON = "summary_pending"
 
@@ -74,7 +77,7 @@ def _handle_entity_relation_summary(
     Preciso never calls an LLM to compress descriptions. When the field grows past
     bounds, it stays fully verbatim and the entity/relation is flagged
     PENDING_SUMMARY_REASON so the MCP-driving agent can compress it via
-    list_pending_summaries / submit_summary (preciso_mcp/tools/pending_summaries_tool.py)
+    list_pending_summaries / submit_summary (core/summary_maintenance.py)
     — that tool is the only place a SUMMARY_MARKER segment is ever written.
     """
     if not description_list:
@@ -101,3 +104,50 @@ def _handle_entity_relation_summary(
         return _assemble_description(prior_summary, raw_tail, separator), None
 
     return _assemble_description(prior_summary, raw_tail, separator), PENDING_SUMMARY_REASON
+
+
+def partition_summary_descriptions(description_list: list[str], raw_tail_size: int) -> tuple[str | None, list[str], list[str]]:
+    """(prior_summary, old_descriptions beyond raw_tail_size oldest-first, keep_tail newest)."""
+    prior_summary, raw_tail = _split_summary_zones(description_list)
+    keep_tail = raw_tail[len(raw_tail) - raw_tail_size :] if raw_tail_size else []
+    old_descriptions = raw_tail[: len(raw_tail) - len(keep_tail)]
+    return prior_summary, old_descriptions, keep_tail
+
+
+async def sync_pending_summary_record(
+    pending_summaries_storage: BaseKVStorage | None,
+    *,
+    key: str,
+    kind: str,
+    name: str,
+    src: str | None,
+    tgt: str | None,
+    summary_reason: str | None,
+    description_count: int,
+) -> None:
+    """Write or clear the pending-summary work-queue record for `key`.
+
+    Called after every merge. When a later merge brings the field back within
+    bounds (summary_reason is no longer PENDING_SUMMARY_REASON), the stale
+    record is cleared here too — the pending store is a work queue, not
+    authoritative content. `description_count` doubles as an optimistic-
+    concurrency token: submit_summary rejects a submission if the live count has
+    moved since the agent last read it via list_pending_summaries.
+    """
+    if pending_summaries_storage is None:
+        return
+    if summary_reason == PENDING_SUMMARY_REASON:
+        await pending_summaries_storage.upsert(
+            {
+                key: {
+                    "kind": kind,
+                    "name": name,
+                    "src": src,
+                    "tgt": tgt,
+                    "description_count": description_count,
+                    "created_at": int(time.time()),
+                }
+            }
+        )
+    else:
+        await pending_summaries_storage.delete([key])

@@ -1,0 +1,935 @@
+{
+  "platform": "macOS-26.5.1-arm64-arm-64bit-Mach-O",
+  "python": "3.13.5",
+  "dependency_footprint": {
+    "packages": [
+      {
+        "name": "annotated-types",
+        "version": "0.8.0",
+        "added_by_fastembed": false,
+        "installed_bytes": 67721,
+        "cached_wheel_bytes": 13427
+      },
+      {
+        "name": "anyio",
+        "version": "4.15.1",
+        "added_by_fastembed": false,
+        "installed_bytes": 1287580,
+        "cached_wheel_bytes": 132079
+      },
+      {
+        "name": "attrs",
+        "version": "26.1.0",
+        "added_by_fastembed": false,
+        "installed_bytes": 440430,
+        "cached_wheel_bytes": 67548
+      },
+      {
+        "name": "certifi",
+        "version": "2026.7.22",
+        "added_by_fastembed": false,
+        "installed_bytes": 254111,
+        "cached_wheel_bytes": 136983
+      },
+      {
+        "name": "cffi",
+        "version": "2.1.1",
+        "added_by_fastembed": false,
+        "installed_bytes": 1046773,
+        "cached_wheel_bytes": 184764
+      },
+      {
+        "name": "charset-normalizer",
+        "version": "3.5.2",
+        "added_by_fastembed": false,
+        "installed_bytes": 1340363,
+        "cached_wheel_bytes": 366626
+      },
+      {
+        "name": "click",
+        "version": "8.5.0",
+        "added_by_fastembed": false,
+        "installed_bytes": 953117,
+        "cached_wheel_bytes": 125251
+      },
+      {
+        "name": "cryptography",
+        "version": "50.0.2",
+        "added_by_fastembed": false,
+        "installed_bytes": 11598386,
+        "cached_wheel_bytes": 3914904
+      },
+      {
+        "name": "fastembed",
+        "version": "0.9.0",
+        "added_by_fastembed": true,
+        "installed_bytes": 980945,
+        "cached_wheel_bytes": 142280
+      },
+      {
+        "name": "filelock",
+        "version": "4.2.0",
+        "added_by_fastembed": true,
+        "installed_bytes": 993871,
+        "cached_wheel_bytes": 135032
+      },
+      {
+        "name": "flatbuffers",
+        "version": "25.12.19",
+        "added_by_fastembed": true,
+        "installed_bytes": 221953,
+        "cached_wheel_bytes": 26661
+      },
+      {
+        "name": "fsspec",
+        "version": "2026.9.0",
+        "added_by_fastembed": true,
+        "installed_bytes": 1829396,
+        "cached_wheel_bytes": 221738
+      },
+      {
+        "name": "h11",
+        "version": "0.16.0",
+        "added_by_fastembed": false,
+        "installed_bytes": 186249,
+        "cached_wheel_bytes": 37515
+      },
+      {
+        "name": "hf-xet",
+        "version": "1.7.0",
+        "added_by_fastembed": true,
+        "installed_bytes": 7714099,
+        "cached_wheel_bytes": 3560352
+      },
+      {
+        "name": "httpcore",
+        "version": "1.0.9",
+        "added_by_fastembed": false,
+        "installed_bytes": 631647,
+        "cached_wheel_bytes": 78784
+      },
+      {
+        "name": "httpx",
+        "version": "0.28.1",
+        "added_by_fastembed": false,
+        "installed_bytes": 637286,
+        "cached_wheel_bytes": 73517
+      },
+      {
+        "name": "httpx-sse",
+        "version": "0.4.3",
+        "added_by_fastembed": false,
+        "installed_bytes": 34633,
+        "cached_wheel_bytes": 8960
+      },
+      {
+        "name": "huggingface-hub",
+        "version": "1.33.0",
+        "added_by_fastembed": true,
+        "installed_bytes": 6691825,
+        "cached_wheel_bytes": 846435
+      },
+      {
+        "name": "idna",
+        "version": "3.20",
+        "added_by_fastembed": false,
+        "installed_bytes": 518429,
+        "cached_wheel_bytes": 69583
+      },
+      {
+        "name": "jsonschema",
+        "version": "4.26.0",
+        "added_by_fastembed": false,
+        "installed_bytes": 949226,
+        "cached_wheel_bytes": 90630
+      },
+      {
+        "name": "jsonschema-specifications",
+        "version": "2025.9.1",
+        "added_by_fastembed": false,
+        "installed_bytes": 51932,
+        "cached_wheel_bytes": 18437
+      },
+      {
+        "name": "loguru",
+        "version": "0.7.3",
+        "added_by_fastembed": true,
+        "installed_bytes": 457942,
+        "cached_wheel_bytes": 61595
+      },
+      {
+        "name": "mcp",
+        "version": "1.30.0",
+        "added_by_fastembed": false,
+        "installed_bytes": 1825781,
+        "cached_wheel_bytes": 234581
+      },
+      {
+        "name": "mmh3",
+        "version": "5.3.1",
+        "added_by_fastembed": true,
+        "installed_bytes": 212068,
+        "cached_wheel_bytes": 39561
+      },
+      {
+        "name": "nano-vectordb",
+        "version": "0.0.4.3",
+        "added_by_fastembed": false,
+        "installed_bytes": 30927,
+        "cached_wheel_bytes": 5590
+      },
+      {
+        "name": "networkx",
+        "version": "3.7",
+        "added_by_fastembed": false,
+        "installed_bytes": 16099310,
+        "cached_wheel_bytes": 2142205
+      },
+      {
+        "name": "numpy",
+        "version": "2.5.4",
+        "added_by_fastembed": false,
+        "installed_bytes": 32417475,
+        "cached_wheel_bytes": 5445803
+      },
+      {
+        "name": "ollama",
+        "version": "0.6.3",
+        "added_by_fastembed": false,
+        "installed_bytes": 162732,
+        "cached_wheel_bytes": 16603
+      },
+      {
+        "name": "onnxruntime",
+        "version": "1.31.0",
+        "added_by_fastembed": true,
+        "installed_bytes": 82228831,
+        "cached_wheel_bytes": 20881803
+      },
+      {
+        "name": "packaging",
+        "version": "26.3",
+        "added_by_fastembed": true,
+        "installed_bytes": 995706,
+        "cached_wheel_bytes": 129956
+      },
+      {
+        "name": "pillow",
+        "version": "12.3.0",
+        "added_by_fastembed": true,
+        "installed_bytes": 14666024,
+        "cached_wheel_bytes": 4780109
+      },
+      {
+        "name": "preciso-graphrag",
+        "version": "0.1.0",
+        "added_by_fastembed": false,
+        "installed_bytes": 2957061,
+        "cached_wheel_bytes": null
+      },
+      {
+        "name": "protobuf",
+        "version": "7.36.2",
+        "added_by_fastembed": true,
+        "installed_bytes": 2698570,
+        "cached_wheel_bytes": 456039
+      },
+      {
+        "name": "py-rust-stemmers",
+        "version": "0.1.8",
+        "added_by_fastembed": true,
+        "installed_bytes": 688817,
+        "cached_wheel_bytes": 275628
+      },
+      {
+        "name": "pycparser",
+        "version": "3.11",
+        "added_by_fastembed": false,
+        "installed_bytes": 455083,
+        "cached_wheel_bytes": 51178
+      },
+      {
+        "name": "pydantic",
+        "version": "2.14.1",
+        "added_by_fastembed": false,
+        "installed_bytes": 3903685,
+        "cached_wheel_bytes": 488106
+      },
+      {
+        "name": "pydantic-core",
+        "version": "2.50.1",
+        "added_by_fastembed": false,
+        "installed_bytes": 4871651,
+        "cached_wheel_bytes": 2024738
+      },
+      {
+        "name": "pydantic-settings",
+        "version": "2.16.0",
+        "added_by_fastembed": false,
+        "installed_bytes": 612924,
+        "cached_wheel_bytes": 80364
+      },
+      {
+        "name": "pyjwt",
+        "version": "2.15.1",
+        "added_by_fastembed": false,
+        "installed_bytes": 251486,
+        "cached_wheel_bytes": 33860
+      },
+      {
+        "name": "python-dotenv",
+        "version": "1.2.4",
+        "added_by_fastembed": false,
+        "installed_bytes": 117982,
+        "cached_wheel_bytes": 23266
+      },
+      {
+        "name": "python-multipart",
+        "version": "0.0.32",
+        "added_by_fastembed": false,
+        "installed_bytes": 186849,
+        "cached_wheel_bytes": 30042
+      },
+      {
+        "name": "pyyaml",
+        "version": "6.0.3",
+        "added_by_fastembed": true,
+        "installed_bytes": 865521,
+        "cached_wheel_bytes": 173252
+      },
+      {
+        "name": "referencing",
+        "version": "0.37.0",
+        "added_by_fastembed": false,
+        "installed_bytes": 265483,
+        "cached_wheel_bytes": 26766
+      },
+      {
+        "name": "regex",
+        "version": "2026.9.29",
+        "added_by_fastembed": false,
+        "installed_bytes": 1846451,
+        "cached_wheel_bytes": 293472
+      },
+      {
+        "name": "requests",
+        "version": "2.34.2",
+        "added_by_fastembed": false,
+        "installed_bytes": 478528,
+        "cached_wheel_bytes": 73075
+      },
+      {
+        "name": "rpds-py",
+        "version": "2026.9.1",
+        "added_by_fastembed": false,
+        "installed_bytes": 989730,
+        "cached_wheel_bytes": 340514
+      },
+      {
+        "name": "sse-starlette",
+        "version": "3.5.0",
+        "added_by_fastembed": false,
+        "installed_bytes": 76224,
+        "cached_wheel_bytes": 17407
+      },
+      {
+        "name": "starlette",
+        "version": "1.8.0",
+        "added_by_fastembed": false,
+        "installed_bytes": 652175,
+        "cached_wheel_bytes": 79612
+      },
+      {
+        "name": "tiktoken",
+        "version": "0.14.0",
+        "added_by_fastembed": false,
+        "installed_bytes": 3024609,
+        "cached_wheel_bytes": 1038820
+      },
+      {
+        "name": "tokenizers",
+        "version": "0.23.3",
+        "added_by_fastembed": true,
+        "installed_bytes": 10066489,
+        "cached_wheel_bytes": 3101381
+      },
+      {
+        "name": "tqdm",
+        "version": "4.70.1",
+        "added_by_fastembed": true,
+        "installed_bytes": 449557,
+        "cached_wheel_bytes": 80199
+      },
+      {
+        "name": "typing-extensions",
+        "version": "4.16.0",
+        "added_by_fastembed": false,
+        "installed_bytes": 348678,
+        "cached_wheel_bytes": 45571
+      },
+      {
+        "name": "typing-inspection",
+        "version": "0.4.4",
+        "added_by_fastembed": false,
+        "installed_bytes": 90206,
+        "cached_wheel_bytes": 14750
+      },
+      {
+        "name": "urllib3",
+        "version": "2.8.0",
+        "added_by_fastembed": false,
+        "installed_bytes": 930794,
+        "cached_wheel_bytes": 135717
+      },
+      {
+        "name": "uvicorn",
+        "version": "0.54.0",
+        "added_by_fastembed": false,
+        "installed_bytes": 688548,
+        "cached_wheel_bytes": 87427
+      }
+    ],
+    "added_installed_bytes": 131761614,
+    "added_cached_wheel_bytes": 34912021,
+    "missing_added_wheel_sizes": [],
+    "limitations": "Active dependency closure in this resolved macOS environment. Installed bytes include recorded package files and omit interpreter, pip, unrecorded bytecode, model cache, and editable source. Wheel sizes are recovered from this run's pip HTTP cache."
+  },
+  "fresh_process_retrieval_stable": true,
+  "limitations": "Six synthetic direct-chunk cases; no graph edges, answers, representative corpus, load test, or default-model approval. Offline settings and socket guards block Python network connections; this is not an OS network sandbox. Peak RSS is per child. First load uses an already downloaded cache; repeated load may benefit from OS page cache.",
+  "results": [
+    {
+      "provider": "fallback",
+      "fixture_sha256": "4df12b1ed7143d985d807a92c2d785d757a79afe6aacc67ed1fea7f8d3ce9f83",
+      "elapsed_seconds": 1.165844917006325,
+      "memory": {
+        "rss_mib": 42.27,
+        "process_peak_rss_mib": 61.03
+      },
+      "network_attempts": 1,
+      "blocked_connections": [
+        {
+          "target": "('57.150.192.193', 443)",
+          "callers": [
+            "load.py:read_file_cached",
+            "load.py:read_file",
+            "api.py:get",
+            "api.py:request",
+            "sessions.py:request",
+            "sessions.py:send",
+            "adapters.py:send",
+            "connectionpool.py:urlopen",
+            "connectionpool.py:_make_request",
+            "connectionpool.py:_validate_conn",
+            "connection.py:connect",
+            "connection.py:_new_conn",
+            "connection.py:create_connection"
+          ]
+        }
+      ],
+      "details": {},
+      "retrieval": {
+        "provider": "fallback",
+        "embedding": {
+          "provider": "fallback",
+          "model": "fallback",
+          "revision": "lexical-v1",
+          "dimension": 8,
+          "asymmetric": false,
+          "format_version": 1
+        },
+        "context_tokenizer": "whitespace-fallback",
+        "embedding_concurrency": 1,
+        "vector_similarity_threshold": 0.6,
+        "mode": "mix",
+        "chunk_top_k": 2,
+        "mean_evidence_recall": 0.7,
+        "complete_evidence_cases": 3,
+        "answerable_cases": 5,
+        "queries": [
+          {
+            "id": "retention",
+            "retrieved": [
+              "retrieval-pilot::archive",
+              "retrieval-pilot::access"
+            ],
+            "required": [
+              "retrieval-pilot::archive"
+            ],
+            "recall": 1.0,
+            "complete_evidence": true,
+            "unsupported_returned_evidence": null,
+            "valid_chunk_ids": true,
+            "query_seconds": 0.0038
+          },
+          {
+            "id": "identifier",
+            "retrieved": [
+              "retrieval-pilot::alerts",
+              "retrieval-pilot::garden"
+            ],
+            "required": [
+              "retrieval-pilot::alerts"
+            ],
+            "recall": 1.0,
+            "complete_evidence": true,
+            "unsupported_returned_evidence": null,
+            "valid_chunk_ids": true,
+            "query_seconds": 0.002
+          },
+          {
+            "id": "paraphrase",
+            "retrieved": [
+              "retrieval-pilot::restore",
+              "retrieval-pilot::archive"
+            ],
+            "required": [
+              "retrieval-pilot::restore"
+            ],
+            "recall": 1.0,
+            "complete_evidence": true,
+            "unsupported_returned_evidence": null,
+            "valid_chunk_ids": true,
+            "query_seconds": 0.0007
+          },
+          {
+            "id": "access",
+            "retrieved": [
+              "retrieval-pilot::restore",
+              "retrieval-pilot::weather"
+            ],
+            "required": [
+              "retrieval-pilot::access"
+            ],
+            "recall": 0.0,
+            "complete_evidence": false,
+            "unsupported_returned_evidence": null,
+            "valid_chunk_ids": true,
+            "query_seconds": 0.0005
+          },
+          {
+            "id": "combined",
+            "retrieved": [
+              "retrieval-pilot::alerts",
+              "retrieval-pilot::restore"
+            ],
+            "required": [
+              "retrieval-pilot::archive",
+              "retrieval-pilot::restore"
+            ],
+            "recall": 0.5,
+            "complete_evidence": false,
+            "unsupported_returned_evidence": null,
+            "valid_chunk_ids": true,
+            "query_seconds": 0.0004
+          },
+          {
+            "id": "unsupported",
+            "retrieved": [
+              "retrieval-pilot::restore",
+              "retrieval-pilot::alerts"
+            ],
+            "required": [],
+            "recall": null,
+            "complete_evidence": null,
+            "unsupported_returned_evidence": true,
+            "valid_chunk_ids": true,
+            "query_seconds": 0.0005
+          }
+        ],
+        "reopened_query_matches": true
+      }
+    },
+    {
+      "provider": "fastembed",
+      "fixture_sha256": "4df12b1ed7143d985d807a92c2d785d757a79afe6aacc67ed1fea7f8d3ce9f83",
+      "elapsed_seconds": 3.046899209031835,
+      "memory": {
+        "rss_mib": 157.61,
+        "process_peak_rss_mib": 275.47
+      },
+      "network_attempts": 1,
+      "blocked_connections": [
+        {
+          "target": "('57.150.192.193', 443)",
+          "callers": [
+            "load.py:read_file_cached",
+            "load.py:read_file",
+            "api.py:get",
+            "api.py:request",
+            "sessions.py:request",
+            "sessions.py:send",
+            "adapters.py:send",
+            "connectionpool.py:urlopen",
+            "connectionpool.py:_make_request",
+            "connectionpool.py:_validate_conn",
+            "connection.py:connect",
+            "connection.py:_new_conn",
+            "connection.py:create_connection"
+          ]
+        }
+      ],
+      "details": {
+        "fastembed_version": "0.9.0",
+        "model": "BAAI/bge-small-en-v1.5",
+        "source_revision": "aa8f8b060edb00e03bfdd08813a2949946c8ba55",
+        "model_files_bytes": 67411571,
+        "model_initialization_seconds": 0.7670441250083968,
+        "warm_embedding_median_ms": 6.9256669958122075,
+        "overlength_tail_vectors_identical": true,
+        "overlength_text_characters": 3500,
+        "threads": 1,
+        "overlength_untruncated_tokens": 607,
+        "model_manifest": {
+          "model": "BAAI/bge-small-en-v1.5",
+          "repository": "Qdrant/bge-small-en-v1.5-onnx-Q",
+          "revision": "aa8f8b060edb00e03bfdd08813a2949946c8ba55",
+          "path": "/private/tmp/preciso-fastembed-eval/model-cache/hub/models--Qdrant--bge-small-en-v1.5-onnx-Q/snapshots/aa8f8b060edb00e03bfdd08813a2949946c8ba55",
+          "download_seconds": 67.72805716696894,
+          "files": [
+            {
+              "name": "README.md",
+              "bytes": 900,
+              "sha256": "01e220eed6921254f7e086bb3506d1c03f019f5f747bb9ac2f6ec5ce541edc12"
+            },
+            {
+              "name": "config.json",
+              "bytes": 706,
+              "sha256": "13582bcf2effc85b7bf3d3f5532e686bc1c9ce86bb009d10f0ec33cbe92299dd"
+            },
+            {
+              "name": "model_optimized.onnx",
+              "bytes": 66465124,
+              "sha256": "51f1bd0addd6e859e42c2c8021a5e5461385bb676a649f4b269aa445449f2431"
+            },
+            {
+              "name": "special_tokens_map.json",
+              "bytes": 695,
+              "sha256": "5d5b662e421ea9fac075174bb0688ee0d9431699900b90662acd44b2a350503a"
+            },
+            {
+              "name": "tokenizer.json",
+              "bytes": 711396,
+              "sha256": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66"
+            },
+            {
+              "name": "tokenizer_config.json",
+              "bytes": 1242,
+              "sha256": "0b29c7bfc889e53b36d9dd3e686dd4300f6525110eaa98c76a5dafceb2029f53"
+            },
+            {
+              "name": "vocab.txt",
+              "bytes": 231508,
+              "sha256": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+            }
+          ]
+        }
+      },
+      "retrieval": {
+        "provider": "fastembed",
+        "embedding": {
+          "provider": "fastembed-evaluation",
+          "model": "BAAI/bge-small-en-v1.5",
+          "revision": "aa8f8b060edb00e03bfdd08813a2949946c8ba55",
+          "dimension": 384,
+          "asymmetric": true,
+          "format_version": 1
+        },
+        "context_tokenizer": "whitespace-fallback",
+        "embedding_concurrency": 1,
+        "vector_similarity_threshold": 0.6,
+        "mode": "mix",
+        "chunk_top_k": 2,
+        "mean_evidence_recall": 1.0,
+        "complete_evidence_cases": 5,
+        "answerable_cases": 5,
+        "queries": [
+          {
+            "id": "retention",
+            "retrieved": [
+              "retrieval-pilot::archive",
+              "retrieval-pilot::restore"
+            ],
+            "required": [
+              "retrieval-pilot::archive"
+            ],
+            "recall": 1.0,
+            "complete_evidence": true,
+            "unsupported_returned_evidence": null,
+            "valid_chunk_ids": true,
+            "query_seconds": 0.011
+          },
+          {
+            "id": "identifier",
+            "retrieved": [
+              "retrieval-pilot::alerts"
+            ],
+            "required": [
+              "retrieval-pilot::alerts"
+            ],
+            "recall": 1.0,
+            "complete_evidence": true,
+            "unsupported_returned_evidence": null,
+            "valid_chunk_ids": true,
+            "query_seconds": 0.0117
+          },
+          {
+            "id": "paraphrase",
+            "retrieved": [
+              "retrieval-pilot::restore",
+              "retrieval-pilot::archive"
+            ],
+            "required": [
+              "retrieval-pilot::restore"
+            ],
+            "recall": 1.0,
+            "complete_evidence": true,
+            "unsupported_returned_evidence": null,
+            "valid_chunk_ids": true,
+            "query_seconds": 0.0116
+          },
+          {
+            "id": "access",
+            "retrieved": [
+              "retrieval-pilot::access",
+              "retrieval-pilot::restore"
+            ],
+            "required": [
+              "retrieval-pilot::access"
+            ],
+            "recall": 1.0,
+            "complete_evidence": true,
+            "unsupported_returned_evidence": null,
+            "valid_chunk_ids": true,
+            "query_seconds": 0.0184
+          },
+          {
+            "id": "combined",
+            "retrieved": [
+              "retrieval-pilot::restore",
+              "retrieval-pilot::archive"
+            ],
+            "required": [
+              "retrieval-pilot::archive",
+              "retrieval-pilot::restore"
+            ],
+            "recall": 1.0,
+            "complete_evidence": true,
+            "unsupported_returned_evidence": null,
+            "valid_chunk_ids": true,
+            "query_seconds": 0.0351
+          },
+          {
+            "id": "unsupported",
+            "retrieved": [
+              "retrieval-pilot::archive"
+            ],
+            "required": [],
+            "recall": null,
+            "complete_evidence": null,
+            "unsupported_returned_evidence": true,
+            "valid_chunk_ids": true,
+            "query_seconds": 0.0125
+          }
+        ],
+        "reopened_query_matches": true
+      }
+    },
+    {
+      "provider": "fastembed",
+      "fixture_sha256": "4df12b1ed7143d985d807a92c2d785d757a79afe6aacc67ed1fea7f8d3ce9f83",
+      "elapsed_seconds": 1.782944124948699,
+      "memory": {
+        "rss_mib": 265.92,
+        "process_peak_rss_mib": 290.86
+      },
+      "network_attempts": 1,
+      "blocked_connections": [
+        {
+          "target": "('57.150.192.193', 443)",
+          "callers": [
+            "load.py:read_file_cached",
+            "load.py:read_file",
+            "api.py:get",
+            "api.py:request",
+            "sessions.py:request",
+            "sessions.py:send",
+            "adapters.py:send",
+            "connectionpool.py:urlopen",
+            "connectionpool.py:_make_request",
+            "connectionpool.py:_validate_conn",
+            "connection.py:connect",
+            "connection.py:_new_conn",
+            "connection.py:create_connection"
+          ]
+        }
+      ],
+      "details": {
+        "fastembed_version": "0.9.0",
+        "model": "BAAI/bge-small-en-v1.5",
+        "source_revision": "aa8f8b060edb00e03bfdd08813a2949946c8ba55",
+        "model_files_bytes": 67411571,
+        "model_initialization_seconds": 0.6461040419526398,
+        "warm_embedding_median_ms": 7.0910409558564425,
+        "overlength_tail_vectors_identical": true,
+        "overlength_text_characters": 3500,
+        "threads": 1,
+        "overlength_untruncated_tokens": 607,
+        "model_manifest": {
+          "model": "BAAI/bge-small-en-v1.5",
+          "repository": "Qdrant/bge-small-en-v1.5-onnx-Q",
+          "revision": "aa8f8b060edb00e03bfdd08813a2949946c8ba55",
+          "path": "/private/tmp/preciso-fastembed-eval/model-cache/hub/models--Qdrant--bge-small-en-v1.5-onnx-Q/snapshots/aa8f8b060edb00e03bfdd08813a2949946c8ba55",
+          "download_seconds": 67.72805716696894,
+          "files": [
+            {
+              "name": "README.md",
+              "bytes": 900,
+              "sha256": "01e220eed6921254f7e086bb3506d1c03f019f5f747bb9ac2f6ec5ce541edc12"
+            },
+            {
+              "name": "config.json",
+              "bytes": 706,
+              "sha256": "13582bcf2effc85b7bf3d3f5532e686bc1c9ce86bb009d10f0ec33cbe92299dd"
+            },
+            {
+              "name": "model_optimized.onnx",
+              "bytes": 66465124,
+              "sha256": "51f1bd0addd6e859e42c2c8021a5e5461385bb676a649f4b269aa445449f2431"
+            },
+            {
+              "name": "special_tokens_map.json",
+              "bytes": 695,
+              "sha256": "5d5b662e421ea9fac075174bb0688ee0d9431699900b90662acd44b2a350503a"
+            },
+            {
+              "name": "tokenizer.json",
+              "bytes": 711396,
+              "sha256": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66"
+            },
+            {
+              "name": "tokenizer_config.json",
+              "bytes": 1242,
+              "sha256": "0b29c7bfc889e53b36d9dd3e686dd4300f6525110eaa98c76a5dafceb2029f53"
+            },
+            {
+              "name": "vocab.txt",
+              "bytes": 231508,
+              "sha256": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+            }
+          ]
+        }
+      },
+      "retrieval": {
+        "provider": "fastembed",
+        "embedding": {
+          "provider": "fastembed-evaluation",
+          "model": "BAAI/bge-small-en-v1.5",
+          "revision": "aa8f8b060edb00e03bfdd08813a2949946c8ba55",
+          "dimension": 384,
+          "asymmetric": true,
+          "format_version": 1
+        },
+        "context_tokenizer": "whitespace-fallback",
+        "embedding_concurrency": 1,
+        "vector_similarity_threshold": 0.6,
+        "mode": "mix",
+        "chunk_top_k": 2,
+        "mean_evidence_recall": 1.0,
+        "complete_evidence_cases": 5,
+        "answerable_cases": 5,
+        "queries": [
+          {
+            "id": "retention",
+            "retrieved": [
+              "retrieval-pilot::archive",
+              "retrieval-pilot::restore"
+            ],
+            "required": [
+              "retrieval-pilot::archive"
+            ],
+            "recall": 1.0,
+            "complete_evidence": true,
+            "unsupported_returned_evidence": null,
+            "valid_chunk_ids": true,
+            "query_seconds": 0.011
+          },
+          {
+            "id": "identifier",
+            "retrieved": [
+              "retrieval-pilot::alerts"
+            ],
+            "required": [
+              "retrieval-pilot::alerts"
+            ],
+            "recall": 1.0,
+            "complete_evidence": true,
+            "unsupported_returned_evidence": null,
+            "valid_chunk_ids": true,
+            "query_seconds": 0.009
+          },
+          {
+            "id": "paraphrase",
+            "retrieved": [
+              "retrieval-pilot::restore",
+              "retrieval-pilot::archive"
+            ],
+            "required": [
+              "retrieval-pilot::restore"
+            ],
+            "recall": 1.0,
+            "complete_evidence": true,
+            "unsupported_returned_evidence": null,
+            "valid_chunk_ids": true,
+            "query_seconds": 0.0078
+          },
+          {
+            "id": "access",
+            "retrieved": [
+              "retrieval-pilot::access",
+              "retrieval-pilot::restore"
+            ],
+            "required": [
+              "retrieval-pilot::access"
+            ],
+            "recall": 1.0,
+            "complete_evidence": true,
+            "unsupported_returned_evidence": null,
+            "valid_chunk_ids": true,
+            "query_seconds": 0.0107
+          },
+          {
+            "id": "combined",
+            "retrieved": [
+              "retrieval-pilot::restore",
+              "retrieval-pilot::archive"
+            ],
+            "required": [
+              "retrieval-pilot::archive",
+              "retrieval-pilot::restore"
+            ],
+            "recall": 1.0,
+            "complete_evidence": true,
+            "unsupported_returned_evidence": null,
+            "valid_chunk_ids": true,
+            "query_seconds": 0.0132
+          },
+          {
+            "id": "unsupported",
+            "retrieved": [
+              "retrieval-pilot::archive"
+            ],
+            "required": [],
+            "recall": null,
+            "complete_evidence": null,
+            "unsupported_returned_evidence": true,
+            "valid_chunk_ids": true,
+            "query_seconds": 0.0097
+          }
+        ],
+        "reopened_query_matches": true
+      }
+    }
+  ],
+  "recorded_date": "2026-10-16",
+  "decision": "Candidate only; do not adopt as default until input-length policy is implemented and reviewed."
+}

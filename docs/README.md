@@ -20,6 +20,8 @@ Start with the guide that matches the task.
 | Inspect runtime measurements | [Runtime baseline](runtime-baseline.md) |
 | Measure local performance | [Performance](performance.md) |
 | Evaluate source evidence | [Retrieval pilot](retrieval-pilot.md) |
+| Plan simple Codex setup | [Setup integration plan](setup-integration-plan.md) |
+| Review built-in embedding measurements | [FastEmbed evaluation](fastembed-evaluation.md) |
 | Use extraction skills | [Skills guide](skills-guide.md) |
 | Understand summary preservation | [Summary design](summary-design.md) |
 | Resolve an operational question | [FAQ](faq.md) |

@@ -93,7 +93,7 @@ async def select_evidence_chunks_by_vector(
         preview = ", ".join(missing_chunk_ids[:5])
         suffix = "" if len(missing_chunk_ids) <= 5 else f" (+{len(missing_chunk_ids) - 5} more)"
         raise EvidenceVectorIntegrityError(
-            f"missing chunk vector(s) for evidence: {preview}{suffix}; reingest or rebuild the chunk vector index"
+            f"missing chunk vector(s) for evidence: {preview}{suffix}; restore a verified backup or rebuild a fresh graph from complete reviewed extractions"
         )
 
     if query_embedding is None:
@@ -492,6 +492,7 @@ async def _apply_token_truncation(
         entities_context.append(
             {
                 "entity": entity_name,
+                "display_name": entity.get("display_name", entity_name),
                 "type": entity.get("entity_type", "UNKNOWN"),
                 # marker is internal bookkeeping — keep it out of the LLM context
                 "description": strip_summary_marker(entity.get("description", "UNKNOWN")),

@@ -529,6 +529,7 @@ def convert_to_user_format(
             formatted_entities.append(
                 {
                     "entity_name": original_entity.get("entity_name", entity_name),
+                    "display_name": original_entity.get("display_name", entity_name),
                     "entity_type": original_entity.get("entity_type", "UNKNOWN"),
                     "description": strip_summary_marker(original_entity.get("description", "")),
                     "source_id": original_entity.get("source_id", ""),
@@ -540,6 +541,7 @@ def convert_to_user_format(
             formatted_entities.append(
                 {
                     "entity_name": entity_name,
+                    "display_name": entity.get("display_name", entity_name),
                     "entity_type": entity.get("type", "UNKNOWN"),
                     "description": strip_summary_marker(entity.get("description", "")),
                     "source_id": entity.get("source_id", ""),

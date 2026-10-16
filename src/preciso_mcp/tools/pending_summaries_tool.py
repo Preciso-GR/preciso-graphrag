@@ -25,6 +25,14 @@ from core.utils import (
 VALID_KINDS = {"entity", "relation"}
 
 
+async def _content_token(stores: dict, description: str) -> tuple[str, bool]:
+    from core.documents import _state, payload_hash
+
+    state = await _state(stores) if "documents" in stores else {}
+    generation = state.get("generation", 0)
+    return payload_hash({"description": description, "generation": generation}), generation > 0
+
+
 def _zone_split(description_list: list[str], raw_tail_size: int) -> tuple[str | None, list[str], list[str]]:
     """(prior_summary, old_descriptions beyond raw_tail_size oldest-first, keep_tail newest)."""
     prior_summary, raw_tail = _split_summary_zones(description_list)
@@ -86,6 +94,7 @@ async def _list_pending_summaries(storage_instances: dict, global_config: dict, 
 
         items: list[dict[str, Any]] = []
         for (key, record), description in zip(records, descriptions):
+            content_token, token_required = await _content_token(storage_instances, description)
             description_list = description.split(GRAPH_FIELD_SEP) if description else []
             prior_summary, old_descriptions, keep_tail = _zone_split(description_list, raw_tail_size)
             items.append(
@@ -96,6 +105,8 @@ async def _list_pending_summaries(storage_instances: dict, global_config: dict, 
                     "src": record.get("src"),
                     "tgt": record.get("tgt"),
                     "description_count": len(description_list),
+                    "content_token": content_token,
+                    "content_token_required": token_required,
                     "content_to_summarize": {
                         "prior_summary": prior_summary,
                         "old_descriptions": old_descriptions,
@@ -117,12 +128,13 @@ async def submit_summary(
     storage_instances: dict, global_config: dict, name: str, kind: str,
     summary_text: str, expected_description_count: int,
     src: str | None = None, tgt: str | None = None,
+    expected_content_token: str | None = None,
 ) -> dict:
     from core.transactions import run_artifact_mutation
 
     return await run_artifact_mutation(
         lambda: _submit_summary(storage_instances, global_config, name, kind, summary_text,
-                                expected_description_count, src, tgt),
+                                expected_description_count, src, tgt, expected_content_token),
         storage_instances, global_config,
     )
 
@@ -136,6 +148,7 @@ async def _submit_summary(
     expected_description_count: int,
     src: str | None = None,
     tgt: str | None = None,
+    expected_content_token: str | None = None,
 ) -> dict:
     """Store the agent's rolling summary and clear (or re-flag) the pending record.
 
@@ -194,6 +207,10 @@ async def _submit_summary(
                 edge = await graph.get_edge(src, tgt)
                 description = (edge or {}).get("description", "")
 
+            content_token, token_required = await _content_token(storage_instances, description)
+            if (token_required or expected_content_token is not None) and expected_content_token != content_token:
+                return {"status": "error", "error_code": "stale_summary",
+                        "message": "Summary evidence changed. List pending summaries again and echo its content_token."}
             current_description_list = description.split(GRAPH_FIELD_SEP) if description else []
             prior_summary, _old_descriptions, keep_tail = _zone_split(current_description_list, raw_tail_size)
 
@@ -235,7 +252,9 @@ async def _submit_summary(
                 entity_vdb = storage_instances.get("entities_vdb")
                 if entity_vdb is not None:
                     entity_vdb_id = compute_mdhash_id(entity_name, prefix="ent-")
-                    entity_content = f"{entity_name}\n{strip_summary_marker(new_description)}"
+                    display_name = updated_node.get("display_name", entity_name)
+                    label_line = f"{display_name}\n" if display_name != entity_name else ""
+                    entity_content = f"{entity_name}\n{label_line}{strip_summary_marker(new_description)}"
                     await safe_vdb_operation_with_exception(
                         operation=lambda payload={
                             entity_vdb_id: {

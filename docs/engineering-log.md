@@ -187,3 +187,20 @@ between these releases. This is a limited compatibility check, not migration pro
 
 See [runtime baseline](runtime-baseline.md) for methods, measurements, and limits.
 No performance optimization or production resource limit was selected from these runs.
+
+## Mechanism 0: document preparation
+
+The entry-point review found no upload endpoint or built-in raw-document parser.
+An external agent reads sources and produces reviewed extractions. This boundary
+is now documented separately from graph ingestion.
+
+The three extraction skills had chunking instructions inside JSON examples. Those
+examples now parse as JSON. Character and token guidance no longer claims an
+approximate equivalence. The general skill no longer instructs agents to infer
+missing values or create every named concept as an entity.
+
+A shared preparation guide separates extraction-only work from authorized ingestion.
+It defines evidence wording, uncertainty, identity collisions, and source review.
+The guide does not add automatic claim verification. The worked example passed
+existing shape and strict-reference validators. Each example chunk occurs in the
+synthetic source. No graph was ingested and no model inference was run.

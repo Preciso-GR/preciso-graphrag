@@ -1,0 +1,40 @@
+{
+  "document_id": "preparation-example",
+  "file_path": "docs/examples/preparation-source.md",
+  "chunks": [
+    {
+      "chunk_id": "chunk_001",
+      "content": "Mira owns the archive service.",
+      "chunk_order_index": 0
+    },
+    {
+      "chunk_id": "chunk_002",
+      "content": "The archive service retains verified snapshots for fourteen days.",
+      "chunk_order_index": 1
+    }
+  ],
+  "entities": [
+    {
+      "entity_name": "mira",
+      "entity_type": "PERSON",
+      "description": "Mira owns the archive service.",
+      "source_id": "chunk_001"
+    },
+    {
+      "entity_name": "archive_service",
+      "entity_type": "SERVICE",
+      "description": "The archive service retains verified snapshots for fourteen days.",
+      "source_id": "chunk_002"
+    }
+  ],
+  "relationships": [
+    {
+      "src_id": "mira",
+      "tgt_id": "archive_service",
+      "description": "Mira owns the archive service.",
+      "keywords": "OWNS",
+      "source_id": "chunk_001",
+      "weight": 1.0
+    }
+  ]
+}

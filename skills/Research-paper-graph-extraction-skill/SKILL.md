@@ -19,17 +19,20 @@ description: >
 
 ## Agent Runtime Contract
 
+Read [Document preparation](../../docs/document-preparation.md) before processing a source.
+Its evidence and authorization rules apply to this skill.
+
 Use this skill when the raw input file is in `to_be_extracted/` and the content is academic or scientific literature.
 
 Execution contract:
-- Call `get_server_status()` before starting extraction.
-- If overall is `degraded`, explain what is degraded, what still works, and ask whether to proceed or fix first.
+- For extraction-only work, keep the MCP server stopped. If ingestion is in scope, check `get_server_status()` before ingestion.
+- If status is `degraded`, explain the problem. Respect existing authorization. Ask only when a decision is needed to proceed.
 - Read one paper or one raw source file from `to_be_extracted/` at a time unless the user explicitly asks for a combined corpus extraction.
 - For the best graph quality, prefer `.md` and `.txt` source files. If the source is PDF, assume there is no built-in repo parser or OCR layer and be more conservative about noisy layout, broken equations, and repeated headers/footers.
 - Prefer one extraction JSON per source paper so ingestion and retries stay simple.
 - Validate entity, relationship, citation, and chunk integrity before ingestion.
 - If the extraction has duplicates, orphaned relationships, or conflicts that need cleanup, use the reconciliation skill before ingestion.
-- After a clean extraction is written, call `ingest_from_file`.
+- After a clean extraction is written, show the review summary. Call `ingest_from_file` only within the authorized ingestion scope.
 
 ## Why This Skill Exists
 
@@ -128,11 +131,13 @@ Chunks are the evidence base. Every entity and relationship must point to a chun
   "chunk_order_index": 2,
   "file_path": "attention_is_all_you_need.pdf"
 }
-
-**Chunk size limits (required):**
-- Target 400-800 characters per chunk (or ~200-300 tokens if you have a tokenizer).
-- Hard cap 1,000 characters per chunk. If a paragraph/table is longer, split it.
 ```
+
+**Chunk size guidance:**
+- Prefer one complete evidence passage per chunk.
+- Target 400–800 characters when the passage permits it.
+- Keep each extraction chunk within 1,000 characters. Split longer passages at meaningful boundaries.
+- Character counts and token counts are different measurements. Do not treat them as equivalent.
 
 ---
 
@@ -390,7 +395,7 @@ For theory-heavy papers (philosophy of science, formal methods, economics), extr
 ## Step-by-Step Agent Workflow
 
 ```
-1. CALL get_server_status() and surface degraded modes before continuing
+1. CHECK the requested scope. For extraction-only work, keep the MCP server stopped.
 2. READ paper(s) — abstract, introduction, related work, methods, results, conclusion
 3. CHUNK the text into evidence blocks (sections, paragraphs, or tables)
    - Assign chunk_id like chunk_001, chunk_002...
@@ -413,7 +418,7 @@ For theory-heavy papers (philosophy of science, formal methods, economics), extr
    - Every entity/relationship source_id matches a chunk_id
    - Output path matches the current source file name
 9. WRITE to extractions/{filename}_extracted.json
-10. CALL ingest_from_file MCP tool
+10. SHOW the review summary; CALL ingest_from_file only within the authorized ingestion scope
 11. CALL list_pending_summaries() and resolve any flagged entities/relationships
     via submit_summary(...) before finishing — Preciso never compresses
     descriptions itself, so this step is the only way descriptions
@@ -515,6 +520,9 @@ For theory-heavy papers (philosophy of science, formal methods, economics), extr
 ---
 
 ## After Extraction
+
+For extraction-only requests, return the extraction and review summary.
+The remaining actions require ingestion authorization.
 
 - Run `ingest_from_file("extractions/{filename}_extracted.json")` via MCP
 - If ingestion fails, use `reingest_from_file(...)` — no re-extraction needed

@@ -1,5 +1,9 @@
 # MCP capabilities for an external-document GraphRAG workflow
 
+Historical research baseline. The current tools add workflow discovery and a
+document/graph lifecycle. See [current implementation](../document-lifecycle.md).
+Repository observations below describe the earlier baseline.
+
 Checked: 2026-10-16. Scope: capability fit and a bounded next experiment; no implementation or model execution. External sources below are official MCP specifications only.
 
 ## Finding

@@ -100,8 +100,10 @@ extraction ready for review and wait for that decision.
 
 Before ingestion, check `get_server_status` and resolve any blocking provider or
 storage issue. Call `ingest_from_file` with the extraction path. Inspect the result
-before reporting success. Ingestion is additive. Source corrections require a
-fresh rebuild from the complete valid corpus.
+before reporting success. New document IDs add evidence. Changed extractions
+under an existing ID require explicit replacement. Use the
+[document lifecycle procedure](document-lifecycle.md). Legacy graphs without a
+complete contribution ledger require a fresh rebuild.
 
 ## Small worked example
 

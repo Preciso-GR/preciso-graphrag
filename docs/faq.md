@@ -45,16 +45,19 @@ Source documents and reviewed extraction files still matter: they are the reprod
 
 ## How do I correct an already-ingested document?
 
-Preciso does not support in-place document replacement or deletion. Ingestion is additive, so submitting a changed extraction to the existing graph can leave the earlier document's descriptions, relationships, weights, summaries, source links, chunks, or embeddings behind.
+For a tracked document, use `manage_documents(action="replace")` with the complete
+corrected extraction. Preview first, then commit with the returned revision.
+Use `action="delete"` to remove its contributions. Shared contributions remain.
+See [document lifecycle](document-lifecycle.md) for the procedure and resource limits.
 
-Use a full rebuild:
+For a legacy graph without a complete contribution ledger, use a fresh rebuild:
 
 1. Keep the valid source documents and extractions for every unaffected document.
 2. Remove the flawed extraction from the rebuild inputs.
 3. Generate and review the corrected extraction.
 4. Stop the active Preciso, Codex, or Claude ingestion session so no graph state remains loaded in memory.
 5. Back up `GRAPH_IS_HERE/` if you may need to recover the current graph.
-6. Remove all generated graph and retrieval artifacts from `GRAPH_IS_HERE/`.
+6. Select a new, empty graph directory. Preserve the previous directory.
 7. Start a fresh session and confirm that Preciso reports an empty graph.
 8. Ingest the corrected extraction and every other valid extraction in the complete corpus.
 9. Confirm that entity merging, relationships, evidence links, embeddings, summaries, and the artifact manifest were recreated.

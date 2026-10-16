@@ -184,16 +184,20 @@ Preciso builds one graph from one or more extraction payloads. The supported ing
 - **Initial graph build:** ingest each source document with a stable, unique `document_id`.
 - **New data later:** ingest the new source under a new `document_id`; matching entities and relationships accumulate the new evidence.
 - **Recovery replay:** reingesting an identical extraction with the same `document_id` is idempotent.
-- **Changed existing document:** reusing an existing `document_id` with changed content is not a replacement operation. The merge pipeline is additive, so evidence produced by the earlier version can remain stored and cited.
+- **Changed existing document:** ordinary ingestion rejects changed content under a tracked document ID. Use `manage_documents(action="replace")` with a current workspace revision.
 
-Preciso intentionally does not expose document replacement or deletion. Merged descriptions, relationship weights, summaries, and shared graph connections do not retain enough per-document contribution history for safe subtraction.
+The contribution ledger, `kv_store_documents.json`, retains reviewed extractions.
+Replacement and deletion rebuild derived stores from retained contributions inside
+an artifact transaction. Shared evidence from other documents remains. Graph
+editing rules also survive restart and later document ingestion. See
+[document lifecycle](document-lifecycle.md) for operations and limitations.
 
-When an ingested source is flawed, perform a full rebuild:
+Legacy graphs without a complete contribution ledger still require a fresh rebuild:
 
 1. Preserve every unaffected source document and reviewed extraction.
 2. Remove the flawed extraction from the rebuild inputs and generate its corrected replacement.
 3. Stop the active ingestion session and back up the current graph if recovery may be needed.
-4. Remove every generated artifact from `GRAPH_IS_HERE/` and start a fresh session with an empty graph.
+4. Select a new, empty graph directory. Preserve the previous graph directory.
 5. Ingest the corrected extraction plus every other valid extraction in the complete corpus.
 6. Re-run representative queries or evaluations and regenerate downstream exports.
 
@@ -211,7 +215,7 @@ When you ask a question, the system:
 6. **Assemble context** — entities, relationships, and the selected text chunks formatted as structured JSON within the final token budget.
 7. **Return or augment** — either return context as-is (for inspection) or pass to LLM for synthesis.
 
-Evidence selection is fail-closed: Preciso does not fall back to an unranked or weighted method when a chunk vector is missing. Ingestion verifies each chunk vector before making its text available for graph evidence. A missing vector during query indicates a corrupt or legacy index and returns an explicit error instructing the caller to replay the identical extraction or perform a full rebuild.
+Evidence selection is fail-closed: Preciso does not fall back to an unranked or weighted method when a chunk vector is missing. Ingestion verifies each chunk vector before making its text available for graph evidence. A missing vector during query indicates a corrupt or legacy index. Restore a verified backup or rebuild a fresh graph from complete reviewed extractions. A successful identical retry returns the stored result; it does not repair externally corrupted artifacts.
 
 The evidence selector is configured with:
 

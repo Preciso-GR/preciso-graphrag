@@ -2,7 +2,9 @@
 
 Checked: 2026-10-16. Baseline application commit: `35fcf08`.
 Purpose: define seamless agent connection, automation, control, and coordination.
-Status: research and design only. No application feature in this proposal is implemented.
+Status at the baseline: research and design only. Later work implements a bounded
+document and graph lifecycle. See [current implementation](../document-lifecycle.md).
+The remaining proposals below are not implementation claims.
 
 ## Main recommendation
 

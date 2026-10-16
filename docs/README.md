@@ -5,6 +5,7 @@ Start with the guide that matches the task.
 | Task | Document |
 |---|---|
 | Prepare a source document | [Mechanism 0](document-preparation.md) |
+| Maintain documents and graph records | [Document lifecycle](document-lifecycle.md) |
 | Understand document lifecycle terms | [Domain model](domain-model.md) |
 | Trace the system | [Architecture](architecture.md) |
 | Edit the system diagram | [Excalidraw source](diagrams/system-structure.excalidraw) |

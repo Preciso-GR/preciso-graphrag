@@ -2,6 +2,44 @@
 
 Scope: the core-only branch. Supply-chain features and service containers are excluded.
 
+## Document lifecycle series — 2026-10-16
+
+The five-stage series adds contribution tracking, document maintenance, graph
+editing, MCP discovery, and workflow verification. See
+[document lifecycle](document-lifecycle.md) for commands and limits.
+
+The ledger retains reviewed extraction JSON. Destructive operations replay the
+complete retained corpus within the existing transaction. This is a correctness
+baseline. It is not a claim that full replay is optimal for large collections.
+No LlamaIndex, LangGraph, LangChain, new service, or new dependency was added.
+
+Graph isolation withholds cited passages and their chunk vectors. Disconnection
+only removes the graph edge. Shared-passage tests exposed that distinction and
+prevent accidental loss of endpoint nodes. Node labels remain separate from the
+existing canonical name IDs. Explicit aliases persist after an entity merge.
+
+Lifecycle tests also exposed a vector clearing defect. Clearing NanoVectorDB's
+record metadata left its embedding matrix populated. The adapter now uses the
+dependency's deletion method to clear both aligned structures. Query regressions
+check that obsolete vector results disappear after replacement and deletion.
+
+Rebuilds invalidate summaries and advance a rebuild generation. Summary content
+tokens bind pending work to its description and generation. A stale submission
+cannot pass merely because the replacement has the same description count.
+
+The standalone MCP smoke checks 10 initial documents, three later documents,
+replay, invalid input, replacement, deletion, stale revisions, node isolation,
+process restart, restoration, and retrieval of corrected evidence. It uses a
+temporary workspace and deterministic embeddings. User graph files are not inputs
+to these checks. No real embedding model is run for this series.
+
+Compatibility changes are intentional: changed content under a tracked document
+ID now requires explicit replacement; reserved document IDs start with `__`;
+managed lifecycle calls require complete claims with local chunk references;
+legacy or incomplete ledgers reject destructive edits. Do not use an older runtime
+to write a ledger-enabled workspace. Large-corpus performance, client-specific
+agent behavior, temporal claims, and team authorization remain unverified.
+
 PRECISO stores document evidence in a local graph and vector index. An MCP client
 uses tools to add documents and retrieve evidence. The supported runtime owns one
 graph directory. A second runtime cannot open the same directory for service use.

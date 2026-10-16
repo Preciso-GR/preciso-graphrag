@@ -7,8 +7,10 @@ This procedure uses the same installed package as the MCP server.
 
 The backup copies the supported graph, vector, and JSON artifacts. It preserves
 embedding fingerprints inside the vector files. It excludes lock files, transaction
-journals, source documents, extraction files, and reconciled output directories.
-Preserve reviewed source inputs separately.
+journals, raw source documents, standalone extraction files, and reconciled output
+directories. The contribution ledger is included; it contains submitted extraction
+text and graph editing rules. Preserve reviewed source files separately. Use a
+release that understands the ledger to restore a ledger-enabled backup.
 
 The manifest records each artifact's byte count and SHA-256 hash. Verification
 detects changed bytes. It does not establish authenticity, source correctness,
@@ -102,7 +104,7 @@ On 2026-10-10, the offline test restored a populated graph into a fresh director
 Artifact bytes matched the source. The reopened graph contained the expected node,
 and the vector query returned its expected evidence chunk.
 
-The full suite passed 210 tests locally and in the locked Linux arm64 image.
+At that backup milestone, the full suite passed 210 tests locally and in the locked Linux arm64 image.
 The installed runtime CLI also passed with networking disabled and a read-only root.
 
 Regression tests also cover corruption, copy failure, changed bytes during restore,

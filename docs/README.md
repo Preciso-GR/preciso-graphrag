@@ -10,6 +10,7 @@ Start with the guide that matches the task.
 | Trace the system | [Architecture](architecture.md) |
 | Edit the system diagram | [Excalidraw source](diagrams/system-structure.excalidraw) |
 | Operate the MCP server | [MCP server](mcp-server.md) |
+| Set up a project with Codex | [Guided setup](simple-setup.md) |
 | Back up and restore a graph | [Backup procedure](backup-recovery.md) |
 | Build and run Docker | [Container operation](container-guide.md) |
 | Contribute a change | [Development workflow](../CONTRIBUTING.md) |

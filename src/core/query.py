@@ -235,6 +235,9 @@ async def _kg_query(
 ) -> QueryResult | None:
     if not query:
         return QueryResult(content=PROMPTS["fail_response"])
+    validator = getattr(getattr(global_config.get("embedding_func"), "func", None), "validate_inputs", None)
+    if validator is not None:
+        await validator([query])
     if query_param.mode == "hybrid" and _detect_comparison_query(
         query, global_config.get("yoy_signal_phrases", DEFAULT_YOY_SIGNAL_PHRASES)
     ):

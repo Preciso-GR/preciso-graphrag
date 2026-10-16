@@ -1,14 +1,16 @@
 # Simple setup integration plan
 
-Status: scope approved on 2026-10-16. Evaluation comes before provider integration.
-No default model has been selected. Proposed commands do not exist yet.
+Status: scope approved on 2026-10-16; implementation started after model review.
+The optional Granite provider and guided setup are implemented on the feature branch
+for 0.3.0rc1. Public PyPI installation remains a release gate. See [guided setup](simple-setup.md).
 
 Stage 1 initial screen is complete. See [measured results](fastembed-evaluation.md).
-The candidate's input truncation blocks default adoption. Integration awaits review.
+The initial BGE candidate's truncation blocked its adoption.
 
 The [expanded comparison](embedding-model-selection.md) now recommends Granite
 Small English R2 for the next optional built-in integration. It covers Nomic,
-Granite, and BGE using the same fixtures. No production default has changed.
+Granite, and BGE using the same fixtures. Granite is the setup default for new local
+collections. Existing collections and manual server defaults remain unchanged.
 
 ## Outcome
 

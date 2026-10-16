@@ -1,117 +1,132 @@
-# Description-Merge Fix: Two-Zone Rolling Summary + Marker-Stripping Contract
+# Agent-written summary maintenance
 
-## The defect
+This guide uses ASD-STE100-inspired plain English. It does not claim formal
+compliance.
 
-Entity and relationship descriptions are stored as one `<SEP>`-joined string and
-re-merged every time a document is ingested. The old policy in
-`src/core/summary.py::_handle_entity_relation_summary` was count-based: as soon as an
-entity accumulated `force_llm_summary_on_merge` (default 3) descriptions, the LLM
-rewrote **all** of them into a single paraphrase — even when the combined text was
-tiny. This had four compounding consequences:
+## Purpose
 
-1. **Premature and silent** — a hardcoded engine-side policy fired with no agent
-   involvement, long before any size limit demanded it.
-2. **Provenance destruction** — the raw, source-grounded descriptions were deleted
-   and replaced by one LLM-authored string. (Real evidence in the shipped graph:
-   node `walmart_u_s_net_sales_2022` contains the phrase "(included here for YoY
-   comparison)", which appears in no source document — it is the LLM's own
-   synthesis, now the only surviving copy.)
-3. **Summary-of-summary drift** — the returned summary carried no marker, so the
-   next merge treated it as just another raw description and re-summarized it
-   together with fresh text. Each pass lost more original wording.
-4. **Retrieval contamination** — the description *is* the retrieval surface: it is
-   embedded into `entities_vdb`/`relationships_vdb` and returned by query
-   synthesis. Collapsing raw text into paraphrase meant vector search matched
-   against, and answers cited, model-authored text instead of verbatim source —
-   in a system that advertises faithfulness ~1.0.
+Several documents can contribute descriptions to the same entity or relationship.
+PRECISO preserves the newest extracted descriptions and asks the connected agent
+to summarize older descriptions. The server does not call a language model to
+write summaries.
 
-The constraint that makes "just don't summarize" impossible: popular entities
-appear in dozens of documents, and unbounded raw text would blow past
-`summary_context_size` and the embedding budget. Compression is mandatory at some
-point; the fix has to bound size, not merely avoid the LLM.
+An extracted description is not the original evidence passage. Source chunks and
+the Contribution Ledger remain separate from the derived summary field.
 
-## The fix: two zones inside the same field
+## Ownership and flow
 
-Each description field now holds **two clearly separated zones** inside the same
-`<SEP>`-joined string — no schema change, no storage-format change:
-
-```
-<<SUM>> <one bounded rolling summary of OLD mentions>
-<SEP> <verbatim recent description 1>
-<SEP> ...up to raw_tail_size verbatim items (default 4)
-```
-
-Merge algorithm (one shared helper for entities and relations, so the two paths
-cannot drift):
-
-- Split the field into the (at most one) `<<SUM>>`-tagged rolling summary and the
-  untagged verbatim tail; append incoming descriptions to the tail, deduplicated
-  byte-for-byte so re-ingesting the same file is a no-op.
-- If the tail is within `raw_tail_size` **and** the whole field fits in
-  `summary_context_size`: store as-is. **No LLM call.** This is the common case
-  the old code got wrong.
-- Otherwise, age out only the *oldest* tail items and fold them — together with
-  the prior rolling summary — into one new summary, hard-capped at
-  `summary_max_tokens`. The most recent `raw_tail_size` descriptions stay
-  byte-for-byte verbatim. Oversized fold inputs are reduced oldest-first in
-  bounded rounds so nothing is silently truncated away.
-
-### Guarantees
-
-- **Bounded size**: exactly one capped summary segment + at most `raw_tail_size`
-  verbatim items; the field cannot grow past the token ceiling regardless of how
-  many documents mention the entity.
-- **Recent wording preserved verbatim**: only genuinely old mentions are
-  compressed, and the LLM only ever rewrites the summary zone.
-- **Labeled, single-lineage compression**: the marker means raw text is never
-  mistaken for a summary and re-cooked blindly. Summary-of-summary still occurs
-  for ancient history — that is the honest tradeoff: bounded, *labeled* lossy
-  compression, because perfect provenance under a hard token cap is impossible.
-- **Backward compatible**: legacy marker-less fields are treated as all-tail and
-  migrate forward on the first qualifying merge. Degraded mode
-  (`llm_model_func=None`) never calls the LLM and preserves the
-  `summary_required` signal; `pipeline_status` summary events still report
-  reason + description count.
-
-## The marker contract: storage keeps it, every exit strips it
-
-`<<SUM>>` is internal bookkeeping. It must persist inside `GRAPH_IS_HERE/`
-(including the portable `graph_graph.graphml`) so the next merge can find the
-summary segment — but it must never appear on any outward surface. Initial
-implementation stripped it at two exits; review found four more, now all closed:
-
-| Exit surface | Where stripped |
+| Module | Responsibility |
 |---|---|
-| Embedding content (entity + relationship) | `src/core/merge.py` |
-| Relationship VDB `description` payload | `src/core/merge.py` (stripped at write, so the marker never enters the derived store) |
-| LLM query context | `src/core/query.py::_apply_token_truncation` |
-| User-facing query results | `src/core/utils.py::convert_to_user_format` |
-| Neo4j export properties | `src/core/export_adapters.py::_node_properties` / `_edge_properties` |
-| Qdrant export payloads | `src/core/export_adapters.py::_vector_payload` (deep-strips every value, belt-and-suspenders against future upstream slips) |
+| `core.summary` | Partition descriptions, check budgets, and maintain pending-work records |
+| `core.summary_maintenance` | List current work, check freshness, and publish reviewed agent summaries |
+| `core.documents` | Own the ledger and expose its rebuild generation |
+| `preciso_mcp.server` | Register MCP tools and forward requests and results |
 
-The canonical helper is `core.utils.strip_summary_marker` (it lives in `utils`
-rather than `summary` to avoid a circular import), and the full contract is
-documented in one place: the comment block above `SUMMARY_MARKER` in `src/config.py`.
+The old `preciso_mcp.tools.pending_summaries_tool` imports remain available.
+They refer to the same core list and submit functions. They contain no summary
+policy or persistence coordination.
 
-## Config additions
+```text
+Extraction merge -> summary policy -> pending queue
+Agent -> list_pending_summaries -> core prepares current work
+Agent writes summary
+Agent -> submit_summary -> core checks freshness
+                       -> transaction publishes graph, vector, and queue changes
+```
 
-- `raw_tail_size` (default 4), env `GRAPHRAG_RAW_TAIL_SIZE`.
-- `GRAPHRAG_FORCE_LLM_SUMMARY_ON_MERGE` is honored as a legacy alias for the tail
-  size; the old "collapse everything at N descriptions" policy is gone.
-- `SUMMARY_MARKER = "<<SUM>>"` — deliberately **not** env-configurable, since
-  changing it would orphan markers already persisted in existing graphs.
+Both merging and summary submission use the same pending-work policy. The summary
+workflow reads rebuild generation through the ledger's public metadata accessor.
+It does not read private ledger state.
 
-## Validation (no pytest suite in this repo; manual per CONTRIBUTING.md)
+## Description storage
 
-- `python3 -m compileall core ingest mcp` — clean.
-- `python3 tests/manual/summary_merge_manual.py` — 26 checks over the merge logic:
-  verbatim tail across N merges, single marker segment, bounded tokens, no LLM
-  below thresholds, idempotent re-ingest, legacy migration, degraded no-LLM mode,
-  giant single description, `raw_tail_size` 0/1, defensive multi-marker folding.
-  Deterministic LLM/tokenizer stubs; no Ollama/network needed.
-- `python3 tests/manual/marker_leak_manual.py` — guards the *invariant*, not just the
-  merge: drives the real `_merge_nodes_then_upsert` / `_merge_edges_then_upsert`
-  write path until a summary is forced, then asserts the marker IS in stored
-  graph data but ABSENT from every VDB payload, every `convert_to_user_format`
-  field, the Neo4j property dicts, and the Qdrant payload builder (including a
-  hostile marker-bearing record). Any future exit surface should be added here.
+The graph description can contain two zones:
+
+```text
+<<SUM>> One rolling summary of older extracted descriptions
+<SEP> Recent extracted description
+<SEP> Another recent extracted description
+```
+
+The marker identifies a derived summary. It is not source evidence. Legacy fields
+without a marker contain only extracted descriptions. Duplicate raw descriptions
+are removed while preserving their original order.
+
+A merge stores the descriptions verbatim. If their count exceeds `raw_tail_size`
+or their token count exceeds `summary_context_size`, it marks the record pending.
+It does not silently generate or truncate a summary.
+
+## List pending work
+
+Call `list_pending_summaries`. Each item includes:
+
+- The entity name or relationship endpoints.
+- The current `description_count`.
+- A `content_token` and its requirement flag.
+- The prior rolling summary.
+- Older extracted descriptions to summarize.
+- Recent extracted descriptions to keep verbatim.
+
+The queue identifies work. The current graph supplies the actual descriptions.
+The workflow recomputes the item when it is listed.
+
+## Submit reviewed work
+
+1. Write a summary of the older descriptions and prior rolling summary.
+2. Preserve dates, units, uncertainty, and conflicting claims.
+3. Call `submit_summary` with the item's identity, summary text, description count,
+   and `content_token` as `expected_content_token`.
+4. Inspect the returned status.
+5. If the evidence changed, list the current work again before preparing another
+   submission.
+
+The content token depends on the description and rebuild generation. A document
+replacement can change the evidence without changing the description count.
+The generation prevents an old submission from passing that equal-count case.
+
+A content token is mandatory after a lifecycle rebuild. Before the first rebuild,
+legacy callers can omit it and use the description-count check. New callers should
+always echo it. Retry acceptance still depends on the current freshness checks.
+
+## Publish the result
+
+The core workflow starts an artifact transaction. It checks freshness, stores one
+rolling summary, retains the recent descriptions verbatim, updates the matching
+entity or relationship vector, and updates the pending queue.
+
+If the remaining description is still over its configured bounds, the record
+stays pending. A failed publication restores the previous files and in-memory
+stores. The MCP adapter does not apply these rules itself.
+
+## Marker and size limits
+
+The stored graph keeps the internal `<<SUM>>` marker. Derived vector content,
+query descriptions, and export properties strip it with
+`core.utils.strip_summary_marker`. Original evidence chunks remain separate.
+
+If submitted summary text exceeds `summary_context_size`, the workflow trims
+that text to `summary_max_tokens`. Shorter submissions remain unchanged. Recent
+descriptions can themselves exceed the budget, so the whole field has no
+unconditional hard size guarantee. Over-budget records remain pending.
+
+Document replacement, deletion, and graph editing rebuild derived descriptions
+from retained extraction contributions and invalidate old summaries. See
+[document lifecycle](document-lifecycle.md).
+
+## Verification
+
+Run the offline checks from the repository root:
+
+```sh
+.venv/bin/python -m pytest -q
+.venv/bin/python -m ruff check src tests scripts
+.venv/bin/python tests/manual/summary_merge_manual.py
+.venv/bin/python tests/manual/marker_leak_manual.py
+.venv/bin/python -m scripts.smoke_summaries
+```
+
+The tests cover recent-description retention, stale counts and tokens, marker
+stripping, entity and relationship updates, and rollback after pending-queue
+publication fails. The MCP smoke also checks restart persistence and fresh
+submission after document replacement. It uses temporary data and deterministic
+offline embeddings. It does not evaluate the factual quality of an agent's prose.

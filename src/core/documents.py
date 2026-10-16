@@ -78,6 +78,17 @@ async def _save_state(stores: dict, state: dict) -> None:
     await stores["documents"].index_done_callback()
 
 
+async def get_rebuild_generation(stores: dict) -> int:
+    """Read the summary freshness generation while the caller holds a session.
+
+    Consumers do not need the ledger's private state layout or completeness
+    checks. Legacy adapter sets without a ledger have generation zero.
+    """
+    documents = stores.get("documents")
+    state = await documents.get_by_id(STATE) if documents is not None else None
+    return (state or {}).get("generation", 0)
+
+
 async def _records(stores: dict) -> dict:
     return {key: copy.deepcopy(value) for key, value in
             (await stores["documents"].get_all_items()).items() if key != STATE}

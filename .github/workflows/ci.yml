@@ -65,6 +65,9 @@ jobs:
       - name: MCP document lifecycle (offline)
         run: python -m scripts.smoke_lifecycle
 
+      - name: MCP summary maintenance (offline)
+        run: python -m scripts.smoke_summaries
+
       - name: Guard script — two-zone summary merge
         run: python tests/manual/summary_merge_manual.py
 

@@ -39,7 +39,7 @@ async def connection(params):
             yield session
 
 
-async def call(session, name: str, **arguments):
+async def call(session, name: str, /, **arguments):
     result = result_dict(await session.call_tool(name, arguments))
     assert result.get("status") == "success", result
     return result

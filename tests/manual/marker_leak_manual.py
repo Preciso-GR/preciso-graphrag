@@ -76,7 +76,7 @@ class _NullLock:
 
 class StubPendingKV:
     """Minimal pending_summaries stand-in: the subset of JsonKVStorage the
-    pending-summary tools and _sync_pending_summary_record actually use."""
+    pending-summary workflow and sync_pending_summary_record actually use."""
 
     def __init__(self):
         self._data: dict = {}

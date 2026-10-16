@@ -11,7 +11,7 @@ from config import (
     SOURCE_IDS_LIMIT_METHOD_KEEP,
 )
 from core.storage.base import BaseGraphStorage, BaseKVStorage, BaseVectorStorage
-from core.summary import PENDING_SUMMARY_REASON, _handle_entity_relation_summary
+from core.summary import _handle_entity_relation_summary, sync_pending_summary_record
 from core.utils import (
     _cooperative_yield,
     apply_source_ids_limit,
@@ -25,45 +25,6 @@ from core.utils import (
     split_source_ids,
     strip_summary_marker,
 )
-
-
-async def _sync_pending_summary_record(
-    pending_summaries_storage: BaseKVStorage | None,
-    *,
-    key: str,
-    kind: str,
-    name: str,
-    src: str | None,
-    tgt: str | None,
-    summary_reason: str | None,
-    description_count: int,
-) -> None:
-    """Write or clear the pending-summary work-queue record for `key`.
-
-    Called after every merge. When a later merge brings the field back within
-    bounds (summary_reason is no longer PENDING_SUMMARY_REASON), the stale
-    record is cleared here too — the pending store is a work queue, not
-    authoritative content. `description_count` doubles as an optimistic-
-    concurrency token: submit_summary rejects a submission if the live count has
-    moved since the agent last read it via list_pending_summaries.
-    """
-    if pending_summaries_storage is None:
-        return
-    if summary_reason == PENDING_SUMMARY_REASON:
-        await pending_summaries_storage.upsert(
-            {
-                key: {
-                    "kind": kind,
-                    "name": name,
-                    "src": src,
-                    "tgt": tgt,
-                    "description_count": description_count,
-                    "created_at": int(time.time()),
-                }
-            }
-        )
-    else:
-        await pending_summaries_storage.delete([key])
 
 
 async def _merge_nodes_then_upsert(
@@ -176,7 +137,7 @@ async def _merge_nodes_then_upsert(
                     "description_count": len(description_list),
                 }
             )
-        await _sync_pending_summary_record(
+        await sync_pending_summary_record(
             pending_summaries_storage,
             key=entity_name,
             kind="entity",
@@ -390,7 +351,7 @@ async def _merge_edges_then_upsert(
                     "description_count": len(description_list),
                 }
             )
-        await _sync_pending_summary_record(
+        await sync_pending_summary_record(
             pending_summaries_storage,
             key=make_relation_chunk_key(src_id, tgt_id),
             kind="relation",

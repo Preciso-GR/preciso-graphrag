@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import copy
 import json
+import time
+from pathlib import Path
 
 import pytest
 
@@ -88,18 +90,27 @@ async def test_file_ingestion_reports_actual_replay_and_revision_conflict(storag
     assert (await stores["text_chunks"].get_by_id("report::one"))["content"] == "ACME reported USD 10 million."
 
 
-async def test_reconciliation_reports_actual_replay_and_revision_conflict(storage_stack):
+@pytest.mark.parametrize("source_timestamp", [None, 1_600_000_000])
+async def test_reconciliation_reports_actual_replay_and_revision_conflict(storage_stack, monkeypatch, source_timestamp):
+    # Retries on a later day must not become a new document revision.
+    clock = [1_700_000_000]
+    monkeypatch.setattr(time, "time", lambda: clock[0])
     stores, config, directory = storage_stack
     config["input_dir"] = str(directory)
     path = directory / "base.json"
     payload = {"document_id": "report_part1", "entities": [], "relationships": [],
                "chunks": [{"chunk_id": "one", "content": "Original evidence."}]}
+    if source_timestamp is not None:
+        payload["timestamp"] = source_timestamp
     path.write_text(json.dumps(payload), encoding="utf-8")
 
     first = await reconcile_tool.ingest_with_reconciliation([str(path)], stores, config)
     assert first["status"] == "success"
     assert first["document_id"] == "report"
     assert first["revision"] == 1 and first["replay"] is False
+    unified = json.loads(Path(first["unified_file"]).read_text())
+    assert unified.get("timestamp") == source_timestamp
+    clock[0] += 86400
     replay = await reconcile_tool.ingest_with_reconciliation([str(path)], stores, config)
     assert replay["status"] == "success"
     assert replay["revision"] == 1 and replay["replay"] is True

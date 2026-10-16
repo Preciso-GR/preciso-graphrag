@@ -2,6 +2,20 @@
 
 Scope: the core-only branch. Supply-chain features and service containers are excluded.
 
+## Stable reconciliation retries — 2026-10-16
+
+Merge review reproduced a revision conflict when identical reconciled input was
+retried after the clock advanced. Reconciliation inserted the current time into
+the extraction, which changed the ledger payload hash. It now preserves a source
+timestamp when supplied and omits the field otherwise. The ledger still records
+ingestion time separately when it is absent from the input.
+
+The regression advances time by one day, checks replay without a revision change,
+then checks that changed evidence still produces a revision conflict. Both source
+timestamp cases pass. All 253 local tests and lint passed. Existing reconciled
+records with generated timestamps require their saved unified extraction for
+exact replay; this fix does not rewrite existing ledger records.
+
 ## Merge verification: workflow syntax — 2026-10-16
 
 GitHub rejected the CI workflow at line 26 before creating jobs. Local YAML

@@ -1,6 +1,6 @@
 # Production readiness
 
-Review date: 2026-10-12. Scope: the core-only branch and private stdio MCP use.
+Review date: 2026-10-16. Scope: the core-only branch and private stdio MCP use.
 
 PRECISO has stronger data safety and a minimal container build. It is not yet
 verified for a production release. Backup restoration, representative resource
@@ -21,6 +21,9 @@ budgets, provider integration, and release rollback remain open gates.
 | Provider deadlines | Bound embedding queue and provider time; probe Ollama asynchronously | Timeout, cancellation, and permit recovery tests |
 | Worker scheduling | Keep at most four default embedding workers, rather than one task per batch | Ordering tests and paused-provider task benchmark |
 | Offline backup | Copy a stopped artifact set, verify checksums, and restore into a fresh directory | Byte equality, reopen/query, corruption, locking, and failure tests |
+| Document lifecycle | Track contributions; preview revision-checked replacement/deletion; fail closed for legacy graphs | Shared-evidence, replay, rollback, and MCP restart checks |
+| Graph maintenance | Persist node isolation, removal, labels, aliases, and disconnected edges | Evidence visibility, future-ingestion, and vector-query regressions |
+| Summary freshness | Reject stale summary work after lifecycle rebuilds | Equal-count replacement with stale and fresh content tokens |
 | Container packaging | Build a wheel; copy core dependencies and tokenizer cache into a non-root runtime | Locked container test stage and MCP smoke procedure |
 
 The defaults limit ingestion to 50,000 records and 26,214,400 bytes. Embedding

@@ -148,9 +148,9 @@ If you find duplicate entities, orphaned relationships, or conflicts,
 use the reconciliation skill before ingestion.
 Before calling any ingestion tool, summarize the source files, document IDs,
 entity/relationship/chunk counts, validation results, and unresolved concerns.
-Explain that ingestion is additive and ask me to confirm that the source documents
-and extractions are correct, current, and ready to persist.
-Only after I confirm, call ingest_from_file for each generated extraction file.
+Add new document IDs within the authorized task. Use explicit replacement for
+changed tracked documents. If ingestion is outside the authorized scope, obtain
+that authorization before persistence. Call ingest_from_file for reviewed files.
 Confirm the graph artifacts written to GRAPH_IS_HERE/ and summarize what was ingested.
 ```
 
@@ -311,7 +311,10 @@ GRAPH_IS_HERE/
 
 The most portable single artifact is `graph_graph.graphml`, but the complete operational graph includes every file in `GRAPH_IS_HERE/`, especially the vector and evidence stores. Copy the whole folder to move the graph to another machine.
 
-`GRAPH_IS_HERE/` is generated state, not a replacement for the source corpus. Retain the source documents and reviewed files in `extractions/` so the graph can be rebuilt from the complete valid corpus when a correction is required.
+`GRAPH_IS_HERE/` contains operational state, including the contribution ledger
+`kv_store_documents.json`. Retain the source documents and reviewed extractions.
+Tracked documents support safe replacement and deletion. Older graphs without a
+complete ledger require a fresh rebuild. See [document lifecycle](docs/document-lifecycle.md).
 
 ---
 
@@ -430,7 +433,8 @@ python3 tests/manual/reconcile_manual.py
 
 - Best input format is `.md` or `.txt` — PDF handling depends on external conversion or a native PDF-capable agent
 - Retrieval quality depends on embedding configuration
-- Ingestion is additive; in-place document correction, replacement, and deletion are not supported
+- Document replacement, deletion, and graph edits require a complete contribution ledger and replay the full tracked corpus
+- Node isolation can withhold other facts in the same evidence passage; it is not an access-control boundary
 - Neo4j and Qdrant exports require those services running externally
 - Single-user local workflow — no built-in multi-user or shared graph support yet
 

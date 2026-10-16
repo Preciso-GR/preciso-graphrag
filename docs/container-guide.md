@@ -81,9 +81,11 @@ Stop the runtime before copying graph data for a backup. Preserve the entire gra
 directory and the reviewed inputs. A live file copy can mix revisions. The journal
 provides interruption recovery; it does not protect against volume loss.
 
-Ingestion is additive. It is not document replacement. For source corrections,
-build a fresh graph from the corrected complete corpus. Keep the previous graph
-until verification succeeds. Model or revision changes also require a fresh index.
+New documents add evidence. Tracked corrections use explicit document replacement.
+See [document lifecycle](document-lifecycle.md). Legacy graphs without complete
+contributions require a fresh graph from the corrected complete corpus. Keep the
+previous graph until verification succeeds. Model or revision changes also require
+a fresh index.
 
 Partial ingestion is disabled by default. `GRAPHRAG_ALLOW_PARTIAL_INGEST=true`
 explicitly enables legacy partial acceptance. The container requires valid source IDs.

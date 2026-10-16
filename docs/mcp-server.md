@@ -122,6 +122,10 @@ part of the name only when no explicit MCP name overrides it.
 
 | Tool | Inputs | Operation |
 |---|---|---|
+| `get_document_workflow` | None | Discover extraction format, supported workflow, and limits |
+| `manage_documents` | `action`; optional `document_id`, `payload`, `expected_revision`, `dry_run` | List, create, replace, or delete tracked documents |
+| `manage_graph` | `action`; optional `node_id`, `target_id`, `label`, `expected_revision`, `dry_run` | Inspect, isolate, restore, remove, rename, merge, or disconnect graph records |
+| `read_evidence` | `chunk_id` | Read an active indexed source passage |
 | `get_server_status` | None | Read provider readiness and artifact counts |
 | `ingest_graph_tool` | `payload`: object | Add a reviewed extraction from memory |
 | `ingest_from_file` | `file_path`: string | Read and add a reviewed extraction file |
@@ -130,12 +134,17 @@ part of the name only when no explicit MCP name overrides it.
 | `ingest_checkpoint_tool` | `payload`: object | Save checkpoint metadata; optional `checkpoint_id` is inside the payload |
 | `query_graph_tool` | `query`: string; `mode`: optional string, default `mix` | Retrieve document evidence |
 | `list_pending_summaries` | `limit`: integer, default `50` | Read pending description-compression work |
-| `submit_summary` | `name`, `kind`, `summary_text`, `expected_description_count`; optional `src`, `tgt` | Apply an agent-written summary if the description count still matches |
+| `submit_summary` | `name`, `kind`, `summary_text`, `expected_description_count`; optional `src`, `tgt`, `expected_content_token` | Apply a summary if its evidence is current; token required after lifecycle rebuilds |
 | `export_graph_to_neo4j` | Optional `uri`, `username`, `password`, `database`, `workspace`, `clear_existing` | Export a committed graph snapshot |
 | `export_vectors_to_qdrant` | Optional `url`, `api_key`, `collection_prefix`, `workspace`, `clear_existing` | Export committed vector artifacts |
 
 `kind` accepts `entity` or `relation`. For a relation summary, provide `src` and
-`tgt`. Read pending work again if a stale description count causes rejection.
+`tgt`. Echo the pending item's `content_token` as `expected_content_token`.
+Read pending work again if a stale count or token causes rejection.
+
+For the preview and commit procedure, see [document lifecycle](document-lifecycle.md).
+The new tools use application-level `status` and `error_code` fields. Inspect them
+even when the MCP response itself has no protocol error.
 
 Query modes are `local`, `global`, `hybrid`, `naive`, `mix`, and `bypass`.
 The selected mode changes candidate selection. It does not guarantee evidence support.
@@ -204,9 +213,10 @@ further access. Preserve the directory and repair the storage failure before res
 Do not remove `.preciso-transaction` to bypass recovery. Do not edit live artifacts.
 A checkpoint stores metadata. It is not a complete graph backup.
 
-For document corrections, rebuild a fresh graph from the complete valid corpus.
-Additive ingestion does not replace previous contributions. Preserve the prior
-graph until the new graph passes verification.
+For tracked document corrections, use `manage_documents(action="replace")`.
+Preview first and commit with its revision. Legacy graphs without complete
+contributions require a fresh graph from the complete valid corpus. Preserve
+the prior graph until the new graph passes verification.
 
 ## Stop and verify
 

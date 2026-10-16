@@ -2,6 +2,30 @@
 
 Scope: the core-only branch. Supply-chain features and service containers are excluded.
 
+## Setup planning and local embedding screen — 2026-10-16
+
+The approved onboarding scope is individual macOS users, Codex, English documents,
+and one collection per project. Local built-in embeddings, optional Ollama, and
+existing API providers remain explicit user choices. The setup plan defines model
+download consent, shared model caching, credential storage, connection previews,
+and fail-closed provider behavior. Those setup features are planned, not implemented.
+
+A separate temporary environment evaluated FastEmbed 0.9.0 with the pinned quantized
+BGE-small English model. No production dependencies, provider defaults, or existing
+collections changed. The harness reuses the frozen retrieval pilot and adds cached
+fresh-process runs, store reopen, artifact hashes, dependency sizes, resource
+measurements, network-connection guards, and an overlength-input probe.
+
+The candidate returned complete evidence for five of five answerable pilot cases,
+but silently omitted differences beyond its input boundary. It remains a candidate;
+input-length enforcement and broader evaluation must precede default adoption.
+See [results and limits](fastembed-evaluation.md) and [setup plan](setup-integration-plan.md).
+
+Verification: the cached evaluation completed, both candidate processes matched
+retrieved evidence, and reopened stores matched the original query. All 253 local
+tests, lint, compilation, and diff whitespace checks passed. This feature branch
+has not run container or hosted CI checks for these evaluation-only changes.
+
 ## Stable reconciliation retries — 2026-10-16
 
 Merge review reproduced a revision conflict when identical reconciled input was

@@ -19,8 +19,8 @@ async def ingest_from_file(file_path: str, storage_instances: dict, global_confi
     Reads a reviewed extraction from disk and additively ingests it into the graph.
 
     This operation does not replace or remove contributions from an earlier
-    version of a document. Correcting already-ingested content requires a full
-    rebuild from the complete valid corpus.
+    version of a document. Changed tracked documents require explicit replacement
+    through manage_documents.
 
     Supports:
       .json files: parsed directly as JSON
@@ -43,7 +43,7 @@ async def reingest_from_file(file_path: str, storage_instances: dict, global_con
 
     Identical logic to ingest_from_file; this is recovery replay, not document
     correction or replacement. A changed extraction must not be replayed into
-    the existing graph because ingestion is additive.
+    the existing graph; use explicit document replacement instead.
     """
 
     return await _ingest_file(file_path, storage_instances, global_config, allow_reconciled=True)
@@ -82,6 +82,7 @@ async def _ingest_file(file_path: str, storage_instances: dict, global_config: d
     chunk_counts = ingestion_counts.get("chunks") or {}
 
     response = {
+        **result,
         "status": result.get("status", "error"),
         "file_path": str(file_path),
         "entities_added": int(
@@ -94,21 +95,11 @@ async def _ingest_file(file_path: str, storage_instances: dict, global_config: d
             chunk_counts.get("added", result.get("chunks_ingested", 0)) or 0
         ),
     }
-    if ingestion_counts:
-        response["ingestion_counts"] = ingestion_counts
-    if "message" in result:
-        response["message"] = result["message"]
-    if result.get("summary_events"):
-        response["summary_events"] = result["summary_events"]
-    if result.get("errors"):
-        response["errors"] = result["errors"]
-    if "warnings" in result:
-        response["warnings"] = result["warnings"]
-
-    if result.get("status") == "partial_success":
-        response["status"] = "validation_failed"
-    elif result.get("status") == "error":
-        response["message"] = result.get("message", "pipeline error")
+    # Keep the legacy extraction path while preserving the core's source path.
+    if "file_path" in result:
+        response["source_file_path"] = result["file_path"]
+    if result.get("status") == "error":
+        response.setdefault("message", "pipeline error")
 
     return response
 

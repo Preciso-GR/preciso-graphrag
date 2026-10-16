@@ -179,6 +179,21 @@ Inline ingestion returns `status` and operation details. Inspect `errors` on
 `validation_failed` and `message` on `error`. Do not treat processed-record counts
 as proof that the complete operation succeeded. Partial ingestion is disabled by default.
 
+Inline, file, replay, and reconciliation ingestion preserve the core result,
+including `error_code`, `revision`, `document_id`, `replay`, and `ingestion_counts`
+when present. Use `revision_conflict` to select explicit document replacement.
+Use `replay: true` to identify an already-processed extraction.
+
+File ingestion retains its existing `file_path` field for the extraction path.
+Its `source_file_path` field preserves the source path returned by the core.
+Existing counter fields remain available. Use the detailed `ingestion_counts`
+to distinguish added, merged, and duplicate records across ingestion paths.
+
+If legacy partial ingestion is explicitly enabled, `partial_success` remains
+`partial_success` in the result. Valid data was committed; inspect `errors` before
+continuing. Adapters do not relabel that result as `validation_failed`. With the
+default setting, the transaction rejects partial ingestion without committing it.
+
 File tools accept `.json`, `.md`, and `.txt` extraction formats. They resolve paths
 within the configured input root. Traversal and symlink escapes are rejected.
 Reconciliation accepts JSON files and writes generated outputs under the graph directory.

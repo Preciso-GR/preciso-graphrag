@@ -215,7 +215,7 @@ async def ingest_graph_tool(payload: dict) -> dict:
     
     OUTPUT:
         {
-            "status": "success" | "error" | "validation_failed",
+            "status": "success" | "error" | "validation_failed" | "partial_success",
             "entities_merged": int,  # legacy total processed
             "relationships_merged": int,  # legacy total processed
             "chunks_ingested": int,  # legacy total processed
@@ -242,10 +242,7 @@ async def ingest_graph_tool(payload: dict) -> dict:
             "errors": validation_errors,
         }
 
-    result = await ingest_extracted_json(payload, storage_instances, global_config)
-    if result.get("status") == "partial_success":
-        result["status"] = "validation_failed"
-    return result
+    return await ingest_extracted_json(payload, storage_instances, global_config)
 
 
 @mcp.tool(
@@ -277,7 +274,7 @@ async def ingest_from_file_tool(file_path: str) -> dict:
     
     OUTPUT:
         {
-            "status": "success" | "error" | "validation_failed",
+            "status": "success" | "error" | "validation_failed" | "partial_success",
             "file_path": "path/to/file",
             "entities_added": int,
             "relationships_added": int,

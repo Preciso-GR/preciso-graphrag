@@ -8,7 +8,6 @@ Called by ingest_with_reconciliation MCP tool.
 """
 
 import re
-import time
 
 
 def _normalize(name: str) -> str:
@@ -208,7 +207,6 @@ def merge_into_unified(
         "file_path": updated_extractions[0].get("file_path", "unknown")
         if updated_extractions
         else "unknown",
-        "timestamp": int(time.time()),
         "entities": final_entities,
         "relationships": list(rel_map.values()),
         "chunks": all_chunks,
@@ -221,6 +219,12 @@ def merge_into_unified(
             "total_chunks": len(all_chunks),
         },
     }
+
+    # Keep source metadata stable across retries. The ledger supplies an
+    # ingestion timestamp when the source has none; wall-clock reconciliation
+    # metadata must not change the document's content hash.
+    if updated_extractions and "timestamp" in updated_extractions[0]:
+        unified["timestamp"] = updated_extractions[0]["timestamp"]
 
     if conflicts:
         unified["_conflicts"] = conflicts

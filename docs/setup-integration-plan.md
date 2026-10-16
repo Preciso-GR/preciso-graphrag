@@ -6,6 +6,10 @@ No default model has been selected. Proposed commands do not exist yet.
 Stage 1 initial screen is complete. See [measured results](fastembed-evaluation.md).
 The candidate's input truncation blocks default adoption. Integration awaits review.
 
+The [expanded comparison](embedding-model-selection.md) now recommends Granite
+Small English R2 for the next optional built-in integration. It covers Nomic,
+Granite, and BGE using the same fixtures. No production default has changed.
+
 ## Outcome
 
 An individual macOS user connects PRECISO to Codex without cloning this repository,

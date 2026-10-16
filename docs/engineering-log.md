@@ -2,6 +2,37 @@
 
 Scope: the core-only branch. Supply-chain features and service containers are excluded.
 
+## Longer-input embedding comparison — 2026-10-16
+
+The feature-branch evaluator now supports explicit BGE, quantized Nomic, and
+Granite profiles. It pins revisions, downloads only required artifacts, validates
+manifests, and runs cached comparisons serially with one inference thread.
+Model files and optional dependencies remain outside the production installation.
+
+The screen adds frozen repository excerpts, model-token boundary inspection, and
+a deliberately repetitive long-tail diagnostic. Initial long-passage results were
+invalid because default character splitting changed evidence IDs. The diagnostic
+now disables that preprocessing only within its temporary run. Raw vector rankings
+separate threshold rejection from incorrect ranking. No production thresholds or
+fixtures were tuned after results.
+
+Granite requires an external ONNX weights file. The downloader now includes it and
+uses a real local directory so ONNX Runtime's external-data validation succeeds.
+Missing required repository artifacts fail before download. Native runtime security
+checks remain enabled.
+
+Granite is the recommended next integration candidate: 5/5 synthetic, 7/8 repository,
+and 3/3 long-tail cases at unchanged settings, compared with Nomic's 5/5, 7/8, and 1/3.
+Nomic nevertheless ranked the correct raw long-tail evidence first in all cases;
+its other results were below threshold. Granite also returned related evidence for
+both unsupported questions. The recommendation preserves these trade-offs rather
+than claiming universal quality or no-answer reliability.
+
+All three final cached runs completed twice in fresh processes with repeatable
+retrieved evidence. All 253 local tests, lint, compile, and whitespace checks passed.
+See [selection and limits](embedding-model-selection.md) for measurements. No
+production provider, runtime dependency, existing graph, or default changed.
+
 ## Setup planning and local embedding screen — 2026-10-16
 
 The approved onboarding scope is individual macOS users, Codex, English documents,

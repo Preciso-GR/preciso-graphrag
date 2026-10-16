@@ -23,6 +23,7 @@ Start with the guide that matches the task.
 | Plan simple Codex setup | [Setup integration plan](setup-integration-plan.md) |
 | Review built-in embedding measurements | [FastEmbed evaluation](fastembed-evaluation.md) |
 | Compare local English model candidates | [Embedding model shortlist](embedding-model-shortlist.md) |
+| Review the measured local model recommendation | [Embedding model selection](embedding-model-selection.md) |
 | Use extraction skills | [Skills guide](skills-guide.md) |
 | Understand summary preservation | [Summary design](summary-design.md) |
 | Resolve an operational question | [FAQ](faq.md) |

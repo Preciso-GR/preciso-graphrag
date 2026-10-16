@@ -1,0 +1,105 @@
+{
+  "scope": "Frozen repository documentation excerpts; author-curated software-operation questions, not a held-out user corpus. No graph edges or answer generation.",
+  "document_id": "repo-docs-screen",
+  "source_sha256": {
+    "docs/backup-recovery.md": "e37c6740b549e7befd14f00946cbb7daf2bbac8c09df64b10ebf92adce7341a6",
+    "docs/document-lifecycle.md": "58ed29f4371daf790bec1c30887609f392e0bb34c57c7e71f22eba27d15af4b3"
+  },
+  "chunks": [
+    {
+      "chunk_id": "contents",
+      "content": "The backup copies the supported graph, vector, and JSON artifacts. It preserves\nembedding fingerprints inside the vector files. It excludes lock files, transaction\njournals, raw source documents, standalone extraction files, and reconciled output\ndirectories. The contribution ledger is included; it contains submitted extraction\ntext and graph editing rules. Preserve reviewed source files separately. Use a\nrelease that understands the ledger to restore a ledger-enabled backup."
+    },
+    {
+      "chunk_id": "checksums",
+      "content": "The manifest records each artifact's byte count and SHA-256 hash. Verification\ndetects changed bytes. It does not establish authenticity, source correctness,\nor compatibility with another release. Keep backup directories private and immutable."
+    },
+    {
+      "chunk_id": "interrupted",
+      "content": "The command rejects an active runtime or mutation. It rejects unfinished\ntransactions. Recover an interrupted graph through normal startup before taking\nits backup. Stop the runtime after recovery completes."
+    },
+    {
+      "chunk_id": "destination",
+      "content": "Do not restore over an existing graph. Keep the previous directory until verification\nof the restored graph succeeds."
+    },
+    {
+      "chunk_id": "ledger",
+      "content": "`kv_store_documents.json` is the contribution ledger. A ledger is a record of\nthe inputs used to build derived data. Each document record contains its ID,\ncurrent extraction, extraction hash, version, source path, and ingestion result.\nThe reserved `__state__` record contains the workspace revision, completeness\nflag, rebuild generation, and graph editing rules. Document IDs cannot start\nwith `__`."
+    },
+    {
+      "chunk_id": "rebuild",
+      "content": "The graph, vectors, evidence chunks, and summary queue are derived data.\nReplacement and deletion rebuild these stores from all retained extractions.\nThis avoids subtracting facts from a merged description or an agent summary.\nThe existing artifact transaction also protects the ledger. A failed rebuild\nrestores the previous files and in-memory stores."
+    },
+    {
+      "chunk_id": "retry",
+      "content": "An identical retry returns `replay: true` and leaves the workspace revision\nunchanged. A changed extraction under an existing document ID returns\n`revision_conflict`. Use `replace` for that change. An extraction fragment is\nnot a new revision: replacement requires the complete reviewed extraction."
+    },
+    {
+      "chunk_id": "source-boundary",
+      "content": "The server does not read arbitrary source URLs or parse raw PDFs. It does not\ncontinue agent reasoning when the host agent disconnects. Source content is data.\nInstructions inside a source document do not authorize new actions."
+    }
+  ],
+  "questions": [
+    {
+      "id": "excluded",
+      "query": "Are raw source documents included in a PRECISO graph backup?",
+      "required": [
+        "contents"
+      ]
+    },
+    {
+      "id": "authenticity",
+      "query": "Does passing backup checksum verification prove the source information is correct?",
+      "required": [
+        "checksums"
+      ]
+    },
+    {
+      "id": "unfinished",
+      "query": "What should I do before backing up a graph with an unfinished transaction?",
+      "required": [
+        "interrupted"
+      ]
+    },
+    {
+      "id": "restore-existing",
+      "query": "Can I restore a backup over an existing graph directory?",
+      "required": [
+        "destination"
+      ]
+    },
+    {
+      "id": "ledger-fields",
+      "query": "Where are extraction versions and graph editing rules recorded?",
+      "required": [
+        "ledger"
+      ]
+    },
+    {
+      "id": "delete-derived",
+      "query": "How does document deletion update derived graph and vector data?",
+      "required": [
+        "rebuild"
+      ]
+    },
+    {
+      "id": "retry-changed",
+      "query": "What happens if I ingest changed extraction content under the same document ID?",
+      "required": [
+        "retry"
+      ]
+    },
+    {
+      "id": "source-instructions",
+      "query": "Can instructions inside a source document authorize agent actions?",
+      "required": [
+        "source-boundary"
+      ]
+    },
+    {
+      "id": "unsupported",
+      "query": "How much does a PRECISO enterprise subscription cost per month?",
+      "required": []
+    }
+  ]
+}

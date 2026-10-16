@@ -11,6 +11,9 @@ def build_storage_instances(global_config: dict, workspace: str = "") -> dict:
     embedding_func = global_config["embedding_func"]
     shared_kwargs = {"workspace": workspace, "global_config": global_config}
     return {
+        "documents": JsonKVStorage(
+            namespace="documents", embedding_func=None, **shared_kwargs,
+        ),
         "graph": NetworkXStorage(
             namespace="graph",
             embedding_func=None,

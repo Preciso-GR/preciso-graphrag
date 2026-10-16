@@ -254,7 +254,7 @@ async def test_new_document_incrementally_adds_entity_evidence(storage_stack):
     ]
 
 
-async def test_changed_same_document_payload_is_additive_not_replacement(storage_stack):
+async def test_changed_same_document_payload_requires_explicit_replacement(storage_stack):
     storage_instances, global_config, _ = storage_stack
     initial = {
         "document_id": "doc_changed",
@@ -286,14 +286,15 @@ async def test_changed_same_document_payload_is_additive_not_replacement(storage
     }
 
     await ingest_extracted_json(initial, storage_instances, global_config)
-    await ingest_extracted_json(changed, storage_instances, global_config)
+    result = await ingest_extracted_json(changed, storage_instances, global_config)
+    assert result["error_code"] == "revision_conflict"
 
     node = await storage_instances["graph"].get_node("ACME")
     source_ids = node["source_id"].split(GRAPH_FIELD_SEP)
-    assert "doc_changed::chunk-1" in source_ids
+    assert "doc_changed::chunk-1" not in source_ids
     assert any(chunk_id.startswith("doc_changed::chunk-1-p") for chunk_id in source_ids)
     descriptions = node["description"].split(GRAPH_FIELD_SEP)
-    assert descriptions == ["Old ACME description.", "Corrected ACME description."]
+    assert descriptions == ["Old ACME description."]
 
 
 async def test_source_ids_expand_split_chunks_and_report_danglers(storage_stack, caplog):
@@ -397,7 +398,7 @@ async def test_strict_source_ids_reject_dangling_citations(storage_stack, monkey
     assert await storage_instances["graph"].get_node("GHOST") is None
 
 
-async def test_source_id_can_reference_a_chunk_from_an_earlier_ingest(storage_stack, monkeypatch):
+async def test_incremental_fragment_under_same_document_requires_replacement(storage_stack, monkeypatch):
     storage_instances, global_config, _ = storage_stack
     await ingest_extracted_json(
         {
@@ -436,8 +437,8 @@ async def test_source_id_can_reference_a_chunk_from_an_earlier_ingest(storage_st
         global_config,
     )
 
-    assert result["status"] == "success"
-    assert result["warnings"] == []
+    assert result["error_code"] == "revision_conflict"
+    assert await storage_instances["graph"].get_node("SECOND") is None
 
 
 async def test_source_id_expands_mixed_split_and_unsplit_citations(storage_stack):

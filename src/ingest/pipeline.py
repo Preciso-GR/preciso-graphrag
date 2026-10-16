@@ -110,8 +110,9 @@ async def ingest_extracted_json(payload, storage_instances, global_config) -> di
     errors = validate_extraction_structure(payload)
     if errors:
         return {"status": "validation_failed", "errors": errors}
+    from core.documents import tracked_ingest
     return await run_artifact_mutation(
-        lambda: _ingest_extracted_json(payload, storage_instances, global_config),
+        lambda: tracked_ingest(payload, storage_instances, global_config),
         storage_instances, global_config,
     )
 

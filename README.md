@@ -29,6 +29,11 @@ Documents → Agent picks skill → Extraction JSON → MCP ingest → Local gra
 
 Drop source files into `to_be_extracted/`. An agent reads them, extracts entities and relationships using domain-specific skills, and persists a queryable knowledge graph locally in `GRAPH_IS_HERE/`. No cloud required. No pipeline to configure.
 
+**Guided setup preview:** the 0.3.0rc1 feature branch adds per-project Codex setup
+with optional built-in English embeddings, Ollama, or API providers. It is not yet
+published to PyPI. See [guided setup](docs/simple-setup.md) for the available
+local-wheel workflow and its verification limits. The existing manual setup remains supported.
+
 ---
 
 ## Why GraphRAG Over Regular RAG?

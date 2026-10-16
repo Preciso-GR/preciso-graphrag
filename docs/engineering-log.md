@@ -2,6 +2,52 @@
 
 Scope: the core-only branch. Supply-chain features and service containers are excluded.
 
+## Optional Granite provider and guided setup — 2026-10-17
+
+User review selected Granite Small English R2. The new provider lives in
+`core.local_embeddings`, separate from MCP transport and interactive setup. It
+verifies pinned artifact hashes, uses local files only during startup, checks
+model-token length without truncation, and runs synchronous work on a thread.
+Cancellation drains native work before releasing the inference lock. One model
+session, CPU inference thread, request, and per-model batch item bound resource use.
+The existing EmbeddingFunc validates returned vectors and records provider errors.
+
+The new query preflight rejects oversized inputs before keyword/cache processing.
+Ingestion remains protected by the existing artifact transaction. A real installed
+MCP check rejected an oversized entity description and preserved all persisted
+artifact bytes. A subsequent normal query succeeded. The provider is optional;
+the base server retains its existing manual configuration and dependencies.
+
+Guided setup selects local or API embeddings, detects supported Ollama models,
+obtains download consent, records per-project public settings, and references
+macOS Keychain or environment credentials. It does not save keys in configuration
+or command arguments. New Ollama settings retain the digest and task-prefix policy.
+Existing project model settings cannot be changed silently. Package entry points
+load settings before config imports. API checks use a synthetic sentence.
+
+Codex registration uses its official CLI after preview and confirmation. Tests
+used a temporary Codex home, preserving an unrelated entry and proving repeated
+registration does not change the file. The interactive local-wheel setup completed
+against disposable project settings and the shared temporary model cache. It
+verified both the prepared uvx launcher and offline dependency resolution before
+adding the confirmed entry. Your personal Codex configuration was not accessed.
+
+An initial wheel inspection found a stale module left in the local setuptools
+build directory after moving the provider into core. The generated directory was
+moved aside. A clean wheel was built and every packaged Python file was compared
+byte-for-byte with current source. No stale module remained. Container builds
+already use a clean source-only context.
+
+Verification: 270 source tests and 270 locked Linux arm64 container tests passed,
+with lint, compile, summary guards, document/summary MCP workflows, real Codex CLI
+registration, installed Granite restart/rollback checks, and the minimal runtime's
+read-only network-disabled MCP smoke. Local uvx checks exercised macOS Python 3.12;
+the source suite used Python 3.13. Real paid API calls, Keychain writes, Intel Mac
+setup, and hosted CI for this feature branch remain unverified.
+
+Version 0.3.0rc1 is prepared but unpublished. No PyPI upload, GitHub release, or
+main-branch merge was performed. See [guided setup](simple-setup.md).
+
 ## Longer-input embedding comparison — 2026-10-16
 
 The feature-branch evaluator now supports explicit BGE, quantized Nomic, and

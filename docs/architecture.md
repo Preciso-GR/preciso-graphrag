@@ -1,5 +1,11 @@
 # Architecture
 
+The optional built-in embedding provider lives in `core/local_embeddings.py`.
+It owns verified Granite artifacts, model-token validation, and serialized CPU
+inference. `preciso_mcp/cli.py` loads project settings before runtime config;
+`setup_cli.py` handles interactive installation and Codex connection separately.
+The MCP server remains noninteractive. See [guided setup](simple-setup.md).
+
 ![PRECISO system structure](diagrams/system-structure.svg)
 
 Edit the diagram in [Excalidraw](diagrams/system-structure.excalidraw).

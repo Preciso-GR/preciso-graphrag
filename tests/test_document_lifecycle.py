@@ -365,4 +365,3 @@ async def test_vector_only_legacy_store_blocks_replace_and_delete(storage_stack)
     assert delete_result["status"] == "error"
     assert delete_result["error_code"] == "legacy_untracked"
     assert (await stores["chunks_vdb"].get_by_id("legacy-vector-only"))["content"].startswith("Legacy indexed")
-

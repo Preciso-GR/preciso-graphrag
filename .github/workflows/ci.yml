@@ -23,7 +23,8 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install MCP smoke client
-        run: python -m pip install --require-hashes --only-binary=:all: -r requirements.lock
+        run: >-
+          python -m pip install --require-hashes --only-binary=:all: -r requirements.lock
       - name: Verify MCP and persistent volume
         run: >-
           python -m scripts.smoke_mcp -- docker run --rm -i

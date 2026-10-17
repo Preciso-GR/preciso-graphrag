@@ -2,6 +2,28 @@
 
 Scope: the core-only branch. Supply-chain features and service containers are excluded.
 
+## Public package publication — 2026-10-17
+
+The maintainer registered separate Trusted Publishers on TestPyPI and PyPI.
+TestPyPI attempt 3 succeeded. Its downloaded wheel matched its validated build
+and passed real Granite MCP ingestion, restart, retrieval, overlength rejection,
+rollback, and recovery. Codex registration passed in a temporary Codex home.
+
+GitHub prerelease `v0.3.0rc1` targets the reviewed PR #3 merge commit
+`10d0d1c1edd9ff34de9021aab80f08d011f2ae66`. The first production run was cancelled
+because tag-push CI and reusable release CI shared `ci-<ref>`. Tag CI succeeded;
+retrying the release workflow then completed all checks and the PyPI upload.
+The follow-up workflow group includes the caller workflow name to separate those
+runs. This change does not alter runtime code or the released tag.
+
+The public PyPI wheel matches the production artifact, SHA256
+`7fe5aed189de472b6200f5cd450da05e1d8f6af996dc6628b7fea9e8749fe0df`.
+All 42 runtime Python modules match the tested TestPyPI package. GitHub release
+downloads and checksums now match production artifacts. The public
+`uvx --from preciso-graphrag==0.3.0rc1 preciso-graphrag setup --help` resolved and
+ran successfully. README, setup, publishing, and changelog notices now describe
+the public prerelease. Preview platform, credential, and retrieval limits remain.
+
 ## Package release preparation — 2026-10-17
 
 Guided setup is the primary preview path in the README. The source-checkout MCP

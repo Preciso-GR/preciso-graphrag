@@ -34,9 +34,10 @@ changes. It does not parse raw PDFs or run an extraction language model itself.
 Local embeddings do not require an embedding API key. Your agent's own model may
 still use a cloud service.
 
-**Version status:** this feature branch contains the unreleased **0.3.0rc1** guided
-setup. It has not been published to PyPI. The instructions below distinguish the
-current checkout from the existing manual workflow.
+**Version status:** **0.3.0rc1** is available on
+[PyPI](https://pypi.org/project/preciso-graphrag/0.3.0rc1/) and
+[GitHub Releases](https://github.com/Preciso-GR/preciso-graphrag/releases/tag/v0.3.0rc1).
+This is a Codex-first macOS preview. See the current limitations below.
 
 ---
 
@@ -90,21 +91,18 @@ See [docs/eval-guide.md](docs/eval-guide.md) for full methodology and multi-hop 
 
 ## Guided Codex Setup — Preview
 
-The first automated setup target is **macOS with Codex CLI**. Install Python 3.11+,
-uv (which provides `uvx`), and Codex CLI before setup.
+The first automated setup target is **macOS with Codex CLI**. Preciso requires
+Python 3.11+. Install uv (which provides `uvx`) and Codex CLI before setup.
 
-From a checkout that contains the 0.3.0rc1 setup code:
+Open a terminal in your project directory and run:
 
 ```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install -e .
-.venv/bin/python -m preciso_mcp.cli setup --project /absolute/path/to/your-project
+uvx --from preciso-graphrag==0.3.0rc1 preciso-graphrag setup --project .
 ```
 
-Keep this checkout available. The development launcher refers to its source path.
-For a built wheel, use the wheel's absolute path with `uvx --from`; see
-[guided setup](docs/simple-setup.md). The public one-command installation is pending
-package publication.
+You do not need to clone the repository. uvx installs the package in an isolated
+environment. Setup asks before preparing optional provider packages and model files.
+For development checkouts and local wheels, see [guided setup](docs/simple-setup.md).
 
 Setup will:
 
@@ -163,8 +161,8 @@ download recovery, launcher behavior, and verification limits.
 ## Manual Source Setup
 
 Use this workflow for the repository folders and manual MCP configuration below.
-The clone command retrieves the default branch; guided setup requires the newer
-setup code described above.
+The clone command retrieves the default branch. Most users can use guided setup
+above instead of maintaining a source checkout.
 
 ### 1. Clone and install
 
@@ -540,7 +538,7 @@ python3 tests/manual/reconcile_manual.py
 
 ## Current Limitations
 
-- Guided setup is an unpublished preview; Windows and Linux automated setup is not verified
+- Guided setup is a release-candidate preview; Windows and Linux automated setup is not verified
 - The built-in model targets English and rejects inputs beyond its token limit
 - Best input format is `.md` or `.txt` — PDF handling depends on external conversion or a native PDF-capable agent
 - Retrieval quality depends on embedding configuration

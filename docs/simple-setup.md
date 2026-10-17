@@ -1,19 +1,19 @@
-# Guided setup for Codex
+# Guided setup for Codex and Claude Code
 
-Status: version 0.3.0rc1 is published on
-[PyPI](https://pypi.org/project/preciso-graphrag/0.3.0rc1/). This release candidate
-targets individual macOS users with Codex CLI. Other automated client and platform
-setups remain unverified.
+This guide describes version 0.3.0rc2. Check
+[published versions](https://pypi.org/project/preciso-graphrag/) before installation.
+The release candidate targets individual macOS users with Codex CLI or Claude Code
+CLI. Other automated client and platform setups remain unverified.
 
 ## What the user does
 
 From your project directory, run:
 
 ```sh
-uvx --from preciso-graphrag==0.3.0rc1 preciso-graphrag setup --project /absolute/project
+uvx --from preciso-graphrag==0.3.0rc2 preciso-graphrag setup --project /absolute/project
 ```
 
-uv and Codex CLI must be installed. The setup command can resume in an isolated
+uv and the selected agent CLI must be installed for registration. The setup command can resume in an isolated
 uvx environment with optional provider packages after confirmation. It does not
 install packages inside a running MCP server.
 
@@ -22,10 +22,16 @@ Keep that wheel available: the generated development launcher references it.
 An editable source installation similarly retains its source URL. Published-package
 launchers use the installed package's exact version.
 
-1. Select local or API embeddings.
-2. For local use, choose built-in Granite or a running Ollama service. Supported
+1. Select Codex, Claude Code, or both. Use `--client codex`, `--client claude`, or
+   `--client both` to preselect. This choice is retained when optional packages
+   require setup to resume in a new uvx environment.
+2. Select local or API embeddings. For local use, choose built-in Granite or Ollama. Supported
    installed Ollama models are listed. If none exists, setup offers a Nomic download.
-   Setup does not install Ollama. A stopped service must be started separately.
+   Setup does not install Ollama. If an installed local service is stopped, setup
+   asks before running `ollama serve` in the background and waits up to 20 seconds
+   for readiness. The service keeps running after successful setup. Failed starts
+   clean up only the process started by setup. An unavailable remote endpoint is
+   never replaced by a local service. Normal MCP startup does not prompt or start Ollama.
 3. For built-in embeddings, review the English model name, 188.1 MiB artifact size,
    and cache directory. Confirm the download if the cached files are missing or
    corrupt. Optional Python dependencies are additional. Failed downloads offer
@@ -34,18 +40,28 @@ launchers use the installed package's exact version.
    receives text and usage may incur charges. Choose macOS Keychain or environment
    credentials. Setup and server readiness checks can send the same synthetic
    sentence more than once; they do not send a document corpus during setup.
-5. Confirm preparation of the Codex launcher. Setup verifies the selected provider,
+5. Confirm preparation of the agent launcher. Setup verifies the selected provider,
    populates uv's package cache, and tests the real MCP connection online and with
    uv's offline package resolution. The built-in model uses local files only.
-6. Review the proposed named Codex entry and confirm it. Setup uses the official
-   `codex mcp add` command. Other entries are preserved. A conflicting entry is not
-   overwritten. Repeat setup leaves an identical entry unchanged.
-7. Reload Codex. Ask it to call `get_server_status` and `get_document_workflow`.
+6. Review and confirm each selected agent entry. Setup uses `codex mcp add` or
+   `claude mcp add --scope local`. Claude runs with the selected project directory.
+   Other entries are preserved. Conflicting entries and changes made during the
+   preview are rejected. Repeat setup leaves an identical entry unchanged. A
+   managed entry differing only in its package version can be updated after
+   confirmation. If a Claude update fails, setup attempts to restore its old entry.
+7. Reload the selected agent. Ask it to call `get_server_status` and `get_document_workflow`.
    Then give the agent access to the documents you want processed.
 
 Codex's named entries are user-level settings and can be visible across projects.
 Each entry points to a separate project collection. This is data separation, not
 an access-control boundary. Do not give an agent access to unrelated collections.
+
+Claude Code stores its project-local connection privately in its user configuration,
+not in the project's `.mcp.json`. `CLAUDE_CONFIG_DIR` is respected. Selecting both
+clients points both entries to the same collection, not separate copies. Only one
+MCP runtime may own that collection. Stop one client's server before switching;
+also stop active servers before rerunning setup's MCP verification. Partial client
+registration is safe to retry: already matching entries are left unchanged.
 
 ## Storage
 
@@ -61,7 +77,7 @@ are never written there or included in Codex command arguments. Keychain referen
 use a provider and project account. No plaintext credential-store fallback is used.
 
 Environment mode accepts `GRAPHRAG_OPENAI_API_KEY` or `OPENAI_API_KEY`, and
-`GRAPHRAG_COHERE_API_KEY` or `COHERE_API_KEY`. Codex must inherit the selected
+`GRAPHRAG_COHERE_API_KEY` or `COHERE_API_KEY`. The selected agent must inherit the selected
 environment variable. A graphical client may not inherit terminal exports; choose
 Keychain when that environment cannot be provided reliably.
 
@@ -105,9 +121,11 @@ manual server launches retain their context-tokenizer behavior.
 - Corrupt model: rerun setup and approve repair. Only invalid/missing files download.
 - Provider unavailable: restore the selected service/credentials and rerun setup.
 - Changed model: keep the original model or explicitly create a new collection.
-- Codex entry conflict: inspect it in Codex. Setup preserves it and reports the conflict.
+- Agent entry conflict: inspect it in that client. Setup preserves it and reports the conflict.
 - Setup stopped after saving settings: rerun for the same project. No duplicate entry
   is added. A failed verification is not reported as a successful connection.
+- Agent CLI missing: settings remain saved. Install the selected CLI and rerun
+  setup for the same project. Setup does not install agent applications.
 
 Setup does not provide automatic model migration, a raw PDF parser, a file watcher,
 or team authorization. Real API provider calls and real Keychain writes require
@@ -120,6 +138,8 @@ an optional setup dependency. Windows/Linux automated setup is not verified.
 python -m pytest -q
 python -m ruff check src tests scripts
 python -m scripts.smoke_codex_setup
+python -m scripts.smoke_agent_setup
+python -m scripts.smoke_ollama_startup
 python -m scripts.smoke_local_setup --python /path/to/installed/python \
   --model-dir /path/to/verified/granite-model
 ```
@@ -131,3 +151,5 @@ and recovery. See [model selection](embedding-model-selection.md) for resource a
 retrieval measurements; setup does not establish production retrieval quality.
 
 Official integration reference: [Codex MCP configuration](https://developers.openai.com/codex/mcp).
+Additional references: [Claude Code MCP](https://code.claude.com/docs/en/mcp),
+[Ollama CLI](https://docs.ollama.com/cli).

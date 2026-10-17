@@ -1,7 +1,7 @@
 # Manual source-checkout connection
 
-Codex users should use [guided setup](../../docs/simple-setup.md). It registers
-the server with `codex mcp add`; it does not read this JSON example.
+Codex and Claude Code users should use [guided setup](../../docs/simple-setup.md).
+It registers through the selected agent CLI and does not read this JSON example.
 
 `claude-code.source.json` shows the repository launcher for clients that accept
 the `mcpServers` JSON format. It is not a universal MCP activation file.

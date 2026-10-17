@@ -1,8 +1,9 @@
 # Publish Preciso
 
-Status: publishing automation is prepared. Version 0.3.0rc1 is not yet on PyPI.
-Publishing requires a maintainer's PyPI and TestPyPI account setup. A GitHub release
-and a PyPI release are separate publications.
+Status: version 0.3.0rc1 is published on PyPI and TestPyPI. The GitHub prerelease
+is published. The matching Trusted Publishers are configured. Future maintainers
+must retain those account settings. A GitHub release and a PyPI release are
+separate publications; always verify the upload result.
 
 ## One-time account configuration
 

@@ -1,12 +1,13 @@
 # Guided setup for Codex
 
-Status: implemented on the setup feature branch for version 0.3.0rc1. The package
-has not been published to PyPI. Do not claim `uvx preciso-graphrag setup` is available
-from the public package index yet. First automated target: individual macOS users.
+Status: version 0.3.0rc1 is published on
+[PyPI](https://pypi.org/project/preciso-graphrag/0.3.0rc1/). This release candidate
+targets individual macOS users with Codex CLI. Other automated client and platform
+setups remain unverified.
 
 ## What the user does
 
-After package publication, the intended command is:
+From your project directory, run:
 
 ```sh
 uvx --from preciso-graphrag==0.3.0rc1 preciso-graphrag setup --project /absolute/project
@@ -16,7 +17,7 @@ uv and Codex CLI must be installed. The setup command can resume in an isolated
 uvx environment with optional provider packages after confirmation. It does not
 install packages inside a running MCP server.
 
-For a local build before publication, use the wheel's absolute path with `--from`.
+For a development build, use the wheel's absolute path with `--from`.
 Keep that wheel available: the generated development launcher references it.
 An editable source installation similarly retains its source URL. Published-package
 launchers use the installed package's exact version.

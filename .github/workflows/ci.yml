@@ -8,7 +8,8 @@ on:
 
 # Cancel superseded runs on the same ref.
 concurrency:
-  group: ci-${{ github.ref }}
+  # Reused release checks must not cancel ordinary CI for the same tag.
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

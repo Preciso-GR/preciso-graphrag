@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.0rc1 — unreleased
+## 0.3.0rc1 — 2026-10-17
 
 - Add optional built-in Granite Small English R2 embeddings with pinned artifact
   verification, one CPU thread, asynchronous offloading, and strict input limits.
@@ -12,12 +12,13 @@
 - Prepare uv's package cache during setup and verify offline dependency resolution
   before adding the Codex entry.
 - Add validated wheel/source builds and Trusted Publishing workflows for TestPyPI
-  and PyPI. Publisher account configuration remains a maintainer release gate.
+  and PyPI. Matching Trusted Publishers are configured for this repository.
 - Move manual MCP configuration into examples and archive superseded planning pages.
   Keep documentation, models, and local data outside installable distributions.
 
-This version has not been published to PyPI or GitHub Releases. Existing collections
-retain their configured model. Built-in model files download only after confirmation.
+Published to TestPyPI, PyPI, and GitHub Releases. Existing collections retain their
+configured model. Built-in model files download only after confirmation. This is
+a Codex-first macOS release-candidate preview, with the limits in the setup guide.
 
 ## 0.2.0rc1 — 2026-10-16
 

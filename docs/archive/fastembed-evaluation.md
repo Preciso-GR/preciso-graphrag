@@ -1,9 +1,11 @@
 # Built-in English embeddings: initial screen
 
+Historical record. For current setup, see [guided setup](../simple-setup.md).
+
 Date: 2026-10-16. Decision: retain as a candidate. Do not change the default yet.
 
 The [setup integration plan](setup-integration-plan.md) defines the approved scope.
-The [recorded measurements](measurements/fastembed-screen-20261016.json) include
+The [recorded measurements](../measurements/fastembed-screen-20261016.json) include
 dependency versions, model artifact hashes, per-question results, and limitations.
 
 ## Question and method

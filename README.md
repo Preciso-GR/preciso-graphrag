@@ -20,19 +20,23 @@
 
 ---
 
-Most RAG tools retrieve documents.
-Preciso builds a **knowledge graph** — so your agent can reason across connections, not just find similar text.
+Preciso is a **local-first GraphRAG MCP server for agents**. It stores document
+passages, entities, and relationships. Your agent can retrieve evidence and follow
+connections across documents.
 
 ```
-Documents → Agent picks skill → Extraction JSON → MCP ingest → Local graph
+Documents → Agent extracts facts → Reviewed extraction → Preciso graph → Evidence for the agent
 ```
 
-Drop source files into `to_be_extracted/`. An agent reads them, extracts entities and relationships using domain-specific skills, and persists a queryable knowledge graph locally in `GRAPH_IS_HERE/`. No cloud required. No pipeline to configure.
+The agent reads the documents, extracts facts, and writes the final answer.
+Preciso validates and stores the extraction, retrieves evidence, and manages graph
+changes. It does not parse raw PDFs or run an extraction language model itself.
+Local embeddings do not require an embedding API key. Your agent's own model may
+still use a cloud service.
 
-**Guided setup preview:** the 0.3.0rc1 feature branch adds per-project Codex setup
-with optional built-in English embeddings, Ollama, or API providers. It is not yet
-published to PyPI. See [guided setup](docs/simple-setup.md) for the available
-local-wheel workflow and its verification limits. The existing manual setup remains supported.
+**Version status:** this feature branch contains the unreleased **0.3.0rc1** guided
+setup. It has not been published to PyPI. The instructions below distinguish the
+current checkout from the existing manual workflow.
 
 ---
 
@@ -57,6 +61,10 @@ The graph makes multi-hop reasoning possible.
 
 ## Benchmark Results
 
+These are historical financial QA results. They do not measure the new Granite
+embedding provider. See [model selection](docs/embedding-model-selection.md) for
+the separate embedding comparison, test conditions, and limitations.
+
 Tested on 23 financial QA questions from Walmart FY2022 + FY2023 10-K filings, scored on four dimensions:
 
 | Metric             | Score     |
@@ -80,7 +88,83 @@ See [docs/eval-guide.md](docs/eval-guide.md) for full methodology and multi-hop 
 
 ---
 
-## Quickstart (3 Minutes)
+## Guided Codex Setup — Preview
+
+The first automated setup target is **macOS with Codex CLI**. Install Python 3.11+,
+uv (which provides `uvx`), and Codex CLI before setup.
+
+From a checkout that contains the 0.3.0rc1 setup code:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -e .
+.venv/bin/python -m preciso_mcp.cli setup --project /absolute/path/to/your-project
+```
+
+Keep this checkout available. The development launcher refers to its source path.
+For a built wheel, use the wheel's absolute path with `uvx --from`; see
+[guided setup](docs/simple-setup.md). The public one-command installation is pending
+package publication.
+
+Setup will:
+
+1. Ask you to choose local or API embeddings.
+2. Show the required packages and model download before asking for confirmation.
+3. Verify the selected provider and prepare a separate collection for the project.
+4. Test the MCP connection, then show the proposed Codex entry for confirmation.
+5. Preserve other Codex entries and reuse an identical existing entry.
+
+Reload Codex after setup. Give it access to your documents and use this prompt:
+
+```text
+Call get_server_status and get_document_workflow. Use the returned workflow to
+prepare these documents for Preciso. Show the extraction validation summary before
+ingestion. Then retrieve evidence from the graph to answer my questions.
+```
+
+### Embedding choices
+
+| Choice | What runs | Requirements |
+|--------|-----------|--------------|
+| Built-in local (default in guided setup) | IBM Granite Small English R2 through FastEmbed | One model download; no Ollama or embedding API key |
+| Ollama | An installed `nomic-embed-text` or `mxbai-embed-large` model | A running Ollama service; setup can offer a Nomic download |
+| API | OpenAI or Cohere embeddings | Provider credentials, network access, and possible usage charges |
+
+The built-in English model produces **384-dimensional vectors**. Its pinned model
+artifacts total **188.1 MiB**; Python dependencies need additional disk space. Setup
+shows the cache path and asks before downloading or repairing model files. Valid
+cached files are reused. Normal server startup does not download model weights.
+
+Granite accepts up to **8,192 model tokens, including special tokens**, per input.
+Tokens are not words. Preciso rejects longer inputs instead of silently truncating
+them. Keep passages focused; split oversized passages or descriptions before retrying.
+
+The built-in provider uses one CPU inference thread and one embedding request at a
+time. A saved collection retains its provider and model identity. A failed provider
+does not trigger an automatic switch. Changing models requires an explicit new
+collection or rebuild.
+
+### Project data and credentials
+
+Guided setup stores each project's settings, graph, and reviewed extractions under
+`~/Library/Application Support/PRECISO/projects/<project-path-hash>/`. The model
+cache is shared under `~/Library/Caches/PRECISO/models/`. Use `PRECISO_CONFIG_DIR`
+and `PRECISO_CACHE_DIR` to select other roots before setup.
+
+API credentials use macOS Keychain or environment variables. They are not written
+to project settings or Codex command arguments. Codex entries are user-level
+settings; separate project collections do not provide access control.
+
+See [guided setup and recovery](docs/simple-setup.md) for credential variables,
+download recovery, launcher behavior, and verification limits.
+
+---
+
+## Manual Source Setup
+
+Use this workflow for the repository folders and manual MCP configuration below.
+The clone command retrieves the default branch; guided setup requires the newer
+setup code described above.
 
 ### 1. Clone and install
 
@@ -167,7 +251,9 @@ Confirm the graph artifacts written to GRAPH_IS_HERE/ and summarize what was ing
 
 ![Preciso Architecture](assets/preciso_arch_org.png)
 
-Six steps, always in this order:
+The manual source workflow uses these steps. Guided setup uses the project data
+directories described above and exposes its extraction contract through
+`get_document_workflow`.
 
 | Step | Who        | What happens                                          |
 |------|------------|-------------------------------------------------------|
@@ -178,7 +264,7 @@ Six steps, always in this order:
 | 5    | Agent      | Calls the MCP ingestion tool                          |
 | 6    | Preciso    | Persists graph in `GRAPH_IS_HERE/` — queryable immediately |
 
-### Folder Contract
+### Source Checkout Folders
 
 ```
 src/                ← installed Python application packages
@@ -211,10 +297,15 @@ evals/              ← benchmark test cases and results
 | Tool | Description |
 |------|-------------|
 | `get_server_status` | Runtime health check — call before anything |
+| `get_document_workflow` | Get extraction requirements, input limits, and document workflow guidance |
+| `manage_documents` | Inspect tracked documents; preview and apply replacement or deletion |
+| `manage_graph` | Inspect nodes and edges; preview and apply supported graph edits |
+| `read_evidence` | Read active source passages used to support graph facts |
 | `ingest_from_file` | Add a new, reviewed extraction to the graph |
 | `reingest_from_file` | Replay the identical extraction after an operational failure |
 | `ingest_graph_tool` | Add a new, reviewed inline extraction payload |
 | `ingest_with_reconciliation_tool` | Ingest after reconciliation subagents finish |
+| `ingest_checkpoint_tool` | Process checkpoint-based ingestion |
 | `query_graph_tool` | Query the persisted graph |
 | `list_pending_summaries` | Agent-handshake mode only: entities/relations deferred for you to summarize |
 | `submit_summary` | Agent-handshake mode only: submit your summary for a pending entity/relation |
@@ -236,7 +327,7 @@ Always call `get_server_status()` first. It reports embedding mode, graph health
     "mode": "local",
     "provider": "ollama",
     "model": "mxbai-embed-large",
-    "dimension": 768,
+    "dimension": 1024,
     "status": "active"
   },
   "graph": {
@@ -256,7 +347,7 @@ Always call `get_server_status()` first. It reports embedding mode, graph health
 </details>
 
 <details>
-<summary>Degraded response example</summary>
+<summary>Legacy manual configuration: degraded response example</summary>
 
 ```json
 {
@@ -275,6 +366,10 @@ uses an LLM (it's always deferred to the agent via `pending_summaries`, see
 raw retrieved context when no LLM is configured.
 
 </details>
+
+Guided setup requires the selected embedding provider to be available. If it is
+unavailable, startup fails with a recovery instruction instead of using fallback
+embeddings.
 
 If `overall` is `degraded`, the agent explains what still works and asks before proceeding. It never silently continues.
 
@@ -297,7 +392,9 @@ The graph connects entities across document sections so your agent gets reasoned
 
 ## Graph Artifacts
 
-After ingestion the graph persists in `GRAPH_IS_HERE/` and is reusable across sessions:
+In the manual source workflow, the graph persists in `GRAPH_IS_HERE/` and is reusable
+across sessions. Guided setup uses its project-specific graph directory. Both store
+the same operational artifacts:
 
 ```
 GRAPH_IS_HERE/
@@ -330,7 +427,8 @@ complete ledger require a fresh rebuild. See [document lifecycle](docs/document-
   <img src="https://img.shields.io/badge/Qdrant-Vector%20Export-DC2626?style=for-the-badge" alt="Qdrant" />
 </p>
 
-`GRAPH_IS_HERE/` is always the operational source of truth. Neo4j and Qdrant are optional downstream copies — not storage backends.
+The local graph directory is the operational source of truth. Neo4j and Qdrant are
+optional downstream copies, not live storage backends.
 
 ```
 Local graph (master) → optional → Neo4j copy
@@ -378,9 +476,14 @@ See [docs/getting-started.md](docs/getting-started.md) for full export setup inc
 
 ---
 
-## MCP Setup
+## Manual MCP Setup
 
-`.mcp.json` uses a repo-local launcher that finds the right Python automatically:
+Codex users can use guided setup above. It registers the server through
+`codex mcp add`; Codex does not use this repository's JSON template.
+
+The [manual source example](examples/mcp/README.md) is for compatible clients.
+Replace the launcher path with an absolute path before using it. Downloading the
+package or copying a configuration file does not automatically connect every agent.
 
 ```json
 {
@@ -388,9 +491,7 @@ See [docs/getting-started.md](docs/getting-started.md) for full export setup inc
     "graphrag-mcp": {
       "type": "stdio",
       "command": "/bin/sh",
-      "args": ["scripts/mcp_launcher.sh"],
-      "cwd": ".",
-      "tools": ["*"]
+      "args": ["/absolute/path/to/preciso-graphrag/scripts/mcp_launcher.sh"]
     }
   }
 }
@@ -419,6 +520,8 @@ python3 tests/manual/reconcile_manual.py
 
 | Guide | What it covers |
 |-------|----------------|
+| [docs/simple-setup.md](docs/simple-setup.md) | Guided Codex setup, project storage, credentials, and recovery |
+| [docs/embedding-model-selection.md](docs/embedding-model-selection.md) | Granite selection, measured resource use, and retrieval limitations |
 | [docs/domain-model.md](docs/domain-model.md) | Canonical document-lifecycle terminology |
 | [docs/getting-started.md](docs/getting-started.md) | Full setup including embeddings and exports |
 | [docs/skills-guide.md](docs/skills-guide.md) | How to use and write extraction skills |
@@ -430,12 +533,15 @@ python3 tests/manual/reconcile_manual.py
 | [docs/container-guide.md](docs/container-guide.md) | Build and operate the core MCP container |
 | [docs/engineering-log.md](docs/engineering-log.md) | Decisions, verification, and documentation method |
 | [docs/production-readiness.md](docs/production-readiness.md) | Implemented controls and open release gates |
+| [docs/publishing.md](docs/publishing.md) | PyPI account setup, TestPyPI, and release publishing |
 | [docs/faq.md](docs/faq.md) | Common problems and fixes |
 
 ---
 
 ## Current Limitations
 
+- Guided setup is an unpublished preview; Windows and Linux automated setup is not verified
+- The built-in model targets English and rejects inputs beyond its token limit
 - Best input format is `.md` or `.txt` — PDF handling depends on external conversion or a native PDF-capable agent
 - Retrieval quality depends on embedding configuration
 - Document replacement, deletion, and graph edits require a complete contribution ledger and replay the full tracked corpus

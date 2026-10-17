@@ -5,7 +5,7 @@ built-in integration. The production provider and default model are unchanged.
 
 The [recorded comparison](measurements/fastembed-comparison-20261016.json) contains
 versions, source revisions, artifact hashes, per-question results, timings,
-memory, and limitations. The [setup plan](setup-integration-plan.md) still governs
+memory, and limitations. The [setup plan](archive/setup-integration-plan.md) still governs
 integration. This screen selects a candidate, not a production-quality guarantee.
 
 ## Method

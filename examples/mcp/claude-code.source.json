@@ -4,11 +4,7 @@
       "type": "stdio",
       "command": "/bin/sh",
       "args": [
-        "scripts/mcp_launcher.sh"
-      ],
-      "cwd": ".",
-      "tools": [
-        "*"
+        "/absolute/path/to/preciso-graphrag/scripts/mcp_launcher.sh"
       ]
     }
   }

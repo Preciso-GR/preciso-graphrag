@@ -2,6 +2,33 @@
 
 Scope: the core-only branch. Supply-chain features and service containers are excluded.
 
+## Package release preparation — 2026-10-17
+
+Guided setup is the primary preview path in the README. The source-checkout MCP
+JSON moved to `examples/mcp/`; it is a manual client example, not Codex activation.
+Generated root `.mcp.json` files are ignored. Four older plans and initial screens
+moved to `docs/archive/`. Current setup, operation, architecture, and measured
+model selection remain in the main documentation directory. Links were updated.
+
+Package metadata now includes the README, license declaration, and project URLs.
+The source manifest excludes documentation, tests, scripts, examples, skills,
+models, and local data. A CI guard compares all 42 runtime Python modules against
+the wheel and checks the source archive's allowed contents. Docker copies the new
+required metadata files before building. No runtime dependency was added.
+
+The publishing workflow runs reusable CI before building distributions. A manual
+run targets TestPyPI. A published GitHub release targets PyPI and must have a tag
+matching the version on a commit reachable from `main`. Separate environment-bound
+publishing jobs use OIDC. Maintainers must configure the matching Trusted Publisher
+in PyPI and TestPyPI; GitHub authentication does not grant PyPI ownership.
+
+Verification: 270 tests passed locally and in the locked Linux container. Lint,
+compilation, integrity guards, Markdown links, workflow YAML parsing, strict Twine
+metadata checks, and distribution contents passed. The wheel was built from its
+source archive and its installed entry points ran outside the checkout. PyPI's
+public project endpoint returned 404 at inspection; this does not reserve a name.
+No PyPI upload or account configuration is claimed. See [publishing](publishing.md).
+
 ## Optional Granite provider and guided setup — 2026-10-17
 
 User review selected Granite Small English R2. The new provider lives in
@@ -96,7 +123,7 @@ measurements, network-connection guards, and an overlength-input probe.
 The candidate returned complete evidence for five of five answerable pilot cases,
 but silently omitted differences beyond its input boundary. It remains a candidate;
 input-length enforcement and broader evaluation must precede default adoption.
-See [results and limits](fastembed-evaluation.md) and [setup plan](setup-integration-plan.md).
+See [results and limits](archive/fastembed-evaluation.md) and [setup plan](archive/setup-integration-plan.md).
 
 Verification: the cached evaluation completed, both candidate processes matched
 retrieved evidence, and reopened stores matched the original query. All 253 local

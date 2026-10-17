@@ -1,14 +1,16 @@
 # Lightweight Docker deployment and retrieval improvement plan
 
+Historical record. For current setup, see [guided setup](../simple-setup.md).
+
 Date: 2026-10-04. Baseline: `core-graphrag` at `b0a32b4`.
 Status update, 2026-10-05: configuration, input boundaries, recovery, embedding
 identity, bounded workers, and the locked three-stage Docker build are implemented.
 The remaining sections describe experiments and acceptance criteria. Retrieval
-quality changes remain pending a reviewed baseline. See [engineering decisions](engineering-log.md)
-and [container operation](container-guide.md) for implemented behavior.
+quality changes remain pending a reviewed baseline. See [engineering decisions](../engineering-log.md)
+and [container operation](../container-guide.md) for implemented behavior.
 
 Production release also requires the data-safety, recovery, security, and
-operational gates in [production-readiness.md](production-readiness.md).
+operational gates in [production-readiness.md](../production-readiness.md).
 
 ## Objective and decision
 
@@ -42,7 +44,7 @@ improve retrieval.
 
 The previous optimizations measured local metadata lookup at 31.050 → 0.491 ms
 and evidence selection at 45.213 → 6.427 ms on the synthetic benchmark. These
-exclude embedding and generation latency; see [performance.md](performance.md).
+exclude embedding and generation latency; see [performance.md](../performance.md).
 
 ## Phase 1 — establish the baseline and simplify configuration
 

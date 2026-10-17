@@ -63,6 +63,8 @@ artifact_manifest.json
 preciso-agent/.env
 preciso-agent
 .claude
+# User-approved manual MCP configuration. The template is under examples/mcp/.
+/.mcp.json
 CLAUDE.md  
 PAPER_MEMORY.md
 MEMORY.md

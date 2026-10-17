@@ -1,13 +1,15 @@
 # Simple setup integration plan
 
+Historical record. For current setup, see [guided setup](../simple-setup.md).
+
 Status: scope approved on 2026-10-16; implementation started after model review.
 The optional Granite provider and guided setup are implemented on the feature branch
-for 0.3.0rc1. Public PyPI installation remains a release gate. See [guided setup](simple-setup.md).
+for 0.3.0rc1. Public PyPI installation remains a release gate. See [guided setup](../simple-setup.md).
 
 Stage 1 initial screen is complete. See [measured results](fastembed-evaluation.md).
 The initial BGE candidate's truncation blocked its adoption.
 
-The [expanded comparison](embedding-model-selection.md) now recommends Granite
+The [expanded comparison](../embedding-model-selection.md) now recommends Granite
 Small English R2 for the next optional built-in integration. It covers Nomic,
 Granite, and BGE using the same fixtures. Granite is the setup default for new local
 collections. Existing collections and manual server defaults remain unchanged.
@@ -124,5 +126,5 @@ documented for Windows and Linux. Use a PR and passing CI before merging to main
 - [FastEmbed](https://github.com/qdrant/fastembed)
 - [Supported models](https://qdrant.github.io/fastembed/examples/Supported_Models/)
 - [Candidate model card](https://huggingface.co/BAAI/bge-small-en-v1.5)
-- [Existing retrieval pilot](retrieval-pilot.md)
-- [MCP operation](mcp-server.md)
+- [Existing retrieval pilot](../retrieval-pilot.md)
+- [MCP operation](../mcp-server.md)

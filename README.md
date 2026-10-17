@@ -1,565 +1,296 @@
 <div align="center">
-  <h1>Preciso</h1>
-  <p><strong>Precise knowledge graphs from your documents.</strong></p>
-  <p><em>Named after Bruno Fernandes. Every pass lands exactly where it needs to.</em></p>
+  <h1><img src="assets/branding/preciso-logo-concept-v1.png" alt="PRECISO — document knowledge connected for agents" width="640" /></h1>
+  <p><strong>Connect your agent to a persistent graph of document evidence.</strong></p>
+  <p>Local-first GraphRAG · Model Context Protocol · Reviewed document updates</p>
   <p>
-    <img src="https://img.shields.io/badge/Codex-Agent-111111?style=for-the-badge&logo=openai&logoColor=white" alt="Codex" />
-    <img src="https://img.shields.io/badge/Claude%20Code-Agent-C8102E?style=for-the-badge" alt="Claude Code" />
-    <img src="https://img.shields.io/badge/OpenCode-Agent-FFFFFF?style=for-the-badge&logoColor=C8102E&color=C8102E" alt="OpenCode" />
-    <img src="https://img.shields.io/badge/Copilot-Agent-7F1D1D?style=for-the-badge&logo=github&logoColor=white" alt="Copilot" />
-  </p>
-  <p>
-    <img src="https://img.shields.io/badge/Local--First-FFFFFF?style=for-the-badge&logoColor=C8102E&color=C8102E" alt="Local-first" />
-    <img src="https://img.shields.io/badge/Python-3.11%2B-111111?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.11+" />
-    <img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=for-the-badge" alt="Apache 2.0" />
-  </p>
-  <p>
+    <a href="https://pypi.org/project/preciso-graphrag/"><img src="https://img.shields.io/pypi/v/preciso-graphrag?include_prereleases" alt="PyPI version" /></a>
     <a href="https://github.com/Preciso-GR/preciso-graphrag/actions/workflows/ci.yml"><img src="https://github.com/Preciso-GR/preciso-graphrag/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+    <img src="https://img.shields.io/badge/Python-3.11%2B-blue" alt="Python 3.11 or later" />
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue" alt="Apache 2.0" /></a>
   </p>
 </div>
 
----
+## What is PRECISO?
 
-Preciso is a **local-first GraphRAG MCP server for agents**. It stores document
-passages, entities, and relationships. Your agent can retrieve evidence and follow
-connections across documents.
+PRECISO is a **GraphRAG MCP server for AI agents**. GraphRAG combines graph
+connections with retrieval of relevant text. MCP (Model Context Protocol) lets
+an agent call the server's tools.
 
-```
-Documents → Agent extracts facts → Reviewed extraction → Preciso graph → Evidence for the agent
-```
+Your agent reads documents and extracts passages, entities, and relationships.
+PRECISO validates and stores that extraction. The agent can then retrieve evidence,
+follow connections, and maintain the collection across sessions.
 
-The agent reads the documents, extracts facts, and writes the final answer.
-Preciso validates and stores the extraction, retrieves evidence, and manages graph
-changes. It does not parse raw PDFs or run an extraction language model itself.
-Local embeddings do not require an embedding API key. Your agent's own model may
-still use a cloud service.
-
-**Setup version:** **0.3.0rc2**, with Codex and Claude Code registration. See
-[PyPI](https://pypi.org/project/preciso-graphrag/) and
-[GitHub Releases](https://github.com/Preciso-GR/preciso-graphrag/releases)
-for published versions. This is a macOS preview. See the current limitations below.
-
----
-
-## Why GraphRAG Over Regular RAG?
-
-**Regular RAG:**
-```
-"What are Apple's risk factors?"
-→ returns the Risk Factors section text
+```text
+Your documents → Agent reads and extracts → PRECISO validates and stores
+                                                   ↓
+Your question  → Agent queries PRECISO    ← Graph connections + source passages
+                         ↓
+                Answer with source evidence
 ```
 
-**Preciso:**
-```
-"What are Apple's risk factors and which executives are responsible for managing them?"
-→ traverses RISK_FACTOR → EXPOSED_TO → COMPANY → EMPLOYS → PERSON
-→ returns a connected answer with evidence
-```
+The agent controls the workflow. PRECISO does not parse raw PDFs, crawl URLs, watch
+folders, or continue work after the agent disconnects. It does not require its own
+extraction language model. Local embeddings need no embedding API key, but your
+agent can still use a cloud model.
 
-The graph makes multi-hop reasoning possible.
+**Current release: 0.3.0rc2.** This is a release candidate for individual local
+use. Guided setup is verified on macOS with Codex CLI and Claude Code CLI.
+See [release notes](https://github.com/Preciso-GR/preciso-graphrag/releases) and
+[current limits](#current-limits).
 
----
+## Who can use it?
 
-## Benchmark Results
+PRECISO is intended for people who repeatedly investigate substantial document
+collections. The examples below are possible workflows, not validated outcomes
+for every domain.
 
-These are historical financial QA results. They do not measure the new Granite
-embedding provider. See [model selection](docs/embedding-model-selection.md) for
-the separate embedding comparison, test conditions, and limitations.
+| Audience | A question they could investigate | Starting point |
+|---|---|---|
+| Financial and business analysts | How did this company's risks and segment performance change across these filings? | A small set of public annual reports; closest to the existing financial evaluations |
+| Researchers and research engineers | Which studies support this claim, under which conditions, and where do findings disagree? | Papers with retained source passages and explicit study identifiers |
+| Healthcare and life-sciences researchers | How do these studies differ in population, intervention, outcomes, and limitations? | Public research synthesis; patient-care use is not validated |
+| Supply-chain and procurement analysts | Which products depend on this supplier, according to these documents? | Domain-specific extraction supplied by the agent; no supply-chain application is included |
+| Consultants and diligence teams | Which source supports each conclusion in this assessment? | A reviewed document set for one investigation |
+| Legal and compliance professionals | Which documents support this obligation or control? | Exploratory evidence review; requires human verification |
+| Product and support teams | Which customer problems relate to this release and its known limitations? | Reviewed exports; source synchronization is manual |
+| Developers and maintainers | Why was this design chosen, and which constraints still apply? | Design notes, issue exports, and project documentation |
 
-Tested on 23 financial QA questions from Walmart FY2022 + FY2023 10-K filings, scored on four dimensions:
+An analyst using PRECISO inside a company fits the current local workflow.
+A shared company knowledge service requires additional authorization, isolation,
+and concurrent-access design. PRECISO currently permits **one active runtime per
+collection**.
 
-| Metric             | Score     |
-|--------------------|-----------|
-| Context Relevancy  | 0.983     |
-| Faithfulness       | **1.000** |
-| Answer Correctness | 0.960     |
-| Precision          | 0.910     |
-| **Preciso Score**  | **95 / 100** |
+## Quick start
 
-- **Hallucinations:** 0 / 23
-- **Failed questions:** 0 / 23
+You need **uv**, which supplies `uvx`, **Python 3.11 or later**, and the **Codex CLI
+or Claude Code CLI** installed. Start in the project directory that should own the
+collection. No repository clone is required.
 
-| System                            | Score     |
-|-----------------------------------|-----------|
-| **Preciso**                       | **95.4%** |
-| GPT-4 + long context (79k tokens) | ~79%      |
-| GPT-4 + standard RAG              | ~19%      |
-
-See [docs/eval-guide.md](docs/eval-guide.md) for full methodology and multi-hop breakdowns.
-
----
-
-## Guided Agent Setup — Preview
-
-The automated setup target is **macOS with Codex CLI, Claude Code CLI, or both**.
-Preciso requires Python 3.11+. Install uv (which provides `uvx`) and the selected
-agent CLI before setup.
-
-Open a terminal in your project directory and run:
-
-```bash
+```sh
 uvx --from preciso-graphrag==0.3.0rc2 preciso-graphrag setup --project .
 ```
 
-You do not need to clone the repository. uvx installs the package in an isolated
-environment. Setup asks before preparing optional provider packages and model files.
-For development checkouts and local wheels, see [guided setup](docs/simple-setup.md).
+The setup wizard will:
 
-Setup will:
+1. Ask for **Codex**, **Claude Code**, or **both**.
+2. Ask for local or API embeddings.
+3. Show required packages and model downloads, then ask before preparing them.
+4. Verify the embedding provider and MCP connection.
+5. Show each agent connection and ask before registering it. Other entries are preserved.
 
-1. Ask whether to connect Codex, Claude Code, or both, then select local or API embeddings.
-2. Show required packages and model downloads. If you select an installed but
-   stopped local Ollama service, ask before starting it in the background.
-3. Verify the selected provider and prepare a separate collection for the project.
-4. Test the MCP connection, then show each selected agent entry for confirmation.
-5. Preserve other agent entries and reuse an identical existing entry. Ask before
-   updating only the package version of a managed entry.
+To preselect both clients:
 
-Claude Code registration uses private, project-local scope. Codex registration uses
-its named user configuration. Neither requires a `.mcp.json` file. For both clients,
-the collection is shared: stop one client's Preciso server before using the other.
-Only one runtime can open a collection at a time.
+```sh
+uvx --from preciso-graphrag==0.3.0rc2 preciso-graphrag setup --project . --client both
+```
 
-Reload your selected agent after setup. Give it access to your documents and use this prompt:
+Reload your selected agent after setup. Installation alone does not connect every
+agent. Codex uses a named entry in its user configuration. Claude Code uses private
+project-local registration. **Neither guided flow requires a `.mcp.json` file.**
+
+Both clients use the same project collection. Stop one client's PRECISO runtime
+before switching to the other. Also stop active runtimes before rerunning setup's
+connection verification.
+
+### Choose embeddings
+
+Embeddings turn text into vectors used to rank related evidence.
+
+| Option | What you need | Behavior |
+|---|---|---|
+| **Built-in Granite — guided default** | One model download; no Ollama or embedding API key | IBM Granite Small English R2 through FastEmbed, running on CPU |
+| **Ollama** | Ollama installed; `nomic-embed-text` or `mxbai-embed-large` | Setup lists supported installed models and can offer a Nomic download |
+| **API** | OpenAI or Cohere credentials and network access | Text is sent to the selected provider; usage can incur charges |
+
+If an installed local Ollama service is stopped, setup asks before starting it
+and waits for readiness. Setup does not install Ollama. Normal server startup
+does not prompt, download weights, or start Ollama.
+
+The built-in English model uses **384-dimensional vectors**. Its pinned artifacts
+occupy **188.1 MiB**, plus Python dependencies. Valid cached files are reused.
+Inputs above **8,192 model tokens, including special tokens**, are rejected rather
+than silently truncated. Tokens are not words. Keep evidence passages focused.
+
+The built-in runtime uses one inference thread and one embedding request at a
+time. Existing collections retain their provider and model identity. An unavailable
+provider causes an error, not an automatic model switch. Use a new collection or
+an explicit rebuild when changing models.
+
+See [guided setup and recovery](docs/simple-setup.md) and
+[embedding measurements](docs/embedding-model-selection.md).
+
+## Use it with your agent
+
+Give the agent access to a small, reviewed document set. Start with this prompt:
 
 ```text
-Call get_server_status and get_document_workflow. Use the returned workflow to
-prepare these documents for Preciso. Show the extraction validation summary before
-ingestion. Then retrieve evidence from the graph to answer my questions.
+Use PRECISO for these documents.
+Call get_server_status and get_document_workflow first.
+Read the authorized source files and follow the returned extraction format.
+Keep original evidence passages and cite them from each extracted claim.
+Show the document IDs, extraction counts, validation results, and unresolved concerns.
+Add the reviewed extractions within this task. Do not silently replace existing documents.
+Then answer my question using retrieved evidence. Cite the sources and state
+when the evidence is insufficient.
 ```
 
-### Embedding choices
+Check that the sources are current and belong in the collection. Structural
+validation checks the extraction format and references. It cannot prove the
+source is true or the extracted claim is correct. PDF reading depends on your
+agent's tools or an external conversion step.
 
-| Choice | What runs | Requirements |
-|--------|-----------|--------------|
-| Built-in local (default in guided setup) | IBM Granite Small English R2 through FastEmbed | One model download; no Ollama or embedding API key |
-| Ollama | An installed `nomic-embed-text` or `mxbai-embed-large` model | Setup can start an installed local service and offer a Nomic download, each after confirmation |
-| API | OpenAI or Cohere embeddings | Provider credentials, network access, and possible usage charges |
+For example, start with two annual reports and ask:
 
-The built-in English model produces **384-dimensional vectors**. Its pinned model
-artifacts total **188.1 MiB**; Python dependencies need additional disk space. Setup
-shows the cache path and asks before downloading or repairing model files. Valid
-cached files are reused. Normal server startup does not download model weights.
+> How did the disclosed risks and segment results change between these reports?
+> Show the supporting passages and distinguish reported facts from your inference.
 
-Granite accepts up to **8,192 model tokens, including special tokens**, per input.
-Tokens are not words. Preciso rejects longer inputs instead of silently truncating
-them. Keep passages focused; split oversized passages or descriptions before retrying.
+Graph retrieval can connect related entities across documents. A retrieved chunk
+can still be irrelevant or insufficient. The agent must check the actual passages
+before making a claim. PRECISO does not guarantee a correct answer.
 
-The built-in provider uses one CPU inference thread and one embedding request at a
-time. A saved collection retains its provider and model identity. A failed provider
-does not trigger an automatic switch. Changing models requires an explicit new
-collection or rebuild.
+## Keep a collection up to date
 
-### Project data and credentials
+You can add documents later without starting a new collection. Use stable document
+IDs and consistent entity names. Similar names do not automatically prove that two
+entities are the same.
 
-Guided setup stores each project's settings, graph, and reviewed extractions under
-`~/Library/Application Support/PRECISO/projects/<project-path-hash>/`. The model
-cache is shared under `~/Library/Caches/PRECISO/models/`. Use `PRECISO_CONFIG_DIR`
-and `PRECISO_CACHE_DIR` to select other roots before setup.
+| Task | Supported operation |
+|---|---|
+| Add new documents | Create a new tracked document for each reviewed extraction |
+| Retry after an uncertain result | Replay the identical extraction; identical retries are idempotent |
+| Correct a document | Replace its complete extraction under the existing document ID |
+| Remove a document | Delete its contribution and rebuild from the remaining documents |
+| Maintain entities and relations | Inspect, isolate, restore, remove, rename, merge, or disconnect supported records |
+| Check supporting text | Read active evidence passages by chunk ID |
 
+Replacement, deletion, and graph edits use a preview followed by a commit with the
+returned workspace revision. The revision check rejects stale changes. These
+operations rebuild derived stores from the retained document extractions; they
+can be expensive for large collections.
+
+Isolation is reversible. Node removal has no restore operation in this version.
+Isolation can withhold other claims in the same source passage. Graph edits are
+not an access-control boundary or secure erasure. See
+[document and graph maintenance](docs/document-lifecycle.md) for exact behavior.
+
+## Main MCP tools
+
+| Tool | Purpose |
+|---|---|
+| `get_server_status` | Check provider readiness and graph status |
+| `get_document_workflow` | Discover the extraction format, operations, and limits |
+| `manage_documents` | List, create, preview and apply replacement or deletion |
+| `manage_graph` | Inspect, preview and apply supported graph edits |
+| `query_graph_tool` | Retrieve context from the collection |
+| `read_evidence` | Read active source text for a returned chunk ID |
+| `ingest_from_file` / `ingest_graph_tool` | Ingest reviewed file or inline extractions |
+| `list_pending_summaries` / `submit_summary` | Let the agent handle deferred description summaries |
+| `export_graph_to_neo4j` / `export_vectors_to_qdrant` | Create optional downstream snapshots |
+
+See [MCP operation](docs/mcp-server.md) for the full tool and configuration reference.
+
+## Where data lives
+
+Guided setup uses these macOS defaults:
+
+```text
+~/Library/Application Support/PRECISO/projects/<project-path-hash>/
+    settings.json     Project settings
+    graph/            Graph, vectors, evidence, and contribution ledger
+
+~/Library/Caches/PRECISO/models/    Shared model cache
+```
+
+The project also has an extraction input directory beside its settings file.
+Use `PRECISO_CONFIG_DIR` and `PRECISO_CACHE_DIR` before setup to select other roots.
 API credentials use macOS Keychain or environment variables. They are not written
-to project settings or agent command arguments. Codex entries are user-level
-settings; separate project collections do not provide access control.
+to project settings or agent command arguments.
 
-See [guided setup and recovery](docs/simple-setup.md) for credential variables,
-download recovery, launcher behavior, and verification limits.
+Preserve original documents, reviewed extractions, and the **complete graph
+directory**. A GraphML file alone is not a full operational backup. Stop the runtime
+and follow [backup and recovery](docs/backup-recovery.md).
 
----
+Neo4j and Qdrant are optional export targets. They are not required for local use
+and are not live storage backends. Exported snapshots remain stale until refreshed.
 
-## Manual Source Setup
+## Docker and other MCP clients
 
-Use this workflow for the repository folders and manual MCP configuration below.
-The clone command retrieves the default branch. Most users can use guided setup
-above instead of maintaining a source checkout.
+The repository includes a multi-stage **Linux** Docker build. It separates test
+and runtime dependencies and runs the server as a non-root user over standard
+input/output. No server network port is required.
 
-### 1. Clone and install
-
-```bash
-git clone https://github.com/Preciso-GR/preciso-graphrag
+```sh
+git clone https://github.com/Preciso-GR/preciso-graphrag.git
 cd preciso-graphrag
+docker build --target test -t preciso-graphrag:test .
+docker build --target runtime -t preciso-graphrag:local .
+```
+
+Follow the [container guide](docs/container-guide.md) to configure a provider,
+persistent volume, input mounts, and an MCP client command. The minimal image does
+not include the built-in Granite provider or optional cloud/export SDKs. Its Ollama
+configuration needs an external Ollama service.
+
+Linux arm64 verification passed 293 tests, lint, summary integrity checks, and an
+MCP ingestion/restart/retrieval smoke test. The smoke runtime used one CPU,
+512 MiB memory, no network, and fallback embeddings. This verifies protocol and
+persistence, not semantic retrieval quality or a production resource budget.
+
+Native Windows containers are not supported by this Dockerfile. Native Windows
+Python use also requires changes to POSIX file locking. Linux containers through
+Docker Desktop with WSL2 are a possible Windows route; that host setup has not
+been verified here.
+
+Other compatible MCP clients can use a manual stdio connection. Client-specific
+setup remains manual and unverified. See [manual MCP examples](examples/mcp/README.md).
+
+## Develop and evaluate
+
+For an editable source installation, run these commands from a checkout:
+
+```sh
 python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-pip install -e .   # register the preciso_mcp/core/ingest packages (editable)
+.venv/bin/python -m pip install -e . -r requirements-dev.txt
+.venv/bin/python -m pytest -q
+.venv/bin/python -m ruff check src tests scripts
 ```
 
-> Requires Python 3.11+, a local virtualenv at `.venv`, and the agent opened from the repo root.
-
-### 2. Drop files into `to_be_extracted/`
-
-Best inputs: `.md`, `.txt`, README files, wiki exports, notes.
-
-> For PDFs: convert to `.md` first, or use Claude Code / Codex which can read PDFs natively.
-
-See [document preparation](docs/document-preparation.md) for mechanism 0 and a worked example.
-For extraction-only work, keep the MCP server stopped.
-
-### Important: verify your source documents before extraction
-
-Before you ask an agent to process anything in `to_be_extracted/`, check the source documents yourself. Make sure they are factually correct, current, complete, and the exact versions you want represented in the graph. Extraction validation can catch structural problems, but it cannot guarantee that the source document itself is true.
-
-Starting with flawed source data can waste both time and money:
-
-- Extraction may consume paid agent or language-model credits.
-- Ingestion generates chunk, entity, and relationship embeddings, which may consume paid embedding-provider credits.
-- Flawed evidence can propagate into shared entities, relationships, descriptions, summaries, source links, and embeddings.
-- Correcting the mistake later may require regenerating the extraction and rebuilding the entire graph from every valid extraction.
-
-Before starting extraction:
-
-- Remove drafts, duplicates, and superseded document versions.
-- Confirm that every remaining document is accurate, final, and belongs in the corpus.
-- Preserve the validated source documents so the graph can be reproduced later.
-- Start the agent extraction workflow only after you are satisfied with the source corpus.
-
-The agent will perform a second, structural validation of the generated extraction before ingestion. That second check complements—but does not replace—your review of the original data.
-
-If you discover flawed source data after it has entered the graph, follow the [full correction workflow](docs/faq.md#how-do-i-correct-an-already-ingested-document).
-
-### 3. Run this prompt in your agent
-
-Open Codex, Claude Code, Copilot, or OpenCode from the repo root.
-
-**Quick version:**
-```
-Process the files in to_be_extracted/ using Preciso. Before ingestion, show me
-the validation summary and ask me to confirm that the corpus is correct and current.
-```
-
-<details>
-<summary>Full agent prompt (recommended for first run)</summary>
-
-```
-Call get_server_status().
-If overall is ready, proceed.
-If overall is degraded, explain what is degraded, what still works,
-and ask whether to proceed or fix first.
-Read the files in to_be_extracted/.
-Choose the most appropriate extraction skill from the skills folder for each file.
-Extract entities, relationships, and chunks into extractions/{source_name}_extracted.json.
-Validate that every source_id maps to a real chunk_id and that all relationships
-reference defined entities.
-If you find duplicate entities, orphaned relationships, or conflicts,
-use the reconciliation skill before ingestion.
-Before calling any ingestion tool, summarize the source files, document IDs,
-entity/relationship/chunk counts, validation results, and unresolved concerns.
-Add new document IDs within the authorized task. Use explicit replacement for
-changed tracked documents. If ingestion is outside the authorized scope, obtain
-that authorization before persistence. Call ingest_from_file for reviewed files.
-Confirm the graph artifacts written to GRAPH_IS_HERE/ and summarize what was ingested.
-```
-
-</details>
-
----
-
-## How It Works
-
-![Preciso Architecture](assets/preciso_arch_org.png)
-
-The manual source workflow uses these steps. Guided setup uses the project data
-directories described above and exposes its extraction contract through
-`get_document_workflow`.
-
-| Step | Who        | What happens                                          |
-|------|------------|-------------------------------------------------------|
-| 1    | You        | Drop source files into `to_be_extracted/`             |
-| 2    | Agent      | Reads the files                                       |
-| 3    | Agent      | Selects the right skill from `skills/`                |
-| 4    | Agent      | Writes `extractions/{source_name}_extracted.json`     |
-| 5    | Agent      | Calls the MCP ingestion tool                          |
-| 6    | Preciso    | Persists graph in `GRAPH_IS_HERE/` — queryable immediately |
-
-### Source Checkout Folders
-
-```
-src/                ← installed Python application packages
-tests/              ← automated tests and manual integrity checks
-scripts/            ← launchers, evaluations, and benchmarks
-to_be_extracted/    ← drop your source files here (.md, .txt)
-skills/             ← agent reads these to know how to extract
-extractions/        ← agent writes extraction JSON here
-GRAPH_IS_HERE/      ← complete operational graph artifacts
-docs/               ← guides and architecture reference
-evals/              ← benchmark test cases and results
-```
-
----
-
-## Skill Selection
-
-| Skill | Path | Use When |
-|-------|------|----------|
-| Financial | `skills/Financial-Graph-Extraction/SKILL.md` | 10-Ks, 10-Qs, earnings calls, analyst reports |
-| Research | `skills/Research-paper-graph-extraction-skill/SKILL.md` | Research papers, scientific literature, academic corpora |
-| General | `skills/General-graph-extraction-skill/SKILL.md` | Codebases, READMEs, wikis, internal docs |
-| Reconciliation | `skills/Reconciliation-Subagent-Skill/SKILL.md` | Cleanup of existing extraction JSON only |
-| Eval | `evals/SKILL.md` | Evaluating a built graph — not for extraction |
-
----
-
-## MCP Tools
-
-| Tool | Description |
-|------|-------------|
-| `get_server_status` | Runtime health check — call before anything |
-| `get_document_workflow` | Get extraction requirements, input limits, and document workflow guidance |
-| `manage_documents` | Inspect tracked documents; preview and apply replacement or deletion |
-| `manage_graph` | Inspect nodes and edges; preview and apply supported graph edits |
-| `read_evidence` | Read active source passages used to support graph facts |
-| `ingest_from_file` | Add a new, reviewed extraction to the graph |
-| `reingest_from_file` | Replay the identical extraction after an operational failure |
-| `ingest_graph_tool` | Add a new, reviewed inline extraction payload |
-| `ingest_with_reconciliation_tool` | Ingest after reconciliation subagents finish |
-| `ingest_checkpoint_tool` | Process checkpoint-based ingestion |
-| `query_graph_tool` | Query the persisted graph |
-| `list_pending_summaries` | Agent-handshake mode only: entities/relations deferred for you to summarize |
-| `submit_summary` | Agent-handshake mode only: submit your summary for a pending entity/relation |
-| `export_graph_to_neo4j` | Optional: push graph structure to Neo4j |
-| `export_vectors_to_qdrant` | Optional: push vector artifacts to Qdrant |
-
-### Runtime Status
-
-Always call `get_server_status()` first. It reports embedding mode, graph health, and LLM config before any work starts.
-
-<details>
-<summary>Healthy response example</summary>
-
-```json
-{
-  "overall": "ready",
-  "warnings": [],
-  "embedding": {
-    "mode": "local",
-    "provider": "ollama",
-    "model": "mxbai-embed-large",
-    "dimension": 1024,
-    "status": "active"
-  },
-  "graph": {
-    "storage": "networkx",
-    "entities": 142,
-    "relationships": 281,
-    "documents_ingested": 1,
-    "chunks": 96
-  },
-  "llm": {
-    "configured": true,
-    "status": "active"
-  }
-}
-```
-
-</details>
-
-<details>
-<summary>Legacy manual configuration: degraded response example</summary>
-
-```json
-{
-  "overall": "degraded",
-  "warnings": [
-    "Fallback embeddings active — graph creation works, vector search quality reduced."
-  ],
-  "embedding": { "mode": "fallback", "status": "degraded" },
-  "llm": { "configured": false, "status": "inactive" }
-}
-```
-
-Note: `llm.configured: false` is not itself a warning — description compression never
-uses an LLM (it's always deferred to the agent via `pending_summaries`, see
-`docs/agent-summarization.md`), and query-time answer synthesis just falls back to
-raw retrieved context when no LLM is configured.
-
-</details>
-
-Guided setup requires the selected embedding provider to be available. If it is
-unavailable, startup fails with a recovery instruction instead of using fallback
-embeddings.
-
-If `overall` is `degraded`, the agent explains what still works and asks before proceeding. It never silently continues.
-
----
-
-## What You Can Query After Ingestion
-
-```
-"What are Apple's top 5 disclosed risk factors?"
-"Which executives are connected to the supply chain risks?"
-"What metrics declined year over year?"
-"How does the Services segment relate to overall revenue?"
-```
-
-The graph connects entities across document sections so your agent gets reasoned answers, not retrieved chunks.
-
-![Sample Knowledge Graph — Walmart FY2023 10-K](assets/preciso_graph_exa.png)
-
----
-
-## Graph Artifacts
-
-In the manual source workflow, the graph persists in `GRAPH_IS_HERE/` and is reusable
-across sessions. Guided setup uses its project-specific graph directory. Both store
-the same operational artifacts:
-
-```
-GRAPH_IS_HERE/
-├── graph_graph.graphml              ← most portable artifact
-├── kv_store_text_chunks.json
-├── kv_store_entity_chunks.json
-├── kv_store_relation_chunks.json
-├── kv_store_pending_summaries.json
-├── kv_store_llm_cache.json
-├── kv_store_checkpoints.json
-├── vdb_entities.json
-├── vdb_relationships.json
-├── vdb_chunks.json
-└── artifact_manifest.json
-```
-
-The most portable single artifact is `graph_graph.graphml`, but the complete operational graph includes every file in `GRAPH_IS_HERE/`, especially the vector and evidence stores. Copy the whole folder to move the graph to another machine.
-
-`GRAPH_IS_HERE/` contains operational state, including the contribution ledger
-`kv_store_documents.json`. Retain the source documents and reviewed extractions.
-Tracked documents support safe replacement and deletion. Older graphs without a
-complete ledger require a fresh rebuild. See [document lifecycle](docs/document-lifecycle.md).
-
----
-
-## Downstream Exports (Optional)
-
-<p>
-  <img src="https://img.shields.io/badge/Neo4j-Export%20Target-8A2BE2?style=for-the-badge" alt="Neo4j" />
-  <img src="https://img.shields.io/badge/Qdrant-Vector%20Export-DC2626?style=for-the-badge" alt="Qdrant" />
-</p>
-
-The local graph directory is the operational source of truth. Neo4j and Qdrant are
-optional downstream copies, not live storage backends.
-
-```
-Local graph (master) → optional → Neo4j copy
-Local graph (master) → optional → Qdrant copy
-```
-
-Think of it like a Google Doc you export to PDF. The local graph is the operational original and the exports are snapshots for sharing. After additive ingestion or a full rebuild, downstream copies remain stale until you export again.
-
-<details>
-<summary>Neo4j export config</summary>
-
-```json
-{
-  "uri": "bolt://localhost:7687",
-  "username": "neo4j",
-  "password": "your-password",
-  "database": "neo4j",
-  "workspace": "default",
-  "clear_existing": false
-}
-```
-
-Required env vars: `GRAPHRAG_NEO4J_URI`, `GRAPHRAG_NEO4J_USERNAME`, `GRAPHRAG_NEO4J_PASSWORD`
-
-</details>
-
-<details>
-<summary>Qdrant export config</summary>
-
-```json
-{
-  "url": "http://localhost:6333",
-  "api_key": null,
-  "collection_prefix": "preciso",
-  "workspace": "default",
-  "clear_existing": false
-}
-```
-
-Required env vars: `GRAPHRAG_QDRANT_URL`, optionally `GRAPHRAG_QDRANT_API_KEY`
-
-</details>
-
-See [docs/getting-started.md](docs/getting-started.md) for full export setup including `.env` configuration.
-
----
-
-## Manual MCP Setup
-
-Codex and Claude Code users can use guided setup above. It registers the server
-through each client's CLI. The manual JSON template is not needed for this flow.
-
-The [manual source example](examples/mcp/README.md) is for compatible clients.
-Replace the launcher path with an absolute path before using it. Downloading the
-package or copying a configuration file does not automatically connect every agent.
-
-```json
-{
-  "mcpServers": {
-    "graphrag-mcp": {
-      "type": "stdio",
-      "command": "/bin/sh",
-      "args": ["/absolute/path/to/preciso-graphrag/scripts/mcp_launcher.sh"]
-    }
-  }
-}
-```
-
----
-
-## Manual Fallback
-
-For users who want to drive ingestion and querying directly without an agent:
-
-```bash
-# Ingest an extraction file
-python3 tests/manual/ingest_manual.py extractions/your_file_extracted.json
-
-# Query the graph
-python3 tests/manual/query_manual.py "What is Tim Cook's role?" mix
-
-# Run reconciliation demo
-python3 tests/manual/reconcile_manual.py
-```
-
----
-
-## Docs
-
-| Guide | What it covers |
-|-------|----------------|
-| [docs/simple-setup.md](docs/simple-setup.md) | Guided agent setup, project storage, credentials, and recovery |
-| [docs/embedding-model-selection.md](docs/embedding-model-selection.md) | Granite selection, measured resource use, and retrieval limitations |
-| [docs/domain-model.md](docs/domain-model.md) | Canonical document-lifecycle terminology |
-| [docs/getting-started.md](docs/getting-started.md) | Full setup including embeddings and exports |
-| [docs/skills-guide.md](docs/skills-guide.md) | How to use and write extraction skills |
-| [docs/eval-guide.md](docs/eval-guide.md) | How to run evaluation and read results |
-| [docs/architecture.md](docs/architecture.md) | How the system works internally |
-| [docs/mcp-server.md](docs/mcp-server.md) | MCP startup, configuration, tools, and recovery |
-| [docs/README.md](docs/README.md) | Documentation index |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Development, verification, review, and release workflow |
-| [docs/container-guide.md](docs/container-guide.md) | Build and operate the core MCP container |
-| [docs/engineering-log.md](docs/engineering-log.md) | Decisions, verification, and documentation method |
-| [docs/production-readiness.md](docs/production-readiness.md) | Implemented controls and open release gates |
-| [docs/publishing.md](docs/publishing.md) | PyPI account setup, TestPyPI, and release publishing |
-| [docs/faq.md](docs/faq.md) | Common problems and fixes |
-
----
-
-## Current Limitations
-
-- Guided setup is a release-candidate preview; Windows and Linux automated setup is not verified
-- The built-in model targets English and rejects inputs beyond its token limit
-- Best input format is `.md` or `.txt` — PDF handling depends on external conversion or a native PDF-capable agent
-- Retrieval quality depends on embedding configuration
-- Document replacement, deletion, and graph edits require a complete contribution ledger and replay the full tracked corpus
-- Node isolation can withhold other facts in the same evidence passage; it is not an access-control boundary
-- Neo4j and Qdrant exports require those services running externally
-- Single-user local workflow — no built-in multi-user or shared graph support yet
-
----
+Source setup, optional provider dependencies, and launch configuration are described
+in [getting started](docs/getting-started.md). See [CONTRIBUTING.md](CONTRIBUTING.md)
+for required checks and the review workflow.
+
+Historical financial QA results cover a small 23-question evaluation. They do not
+establish accuracy for other document sets or the current default embedding model.
+See [evaluation methodology](docs/eval-guide.md), the
+[retrieval pilot](docs/retrieval-pilot.md), and
+[model comparison](docs/embedding-model-selection.md) before interpreting scores.
+
+## Current limits
+
+- Guided setup targets individual macOS users. Windows and Linux automated setup remain unverified.
+- One runtime can own a collection. Shared team access and multi-user authorization are not implemented.
+- The default embedding model targets English. Retrieval quality needs validation on your own corpus.
+- There is no automatic source synchronization, scheduled ingestion, or raw document parser.
+- Replacement and graph editing require a complete contribution ledger. Older or incomplete graphs need a rebuild from reviewed extractions.
+- Lifecycle rebuilds replay the tracked corpus and can require new agent summaries.
+- Healthcare examples concern research documents. Clinical decisions and patient-record workflows are not validated.
+
+See [production readiness](docs/production-readiness.md) for implemented controls
+and open release gates.
+
+## Documentation
+
+| Guide | Contents |
+|---|---|
+| [Guided setup](docs/simple-setup.md) | Agent registration, credentials, model downloads, and recovery |
+| [Document preparation](docs/document-preparation.md) | Source review and extraction examples |
+| [Document lifecycle](docs/document-lifecycle.md) | Incremental ingestion, replacement, deletion, and graph edits |
+| [Architecture](docs/architecture.md) | Modules, storage, and data flow |
+| [Container operation](docs/container-guide.md) | Linux image builds and runtime configuration |
+| [FAQ](docs/faq.md) | Common issues and correction workflows |
+| [Documentation index](docs/README.md) | All guides |
 
 ## License
 
-Licensed under the **Apache License, Version 2.0**. See [LICENSE](LICENSE) for full terms.
-
-
-The extraction pipeline, skills system, MCP tooling, reconciliation layer, and evaluation framework are original work licensed under Apache 2.0.
+[Apache License 2.0](LICENSE). Named after Bruno Fernandes: every pass should land
+where it is needed.

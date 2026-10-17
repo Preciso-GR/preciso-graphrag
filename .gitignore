@@ -54,6 +54,9 @@ evals/test_cases/*.json
 evals/ANALYSIS_REPORT_*.md
 evals/ANALYSIS_REPORT_*.json
 !evals/.gitkeep
+# Local research notes
+/docs/research/
+
 !evals/SKILL.md
 analysis-1
 *_reconciled.json
@@ -84,3 +87,5 @@ RESEARCH_PLAN.md
 htmlcov/
 # Local application mechanism map
 /PRECISO_MECHANISM_MAP.md
+# Unselected logo concept (keep the README's v1 logo available to Git)
+/assets/branding/preciso-logo-concept-v2.png

@@ -11,6 +11,10 @@
 - Preview Codex registration and preserve unrelated or conflicting entries.
 - Prepare uv's package cache during setup and verify offline dependency resolution
   before adding the Codex entry.
+- Add validated wheel/source builds and Trusted Publishing workflows for TestPyPI
+  and PyPI. Publisher account configuration remains a maintainer release gate.
+- Move manual MCP configuration into examples and archive superseded planning pages.
+  Keep documentation, models, and local data outside installable distributions.
 
 This version has not been published to PyPI or GitHub Releases. Existing collections
 retain their configured model. Built-in model files download only after confirmation.

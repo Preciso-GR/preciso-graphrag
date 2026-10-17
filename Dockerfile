@@ -11,7 +11,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     python -m pip install --require-hashes --only-binary=:all: -r requirements-build.lock && \
     python -m venv --without-pip /opt/venv && \
     python -m pip --python /opt/venv/bin/python install --require-hashes --only-binary=:all: -r requirements.lock
-COPY pyproject.toml requirements.txt ./
+COPY pyproject.toml requirements.txt README.md LICENSE MANIFEST.in ./
 COPY src ./src
 RUN python -m pip wheel --no-deps --no-build-isolation --wheel-dir /wheels . && \
     python -m pip --python /opt/venv/bin/python install --no-deps /wheels/*.whl && \

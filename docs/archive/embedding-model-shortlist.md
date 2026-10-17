@@ -1,9 +1,11 @@
 # English local embedding shortlist
 
+Historical record. For current setup, see [guided setup](../simple-setup.md).
+
 Research date: 2026-10-16. Checked current upstream source and the installed
 FastEmbed 0.9.0 registry. No additional model weights were downloaded or tested.
 
-Update: the subsequent [measured comparison](embedding-model-selection.md) tested
+Update: the subsequent [measured comparison](../embedding-model-selection.md) tested
 Nomic and Granite and recommends Granite for the next optional integration. The
 table below preserves the earlier registry estimates; use the comparison for
 actual selected download sizes and runtime measurements.

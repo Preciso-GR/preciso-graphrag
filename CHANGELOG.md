@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.0rc2 — 2026-10-17
+
+- Ask whether to connect Codex, Claude Code, or both. Retain that choice when
+  resuming setup with optional dependencies.
+- Register Claude Code through its official CLI with project-local scope.
+  Preserve other servers and reject conflicting or changed configuration.
+- Offer an explicit, confirmed package-version update for managed client entries.
+- Ask before starting an installed, stopped local Ollama service. Wait for
+  readiness; never start a local service for an unavailable remote endpoint.
+
+Both clients share the selected project collection. Only one MCP runtime can use
+that collection at a time. Ollama startup consent occurs in interactive setup;
+normal MCP startup remains noninteractive. See the release pages for availability.
+
 ## 0.3.0rc1 — 2026-10-17
 
 - Add optional built-in Granite Small English R2 embeddings with pinned artifact

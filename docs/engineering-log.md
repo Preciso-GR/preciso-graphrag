@@ -2,6 +2,134 @@
 
 Scope: the core-only branch. Supply-chain features and service containers are excluded.
 
+## Package release preparation — 2026-10-17
+
+Guided setup is the primary preview path in the README. The source-checkout MCP
+JSON moved to `examples/mcp/`; it is a manual client example, not Codex activation.
+Generated root `.mcp.json` files are ignored. Four older plans and initial screens
+moved to `docs/archive/`. Current setup, operation, architecture, and measured
+model selection remain in the main documentation directory. Links were updated.
+
+Package metadata now includes the README, license declaration, and project URLs.
+The source manifest excludes documentation, tests, scripts, examples, skills,
+models, and local data. A CI guard compares all 42 runtime Python modules against
+the wheel and checks the source archive's allowed contents. Docker copies the new
+required metadata files before building. No runtime dependency was added.
+
+The publishing workflow runs reusable CI before building distributions. A manual
+run targets TestPyPI. A published GitHub release targets PyPI and must have a tag
+matching the version on a commit reachable from `main`. Separate environment-bound
+publishing jobs use OIDC. Maintainers must configure the matching Trusted Publisher
+in PyPI and TestPyPI; GitHub authentication does not grant PyPI ownership.
+
+Verification: 270 tests passed locally and in the locked Linux container. Lint,
+compilation, integrity guards, Markdown links, workflow YAML parsing, strict Twine
+metadata checks, and distribution contents passed. The wheel was built from its
+source archive and its installed entry points ran outside the checkout. PyPI's
+public project endpoint returned 404 at inspection; this does not reserve a name.
+No PyPI upload or account configuration is claimed. See [publishing](publishing.md).
+
+## Optional Granite provider and guided setup — 2026-10-17
+
+User review selected Granite Small English R2. The new provider lives in
+`core.local_embeddings`, separate from MCP transport and interactive setup. It
+verifies pinned artifact hashes, uses local files only during startup, checks
+model-token length without truncation, and runs synchronous work on a thread.
+Cancellation drains native work before releasing the inference lock. One model
+session, CPU inference thread, request, and per-model batch item bound resource use.
+The existing EmbeddingFunc validates returned vectors and records provider errors.
+
+The new query preflight rejects oversized inputs before keyword/cache processing.
+Ingestion remains protected by the existing artifact transaction. A real installed
+MCP check rejected an oversized entity description and preserved all persisted
+artifact bytes. A subsequent normal query succeeded. The provider is optional;
+the base server retains its existing manual configuration and dependencies.
+
+Guided setup selects local or API embeddings, detects supported Ollama models,
+obtains download consent, records per-project public settings, and references
+macOS Keychain or environment credentials. It does not save keys in configuration
+or command arguments. New Ollama settings retain the digest and task-prefix policy.
+Existing project model settings cannot be changed silently. Package entry points
+load settings before config imports. API checks use a synthetic sentence.
+
+Codex registration uses its official CLI after preview and confirmation. Tests
+used a temporary Codex home, preserving an unrelated entry and proving repeated
+registration does not change the file. The interactive local-wheel setup completed
+against disposable project settings and the shared temporary model cache. It
+verified both the prepared uvx launcher and offline dependency resolution before
+adding the confirmed entry. Your personal Codex configuration was not accessed.
+
+An initial wheel inspection found a stale module left in the local setuptools
+build directory after moving the provider into core. The generated directory was
+moved aside. A clean wheel was built and every packaged Python file was compared
+byte-for-byte with current source. No stale module remained. Container builds
+already use a clean source-only context.
+
+Verification: 270 source tests and 270 locked Linux arm64 container tests passed,
+with lint, compile, summary guards, document/summary MCP workflows, real Codex CLI
+registration, installed Granite restart/rollback checks, and the minimal runtime's
+read-only network-disabled MCP smoke. Local uvx checks exercised macOS Python 3.12;
+the source suite used Python 3.13. Real paid API calls, Keychain writes, Intel Mac
+setup, and hosted CI for this feature branch remain unverified.
+
+Version 0.3.0rc1 is prepared but unpublished. No PyPI upload, GitHub release, or
+main-branch merge was performed. See [guided setup](simple-setup.md).
+
+## Longer-input embedding comparison — 2026-10-16
+
+The feature-branch evaluator now supports explicit BGE, quantized Nomic, and
+Granite profiles. It pins revisions, downloads only required artifacts, validates
+manifests, and runs cached comparisons serially with one inference thread.
+Model files and optional dependencies remain outside the production installation.
+
+The screen adds frozen repository excerpts, model-token boundary inspection, and
+a deliberately repetitive long-tail diagnostic. Initial long-passage results were
+invalid because default character splitting changed evidence IDs. The diagnostic
+now disables that preprocessing only within its temporary run. Raw vector rankings
+separate threshold rejection from incorrect ranking. No production thresholds or
+fixtures were tuned after results.
+
+Granite requires an external ONNX weights file. The downloader now includes it and
+uses a real local directory so ONNX Runtime's external-data validation succeeds.
+Missing required repository artifacts fail before download. Native runtime security
+checks remain enabled.
+
+Granite is the recommended next integration candidate: 5/5 synthetic, 7/8 repository,
+and 3/3 long-tail cases at unchanged settings, compared with Nomic's 5/5, 7/8, and 1/3.
+Nomic nevertheless ranked the correct raw long-tail evidence first in all cases;
+its other results were below threshold. Granite also returned related evidence for
+both unsupported questions. The recommendation preserves these trade-offs rather
+than claiming universal quality or no-answer reliability.
+
+All three final cached runs completed twice in fresh processes with repeatable
+retrieved evidence. All 253 local tests, lint, compile, and whitespace checks passed.
+See [selection and limits](embedding-model-selection.md) for measurements. No
+production provider, runtime dependency, existing graph, or default changed.
+
+## Setup planning and local embedding screen — 2026-10-16
+
+The approved onboarding scope is individual macOS users, Codex, English documents,
+and one collection per project. Local built-in embeddings, optional Ollama, and
+existing API providers remain explicit user choices. The setup plan defines model
+download consent, shared model caching, credential storage, connection previews,
+and fail-closed provider behavior. Those setup features are planned, not implemented.
+
+A separate temporary environment evaluated FastEmbed 0.9.0 with the pinned quantized
+BGE-small English model. No production dependencies, provider defaults, or existing
+collections changed. The harness reuses the frozen retrieval pilot and adds cached
+fresh-process runs, store reopen, artifact hashes, dependency sizes, resource
+measurements, network-connection guards, and an overlength-input probe.
+
+The candidate returned complete evidence for five of five answerable pilot cases,
+but silently omitted differences beyond its input boundary. It remains a candidate;
+input-length enforcement and broader evaluation must precede default adoption.
+See [results and limits](archive/fastembed-evaluation.md) and [setup plan](archive/setup-integration-plan.md).
+
+Verification: the cached evaluation completed, both candidate processes matched
+retrieved evidence, and reopened stores matched the original query. All 253 local
+tests, lint, compilation, and diff whitespace checks passed. This feature branch
+has not run container or hosted CI checks for these evaluation-only changes.
+
 ## Stable reconciliation retries — 2026-10-16
 
 Merge review reproduced a revision conflict when identical reconciled input was

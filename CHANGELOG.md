@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.3.0rc1 — unreleased
+
+- Add optional built-in Granite Small English R2 embeddings with pinned artifact
+  verification, one CPU thread, asynchronous offloading, and strict input limits.
+- Add guided per-project setup, provider checks, saved settings, and noninteractive
+  server launch through the `preciso-graphrag` command.
+- Detect supported Ollama models and retain their digest and task-prefix identity.
+- Add optional macOS Keychain credentials and environment-variable alternatives.
+- Preview Codex registration and preserve unrelated or conflicting entries.
+- Prepare uv's package cache during setup and verify offline dependency resolution
+  before adding the Codex entry.
+- Add validated wheel/source builds and Trusted Publishing workflows for TestPyPI
+  and PyPI. Publisher account configuration remains a maintainer release gate.
+- Move manual MCP configuration into examples and archive superseded planning pages.
+  Keep documentation, models, and local data outside installable distributions.
+
+This version has not been published to PyPI or GitHub Releases. Existing collections
+retain their configured model. Built-in model files download only after confirmation.
+
 ## 0.2.0rc1 — 2026-10-16
 
 First published GitHub prerelease of the core-only GraphRAG MCP server.

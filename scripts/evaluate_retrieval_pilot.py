@@ -10,7 +10,7 @@ import tempfile
 import time
 
 
-async def evaluate(fixture, provider):
+async def evaluate(fixture, provider, *, embedding_override=None, verify_reopen=False):
     # Import after CLI configuration, so config reads the selected model/host.
     from config import build_default_embedding_func, build_global_config, probe_ollama_embedding
     from core.bootstrap import build_storage_instances, initialize_storage_instances
@@ -20,7 +20,9 @@ async def evaluate(fixture, provider):
     from config import _fallback_embed
     from ingest.pipeline import ingest_extracted_json
 
-    if provider == "ollama":
+    if embedding_override is not None:
+        embedding = embedding_override
+    elif provider == "ollama":
         embedding = build_default_embedding_func(probe=False)
         await probe_ollama_embedding(embedding)
         if embedding.initialization_error:
@@ -61,14 +63,31 @@ async def evaluate(fixture, provider):
                 "query_seconds": round(time.perf_counter() - start, 4),
             })
         answerable = [row for row in rows if row["recall"] is not None]
+        reopened_query_matches = None
+        if verify_reopen:
+            reopened = build_storage_instances(config)
+            await initialize_storage_instances(reopened)
+            response = await kg_query(
+                query=fixture["questions"][0]["query"], knowledge_graph_inst=reopened["graph"],
+                entities_vdb=reopened["entities_vdb"], relationships_vdb=reopened["relationships_vdb"],
+                text_chunks_db=reopened["text_chunks"], chunks_vdb=reopened["chunks_vdb"],
+                query_param=QueryParam(mode="mix", top_k=2, chunk_top_k=2, only_need_context=True, include_references=True),
+                global_config=config,
+            )
+            chunks = (response.raw_data or {}).get("data", {}).get("chunks", []) if response else []
+            reopened_query_matches = [item["chunk_id"] for item in chunks] == rows[0]["retrieved"]
+            if not reopened_query_matches:
+                raise RuntimeError("Reopened collection returned different evidence")
         return {
             "provider": provider, "embedding": embedding.index_identity(),
+            "context_tokenizer": "tiktoken" if config["tokenizer"]._encoding is not None else "whitespace-fallback",
             "embedding_concurrency": embedding.max_concurrent_requests,
             "vector_similarity_threshold": stores["chunks_vdb"].cosine_better_than_threshold,
             "mode": "mix", "chunk_top_k": 2,
             "mean_evidence_recall": sum(row["recall"] for row in answerable) / len(answerable),
             "complete_evidence_cases": sum(row["complete_evidence"] for row in answerable),
             "answerable_cases": len(answerable), "queries": rows,
+            "reopened_query_matches": reopened_query_matches,
         }
 
 

@@ -34,10 +34,10 @@ changes. It does not parse raw PDFs or run an extraction language model itself.
 Local embeddings do not require an embedding API key. Your agent's own model may
 still use a cloud service.
 
-**Version status:** **0.3.0rc1** is available on
-[PyPI](https://pypi.org/project/preciso-graphrag/0.3.0rc1/) and
-[GitHub Releases](https://github.com/Preciso-GR/preciso-graphrag/releases/tag/v0.3.0rc1).
-This is a Codex-first macOS preview. See the current limitations below.
+**Setup version:** **0.3.0rc2**, with Codex and Claude Code registration. See
+[PyPI](https://pypi.org/project/preciso-graphrag/) and
+[GitHub Releases](https://github.com/Preciso-GR/preciso-graphrag/releases)
+for published versions. This is a macOS preview. See the current limitations below.
 
 ---
 
@@ -89,15 +89,16 @@ See [docs/eval-guide.md](docs/eval-guide.md) for full methodology and multi-hop 
 
 ---
 
-## Guided Codex Setup — Preview
+## Guided Agent Setup — Preview
 
-The first automated setup target is **macOS with Codex CLI**. Preciso requires
-Python 3.11+. Install uv (which provides `uvx`) and Codex CLI before setup.
+The automated setup target is **macOS with Codex CLI, Claude Code CLI, or both**.
+Preciso requires Python 3.11+. Install uv (which provides `uvx`) and the selected
+agent CLI before setup.
 
 Open a terminal in your project directory and run:
 
 ```bash
-uvx --from preciso-graphrag==0.3.0rc1 preciso-graphrag setup --project .
+uvx --from preciso-graphrag==0.3.0rc2 preciso-graphrag setup --project .
 ```
 
 You do not need to clone the repository. uvx installs the package in an isolated
@@ -106,13 +107,20 @@ For development checkouts and local wheels, see [guided setup](docs/simple-setup
 
 Setup will:
 
-1. Ask you to choose local or API embeddings.
-2. Show the required packages and model download before asking for confirmation.
+1. Ask whether to connect Codex, Claude Code, or both, then select local or API embeddings.
+2. Show required packages and model downloads. If you select an installed but
+   stopped local Ollama service, ask before starting it in the background.
 3. Verify the selected provider and prepare a separate collection for the project.
-4. Test the MCP connection, then show the proposed Codex entry for confirmation.
-5. Preserve other Codex entries and reuse an identical existing entry.
+4. Test the MCP connection, then show each selected agent entry for confirmation.
+5. Preserve other agent entries and reuse an identical existing entry. Ask before
+   updating only the package version of a managed entry.
 
-Reload Codex after setup. Give it access to your documents and use this prompt:
+Claude Code registration uses private, project-local scope. Codex registration uses
+its named user configuration. Neither requires a `.mcp.json` file. For both clients,
+the collection is shared: stop one client's Preciso server before using the other.
+Only one runtime can open a collection at a time.
+
+Reload your selected agent after setup. Give it access to your documents and use this prompt:
 
 ```text
 Call get_server_status and get_document_workflow. Use the returned workflow to
@@ -125,7 +133,7 @@ ingestion. Then retrieve evidence from the graph to answer my questions.
 | Choice | What runs | Requirements |
 |--------|-----------|--------------|
 | Built-in local (default in guided setup) | IBM Granite Small English R2 through FastEmbed | One model download; no Ollama or embedding API key |
-| Ollama | An installed `nomic-embed-text` or `mxbai-embed-large` model | A running Ollama service; setup can offer a Nomic download |
+| Ollama | An installed `nomic-embed-text` or `mxbai-embed-large` model | Setup can start an installed local service and offer a Nomic download, each after confirmation |
 | API | OpenAI or Cohere embeddings | Provider credentials, network access, and possible usage charges |
 
 The built-in English model produces **384-dimensional vectors**. Its pinned model
@@ -150,7 +158,7 @@ cache is shared under `~/Library/Caches/PRECISO/models/`. Use `PRECISO_CONFIG_DI
 and `PRECISO_CACHE_DIR` to select other roots before setup.
 
 API credentials use macOS Keychain or environment variables. They are not written
-to project settings or Codex command arguments. Codex entries are user-level
+to project settings or agent command arguments. Codex entries are user-level
 settings; separate project collections do not provide access control.
 
 See [guided setup and recovery](docs/simple-setup.md) for credential variables,
@@ -476,8 +484,8 @@ See [docs/getting-started.md](docs/getting-started.md) for full export setup inc
 
 ## Manual MCP Setup
 
-Codex users can use guided setup above. It registers the server through
-`codex mcp add`; Codex does not use this repository's JSON template.
+Codex and Claude Code users can use guided setup above. It registers the server
+through each client's CLI. The manual JSON template is not needed for this flow.
 
 The [manual source example](examples/mcp/README.md) is for compatible clients.
 Replace the launcher path with an absolute path before using it. Downloading the
@@ -518,7 +526,7 @@ python3 tests/manual/reconcile_manual.py
 
 | Guide | What it covers |
 |-------|----------------|
-| [docs/simple-setup.md](docs/simple-setup.md) | Guided Codex setup, project storage, credentials, and recovery |
+| [docs/simple-setup.md](docs/simple-setup.md) | Guided agent setup, project storage, credentials, and recovery |
 | [docs/embedding-model-selection.md](docs/embedding-model-selection.md) | Granite selection, measured resource use, and retrieval limitations |
 | [docs/domain-model.md](docs/domain-model.md) | Canonical document-lifecycle terminology |
 | [docs/getting-started.md](docs/getting-started.md) | Full setup including embeddings and exports |

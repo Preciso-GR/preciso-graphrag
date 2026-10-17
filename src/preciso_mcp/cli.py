@@ -26,9 +26,10 @@ async def probe_provider():
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="preciso-graphrag")
     commands = parser.add_subparsers(dest="command", required=True)
-    setup = commands.add_parser("setup", help="Choose embeddings and connect a project to Codex")
+    setup = commands.add_parser("setup", help="Choose embeddings and connect Codex, Claude Code, or both")
     setup.add_argument("--project", type=Path, default=Path.cwd())
     setup.add_argument("--provider", choices=["fastembed", "ollama", "openai", "cohere"])
+    setup.add_argument("--client", choices=["codex", "claude", "both"])
     for name in ("serve", "check"):
         command = commands.add_parser(name)
         command.add_argument("--settings", type=Path, required=True)
@@ -36,7 +37,7 @@ def main(argv=None):
     try:
         if args.command == "setup":
             from preciso_mcp.setup_cli import setup_project
-            return setup_project(args.project, args.provider)
+            return setup_project(args.project, args.provider, args.client)
         from preciso_mcp.user_settings import apply_settings, load_settings
         data = load_settings(args.settings)
         apply_settings(data)

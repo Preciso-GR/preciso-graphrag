@@ -1,0 +1,14 @@
+include README.md LICENSE pyproject.toml requirements.txt
+recursive-include src *.py
+prune docs
+prune tests
+prune scripts
+prune skills
+prune evals
+prune assets
+prune examples
+prune .github
+prune GRAPH_IS_HERE
+prune extractions
+prune to_be_extracted
+global-exclude __pycache__ *.py[cod] .DS_Store .env .env.* *.pem *.key

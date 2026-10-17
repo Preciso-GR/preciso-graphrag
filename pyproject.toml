@@ -4,18 +4,37 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "preciso-graphrag"
-version = "0.2.0rc1"
+version = "0.3.0rc1"
 description = "Local-first GraphRAG system exposed as an MCP server"
+readme = "README.md"
+license = {text = "Apache-2.0"}
 requires-python = ">=3.11"
 dynamic = ["dependencies"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
+
+[project.urls]
+Homepage = "https://github.com/Preciso-GR/preciso-graphrag"
+Documentation = "https://github.com/Preciso-GR/preciso-graphrag/blob/main/docs/simple-setup.md"
+Repository = "https://github.com/Preciso-GR/preciso-graphrag"
+Issues = "https://github.com/Preciso-GR/preciso-graphrag/issues"
 
 [project.scripts]
+preciso-graphrag = "preciso_mcp.cli:main"
 preciso-backup = "preciso_mcp.backup_cli:main"
 
 [project.optional-dependencies]
+local = ["fastembed==0.9.0"]
+setup = ["keyring>=25,<26"]
 cloud-embeddings = ["openai>=1.0.0", "cohere>=4.0.0"]
 exports = ["neo4j>=5.0.0", "qdrant-client>=1.9.0"]
 all = [
+    "fastembed==0.9.0",
+    "keyring>=25,<26",
     "openai>=1.0.0",
     "cohere>=4.0.0",
     "neo4j>=5.0.0",

@@ -10,20 +10,23 @@ Start with the guide that matches the task.
 | Trace the system | [Architecture](architecture.md) |
 | Edit the system diagram | [Excalidraw source](diagrams/system-structure.excalidraw) |
 | Operate the MCP server | [MCP server](mcp-server.md) |
+| Set up a project with Codex | [Guided setup](simple-setup.md) |
 | Back up and restore a graph | [Backup procedure](backup-recovery.md) |
 | Build and run Docker | [Container operation](container-guide.md) |
 | Contribute a change | [Development workflow](../CONTRIBUTING.md) |
 | Verify a release | [Release checks](release-checklist.md) |
+| Publish a package | [Publishing](publishing.md) |
 | Check release readiness | [Production readiness](production-readiness.md) |
 | Understand technical decisions | [Engineering log](engineering-log.md) |
 | Review agent connection research | [Agent document roadmap](research/agent-document-roadmap.md) |
 | Inspect runtime measurements | [Runtime baseline](runtime-baseline.md) |
 | Measure local performance | [Performance](performance.md) |
 | Evaluate source evidence | [Retrieval pilot](retrieval-pilot.md) |
+| Review the measured local model recommendation | [Embedding model selection](embedding-model-selection.md) |
 | Use extraction skills | [Skills guide](skills-guide.md) |
 | Understand summary preservation | [Summary design](summary-design.md) |
 | Resolve an operational question | [FAQ](faq.md) |
 
-The [Docker and retrieval plan](lightweight-docker-retrieval-plan.md) records the
-implementation sequence and future experiments. The production-readiness document
-states current release gates. A plan is not evidence that a gate passed.
+Older plans and initial model screens are in the [archive](archive/README.md).
+They preserve decision evidence and are not current setup instructions. The Python
+wheel and source distribution exclude the documentation folder.

@@ -225,6 +225,12 @@ async def _ollama_embed(texts: list[str], **kwargs) -> list[list[float]]:
     if not isinstance(texts, list):
         texts = [texts]
     host = os.getenv("OLLAMA_BASE_URL") or os.getenv("OLLAMA_HOST")
+    if os.getenv("GRAPHRAG_OLLAMA_TASK_PREFIXES") == "v1":
+        if model.startswith("nomic-embed-text"):
+            prefix = "search_query: " if kwargs.get("context") == "query" else "search_document: "
+            texts = [prefix + text for text in texts]
+        elif model.startswith("mxbai-embed-large") and kwargs.get("context") == "query":
+            texts = ["Represent this sentence for searching relevant passages: " + text for text in texts]
     client = ollama.AsyncClient(**({"host": host} if host else {}))
     try:
         if hasattr(client, "embed"):
@@ -288,6 +294,10 @@ def build_default_embedding_func(*, probe: bool = True) -> Any:
     from core.storage.base import EmbeddingFunc
 
     provider = DEFAULT_EMBEDDING_PROVIDER.lower()
+    if provider == "fastembed":
+        from core.local_embeddings import build_embedding
+        directory = os.getenv("GRAPHRAG_LOCAL_MODEL_DIR")
+        return build_embedding(Path(directory) if directory else None)
     if provider == "ollama":
         # Try to auto-detect embedding dimension from the Ollama model.
         # If detection fails, fall back to the configured default.
@@ -297,6 +307,7 @@ def build_default_embedding_func(*, probe: bool = True) -> Any:
             func=_ollama_embed,
             model_name=DEFAULT_EMBEDDING_MODEL,
             provider="ollama",
+            supports_asymmetric=os.getenv("GRAPHRAG_OLLAMA_TASK_PREFIXES") == "v1",
             model_revision=os.getenv("GRAPHRAG_EMBEDDING_REVISION") or None,
         )
         if probe:

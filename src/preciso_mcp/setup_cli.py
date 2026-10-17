@@ -15,6 +15,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
+import urllib.parse
 import urllib.request
 
 from preciso_mcp.user_settings import (
@@ -47,6 +49,59 @@ def installed_ollama_models():
         raise ValueError("Ollama is not reachable. Start it or choose built-in local embeddings.") from None
 
 
+def ensure_ollama_models():
+    """Start an installed local service only after interactive consent."""
+    try:
+        return installed_ollama_models()
+    except ValueError:
+        pass
+    endpoint = urllib.parse.urlsplit(ollama_endpoint())
+    if (endpoint.scheme != "http" or endpoint.hostname not in {"localhost", "127.0.0.1", "::1"}
+            or endpoint.path not in {"", "/"} or endpoint.username or endpoint.password
+            or endpoint.query or endpoint.fragment):
+        raise ValueError("The configured Ollama service is unavailable. Start that service and rerun setup; no local service was started.")
+    executable = shutil.which("ollama")
+    if not executable:
+        raise ValueError("Ollama is not installed. Install it, or choose built-in Granite embeddings.")
+    if not confirm("Ollama is stopped. Start it in the background? It will keep running after setup."):
+        raise ValueError("Ollama was not started. Start it manually or choose built-in embeddings. Settings were not changed.")
+    try:
+        process = subprocess.Popen([executable, "serve"],
+                                   env=dict(os.environ, OLLAMA_HOST=ollama_endpoint()),
+                                   stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                   stderr=subprocess.DEVNULL, start_new_session=True)
+    except OSError:
+        raise ValueError("Ollama could not be started. Run 'ollama serve' to inspect the problem, then rerun setup.") from None
+    ready = False
+    try:
+        deadline = time.monotonic() + 20
+        while time.monotonic() < deadline:
+            try:
+                models = installed_ollama_models()
+                ready = True
+                return models
+            except ValueError:
+                if process.poll() is not None:
+                    break
+                time.sleep(0.5)
+    finally:
+        if not ready and process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=3)
+    raise ValueError("Ollama did not become ready. Run 'ollama serve' to inspect the problem, then rerun setup. Settings were not changed.")
+
+
+def choose_client():
+    value = input("Connect agent: 1 Codex, 2 Claude Code, 3 Both [1]: ").strip() or "1"
+    if value not in {"1", "2", "3"}:
+        raise ValueError("Choose Codex, Claude Code, or both")
+    return {"1": "codex", "2": "claude", "3": "both"}[value]
+
+
 def package_source():
     dist = importlib.metadata.distribution("preciso-graphrag")
     direct = dist.read_text("direct_url.json")
@@ -61,7 +116,7 @@ def package_source():
 def launch_command(settings_path, provider, credential_mode=None, *, offline=True):
     uvx = shutil.which("uvx")
     if not uvx:
-        raise ValueError("Install uv before automated setup; its uvx command launches PRECISO for Codex.")
+        raise ValueError("Install uv before automated setup; its uvx command launches PRECISO for your agent.")
     command = [uvx, "--from", package_source()]
     if offline:
         command.append("--offline")
@@ -73,13 +128,13 @@ def launch_command(settings_path, provider, credential_mode=None, *, offline=Tru
     return command + ["preciso-graphrag", "serve", "--settings", str(settings_path)]
 
 
-def ensure_dependencies(project, provider):
+def ensure_dependencies(project, provider, client="codex"):
     module = {"fastembed": "fastembed", "openai": "openai", "cohere": "cohere"}.get(provider)
     missing_provider = module and importlib.util.find_spec(module) is None
     missing_keyring = provider in KEY_ENV and importlib.util.find_spec("keyring") is None
     if missing_provider or missing_keyring:
         command = launch_command(project_settings_path(project), provider, "keychain" if provider in KEY_ENV else None, offline=False)
-        command[-3:] = ["setup", "--project", str(project), "--provider", provider]
+        command[-3:] = ["setup", "--project", str(project), "--provider", provider, "--client", client]
         print("Selected provider needs optional Python packages:\n" + shlex.join(command))
         if not confirm("Install these packages in uvx's isolated environment and resume setup?"):
             return False
@@ -181,13 +236,33 @@ async def verify_mcp(command):
                 raise ValueError("MCP provider is not active")
 
 
+def connection_name(project):
+    slug = re.sub(r"[^a-z0-9-]", "-", project.name.lower())[:24] or "project"
+    return "preciso-" + slug + "-" + hashlib.sha256(str(project).encode()).hexdigest()[:8]
+
+
+def version_upgrade(previous, command):
+    """Only a package version can change; preserve provider, paths, and flags."""
+    if not isinstance(previous, list) or len(previous) != len(command):
+        return False
+    old, new = list(previous), list(command)
+    try:
+        index = new.index("--from") + 1
+        for value in (old[index], new[index]):
+            if not isinstance(value, str) or not re.fullmatch(r"preciso-graphrag==[0-9][0-9A-Za-z.]*", value):
+                return False
+        old[index] = new[index]
+    except (ValueError, IndexError):
+        return False
+    return old == new
+
+
 def connect_codex(project, command):
     codex = shutil.which("codex")
     if not codex:
         print("Codex CLI was not found. Saved settings are ready; install Codex CLI and rerun setup.")
         return
-    slug = re.sub(r"[^a-z0-9-]", "-", project.name.lower())[:24] or "project"
-    name = "preciso-" + slug + "-" + hashlib.sha256(str(project).encode()).hexdigest()[:8]
+    name = connection_name(project)
     listed = subprocess.run([codex, "mcp", "list", "--json"], capture_output=True, text=True, check=True)
     entries = json.loads(listed.stdout)
     existing = next((entry for entry in entries if entry["name"] == name), None)
@@ -196,33 +271,98 @@ def connect_codex(project, command):
         if transport.get("command") == command[0] and transport.get("args") == command[1:]:
             print("Codex already has this PRECISO connection. No change needed.")
             return
-        raise ValueError("A different Codex entry already uses this project name. It was not overwritten.")
+        previous = [transport.get("command"), *transport.get("args", [])]
+        if not version_upgrade(previous, command) or transport.get("env") or transport.get("env_vars"):
+            raise ValueError("A different Codex entry already uses this project name. It was not overwritten.")
     change = [codex, "mcp", "add", name, "--", *command]
     print("Proposed Codex MCP entry (contains no API key):\n" + shlex.join(change))
     print("Codex stores this named entry in user configuration; separate collections are not access control.")
-    if not confirm("Add this entry while preserving other Codex servers?"):
+    if not confirm(("Update this managed entry's package version" if existing else "Add this entry") + " while preserving other Codex servers?"):
         print("Connection not added. Rerun setup when ready.")
         return
     # Re-read after approval to avoid overwriting an entry added during the prompt.
     current = json.loads(subprocess.run([codex, "mcp", "list", "--json"], capture_output=True, text=True, check=True).stdout)
-    if any(entry["name"] == name for entry in current):
+    if next((entry for entry in current if entry["name"] == name), None) != existing:
         raise ValueError("Codex configuration changed during setup. Rerun to inspect it.")
     subprocess.run(change, check=True, capture_output=True, text=True)
     print("Codex connection added. Restart or reload Codex to discover the server.")
 
 
-def setup_project(project, provider=None):
+def claude_entries(project):
+    """Read entries only; official Claude CLI owns all writes."""
+    config_dir = os.getenv("CLAUDE_CONFIG_DIR")
+    user_path = Path(config_dir).expanduser() / ".claude.json" if config_dir else Path.home() / ".claude.json"
+    try:
+        user = json.loads(user_path.read_text()) if user_path.exists() else {}
+        shared_path = project / ".mcp.json"
+        shared = json.loads(shared_path.read_text()) if shared_path.exists() else {}
+        local = user.get("projects", {}).get(str(project), {}).get("mcpServers", {})
+        entries = [local, shared.get("mcpServers", {}), user.get("mcpServers", {})]
+        if not all(isinstance(entry, dict) for entry in entries):
+            raise ValueError("Invalid MCP server mapping")
+        return entries
+    except (ValueError, AttributeError, OSError):
+        raise ValueError("Claude Code configuration could not be read. Repair its JSON or permissions, then rerun setup. No entry was changed.") from None
+
+
+def connect_claude(project, command):
+    claude = shutil.which("claude")
+    if not claude:
+        print("Claude Code CLI was not found. Saved settings are ready; install Claude Code CLI and rerun setup.")
+        return
+    name = connection_name(project)
+    entries = claude_entries(project)
+    existing = next((entry[name] for entry in entries if name in entry), None)
+    expected = {"type": "stdio", "command": command[0], "args": command[1:]}
+    if existing is not None:
+        normalized = dict(existing) if isinstance(existing, dict) else {}
+        if normalized.get("env") == {}:
+            normalized.pop("env")  # Claude CLI writes an empty env map by default.
+        if normalized == expected:
+            print("Claude Code already has this PRECISO connection. No change needed.")
+            return
+        previous = [existing.get("command"), *existing.get("args", [])] if isinstance(existing, dict) else []
+        if (entries[0].get(name) != existing or not version_upgrade(previous, command)
+                or set(normalized) - set(expected) or normalized.get("type", "stdio") != "stdio"):
+            raise ValueError("A different Claude Code entry already uses this project name. It was not overwritten.")
+    change = [claude, "mcp", "add", "--transport", "stdio", "--scope", "local", name, "--", *command]
+    print("Proposed Claude Code MCP entry (contains no API key):\n" + shlex.join(change))
+    print("Claude Code local scope keeps this connection private to the selected project.")
+    if not confirm(("Update this managed entry's package version" if existing else "Add this entry") + " while preserving other Claude Code servers?"):
+        print("Claude Code connection not added. Rerun setup when ready.")
+        return
+    if claude_entries(project) != entries:
+        raise ValueError("Claude Code configuration changed during setup. Rerun to inspect it.")
+    if existing is not None:
+        subprocess.run([claude, "mcp", "remove", "--scope", "local", name], cwd=project, check=True, capture_output=True, text=True)
+    try:
+        subprocess.run(change, cwd=project, check=True, capture_output=True, text=True)
+    except subprocess.CalledProcessError:
+        if existing is not None:
+            try:
+                subprocess.run([claude, "mcp", "add", "--transport", "stdio", "--scope", "local", name,
+                                "--", *previous], cwd=project, check=True, capture_output=True, text=True)
+            except subprocess.CalledProcessError:
+                raise ValueError("Claude Code update and restoration failed. Project graph/settings are preserved; repair Claude Code CLI and rerun setup to restore its connection.") from None
+        raise
+    print("Claude Code connection added. Restart or reload Claude Code, then inspect /mcp.")
+
+
+def setup_project(project, provider=None, client=None):
     if not sys.stdin.isatty():
         raise ValueError("Setup requires an interactive terminal. Server startup uses the noninteractive serve command.")
     project = project.expanduser().resolve()
     if not project.is_dir():
         raise ValueError("Select an existing project directory")
+    client = client or choose_client()
+    if client == "both":
+        print("Both agents will share this project collection. Use one agent's MCP server at a time; stop it before switching agents.")
     settings_path = project_settings_path(project)
     existing = load_settings(settings_path) if settings_path.exists() else None
     if existing and provider is not None and provider != existing["provider"]:
         raise ValueError("This project already has a provider. Use a new collection for a model change.")
     provider = existing["provider"] if existing else provider or choose_provider()
-    if not ensure_dependencies(project, provider):
+    if not ensure_dependencies(project, provider, client):
         return
     data = dict(existing) if existing else {"schema_version": 1, "project": str(project), "provider": provider,
             "dimension": 384, "workdir": str(settings_path.parent / "graph"),
@@ -246,11 +386,13 @@ def setup_project(project, provider=None):
                 except Exception:
                     choice = input("Download failed. Retry [r], choose API [a], cancel [c]: ").strip().lower()
                     if choice == "a":
-                        return setup_project(project, choose_api())
+                        return setup_project(project, choose_api(), client)
                     if choice != "r":
                         return
     elif provider == "ollama":
-        models = installed_ollama_models()
+        models = ensure_ollama_models()
+        if existing and models.get(existing["model"]) != existing.get("ollama_digest"):
+            raise ValueError("The saved Ollama model changed. Keep its original revision or create a new collection.")
         if not models:
             print("No supported model found. Suggested download: nomic-embed-text (approximately 274 MB).")
             if not confirm("Download it through the running Ollama service?"):
@@ -261,8 +403,6 @@ def setup_project(project, provider=None):
         names = sorted(models)
         if existing:
             name = existing["model"]
-            if models.get(name) != existing.get("ollama_digest"):
-                raise ValueError("The saved Ollama model changed. Keep its original revision or create a new collection.")
         else:
             for index, name in enumerate(names, 1):
                 print(f"{index}. {name}")
@@ -286,8 +426,8 @@ def setup_project(project, provider=None):
         keychain.set_password("preciso-graphrag", credential_account(data), secret)
     save_settings(settings_path, data)
     Path(data["input_dir"]).mkdir(parents=True, exist_ok=True)
-    if not confirm("Prepare and verify the Codex launcher (uv may download Python packages)?"):
-        print("Settings saved. Codex was not changed. Rerun setup to finish the connection.")
+    if not confirm("Prepare and verify the agent launcher (uv may download Python packages)?"):
+        print("Settings saved. Agent connections were not changed. Rerun setup to finish the connection.")
         return
     # Populate uv's tool cache now. Later Codex starts resolve offline, without
     # waiting on package-index availability. The model/API can still use its
@@ -296,4 +436,6 @@ def setup_project(project, provider=None):
     asyncio.run(verify_mcp(warm_command))
     asyncio.run(verify_mcp(command))
     print(f"Provider and MCP connection verified.\nSettings: {settings_path}\nCollection: {data['workdir']}")
-    connect_codex(project, command)
+    for target, connect in (("codex", connect_codex), ("claude", connect_claude)):
+        if client in {target, "both"}:
+            connect(project, command)

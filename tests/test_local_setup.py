@@ -166,7 +166,7 @@ def test_model_download_refusal_keeps_settings_absent(tmp_path, monkeypatch):
     monkeypatch.setattr(setup.sys, "stdin", SimpleNamespace(isatty=lambda: True))
     monkeypatch.setattr(setup, "ensure_dependencies", lambda *a: True)
     monkeypatch.setattr(setup, "confirm", lambda *a: False)
-    setup.setup_project(tmp_path, "fastembed")
+    setup.setup_project(tmp_path, "fastembed", "codex")
     assert not settings.project_settings_path(tmp_path).exists()
     assert not (tmp_path / "cache").exists()
 
@@ -183,7 +183,7 @@ def test_probe_failure_does_not_write_keychain_or_settings(tmp_path, monkeypatch
     monkeypatch.setattr(setup, "confirm", lambda *a: True)
     monkeypatch.setattr(setup, "probe_settings", lambda *a: (_ for _ in ()).throw(ValueError("failed")))
     with pytest.raises(ValueError, match="failed"):
-        setup.setup_project(tmp_path, "openai")
+        setup.setup_project(tmp_path, "openai", "codex")
     assert written == []
     assert not settings.project_settings_path(tmp_path).exists()
 

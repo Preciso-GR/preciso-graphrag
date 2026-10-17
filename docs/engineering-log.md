@@ -2,6 +2,37 @@
 
 Scope: the core-only branch. Supply-chain features and service containers are excluded.
 
+## Agent selection and Ollama startup — 2026-10-17
+
+Version 0.3.0rc2 adds Codex, Claude Code, or both to interactive setup. The
+`--client` option preselects a target and survives optional-package resumption.
+Claude Code registration uses its official CLI with local scope and the selected
+project as its working directory. The installer reads configuration for conflict
+detection, including `CLAUDE_CONFIG_DIR`, and delegates writes to the CLI. Other
+servers are preserved. Repeated matching registration does not write settings.
+Managed entries can change only their pinned package version after confirmation;
+Claude update failure attempts restoration of the previous command.
+
+Both clients point to one project collection. They must not run that collection
+concurrently. The graph ownership guard remains unchanged. Stop an active client
+server before setup verification or switching to the other agent.
+
+Selecting Ollama now offers to start an installed, stopped local service. It asks
+before launching `ollama serve`, waits for API readiness, and preserves the chosen
+endpoint. It does not install Ollama or substitute a local service for an
+unavailable remote endpoint. Failed startup terminates only the process created by
+setup. Successful startup leaves the service running. Ordinary MCP startup remains
+noninteractive and does not launch services or download models.
+
+Verification: 293 offline tests, lint, compilation, documentation links, and strict
+wheel/source metadata and contents checks passed. Both real agent CLIs passed
+registration, preservation, idempotency, and package-version upgrade tests in
+temporary configuration directories. The installed-wheel wizard verified cached
+Granite and registered both clients with isolated settings. A real Ollama process
+started on a temporary port, returned model metadata, and was stopped after the
+test; no model inference or change to the user's existing service occurred.
+No new runtime dependency or graph format was added.
+
 ## Public package publication — 2026-10-17
 
 The maintainer registered separate Trusted Publishers on TestPyPI and PyPI.
